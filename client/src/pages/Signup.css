@@ -1,0 +1,71 @@
+/* Centering the form on the page */
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: #f4f4f4;
+}
+
+/* Wrapper for login/signup */
+.auth-wrapper {
+    width: 100%;
+    max-width: 400px;
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+/* Header text */
+.auth-title {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+/* Styling for input fields */
+.auth-input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+/* Button styling */
+.auth-button {
+    width: 100%;
+    background: #007bff;
+    color: white;
+    padding: 12px;
+    border: none;
+    border-radius: 5px;
+    font-size: 18px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.auth-button:hover {
+    background: #0056b3;
+}
+
+/* Switch between login & signup */
+.auth-switch {
+    margin-top: 15px;
+    font-size: 14px;
+    color: #555;
+}
+
+.auth-switch a {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.auth-switch a:hover {
+    text-decoration: underline;
+}
