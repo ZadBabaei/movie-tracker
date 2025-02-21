@@ -6,28 +6,29 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ✅ Add Middleware
 app.use(cors());
-app.use(express.json());  // <-- This is required to parse JSON in requests
+app.use(express.json());
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
+mongoose.connect(process.env.MONGODB_URI, {
+  writeConcern: { w: "majority" }
 })
-  .then(() => console.log('MongoDB connected!'))
-  .catch((err) => console.log('MongoDB connection error:', err));
+  .then(async () => {
+    console.log('✅ MongoDB Connected to:', mongoose.connection.db.databaseName);
 
-// Import Routes
+    // ✅ Log existing collections
+    const collections = await mongoose.connection.db.listCollections().toArray();
+    console.log("📌 Collections in database:", collections.map(col => col.name));
+    console.log("🔹 Using MongoDB URI:", process.env.MONGODB_URI);
+  })
+  .catch((err) => console.error('❌ MongoDB Connection Error:', err));
+
 const authRoutes = require('./routes/authRoutes');
-app.use('/api/auth', authRoutes);  // <-- Ensure this is after `express.json()`
+app.use('/api/auth', authRoutes);
 
-// Default Route
 app.get('/', (req, res) => {
   res.send('Hello from Movie Tracker Backend!');
 });
 
-// Start Server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

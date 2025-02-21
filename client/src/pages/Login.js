@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
+import './Login.css';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -21,7 +22,8 @@ function Login() {
 
   return (
     <div>
-      <h2>Login</h2>
+      <div className="wrapper">
+  <h2 className='login-text'>Login</h2>
       <form onSubmit={handleSubmit}>
         <input 
           type="email" 
@@ -42,6 +44,8 @@ function Login() {
       <p>
         Don’t have an account? <Link to="/signup">Sign up</Link>
       </p>
+      </div>
+    
     </div>
   );
 }
