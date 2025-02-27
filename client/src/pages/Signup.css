@@ -28,9 +28,9 @@
 
 /* Styling for input fields */
 .auth-input {
-    width: 100%;
-    padding: 12px;
-    margin: 10px 0;
+    width: 80%;
+    padding: 20px;
+    margin: 10px ;
     border: 1px solid #ccc;
     border-radius: 5px;
     font-size: 16px;

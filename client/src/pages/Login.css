@@ -50,6 +50,13 @@ table {
     border-collapse: collapse;
     border-spacing: 0;
 }
+h1, h2, h3 {
+    font-family: 'Montserrat', 'Poppins', 'Inter', sans-serif;
+    font-weight: 700; /* Bold for strong titles */
+    letter-spacing: 1px; /* Slight spacing for a sleek look */
+    text-transform: uppercase; /* Optional: Makes titles more striking */
+}
+
 
 
 /* Center the login page */
@@ -71,13 +78,15 @@ table {
   font-size: 24px;
   font-weight: bold;
   margin-bottom: 20px;
+  font-family: 'Montserrat', 'Poppins', 'Inter', sans-serif;
+
 }
 
 /* Style the input fields */
 input {
-  width: 100%;
-  padding: 10px;
-  margin: 10px 0;
+  width: 80%;
+  padding: 20px;
+  margin: 10px ;
   border: 1px solid #ccc;
   border-radius: 5px;
   font-size: 16px;

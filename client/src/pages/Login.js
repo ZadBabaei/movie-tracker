@@ -7,6 +7,24 @@ function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
+  const handleLogin = async () => {
+  try {
+    const res = await axios.post("http://localhost:5000/api/auth/login", { email, password });
+
+    console.log("✅ Login Response:", res.data); // ✅ Debugging log
+
+    if (res.data.token) {
+      localStorage.setItem("token", res.data.token); // ✅ Store token
+      console.log("✅ Token Stored:", localStorage.getItem("token"));
+      window.location.reload(); // ✅ Refresh to fetch user data
+    } else {
+      console.error("❌ Login successful, but no token received.");
+    }
+  } catch (error) {
+    console.error("❌ Login failed:", error);
+  }
+};
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
