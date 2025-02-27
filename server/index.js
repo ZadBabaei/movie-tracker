@@ -6,11 +6,16 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// ✅ Middleware
 app.use(cors());
 app.use(express.json());
 
+// ✅ Correct API Route Registration
+app.use("/api/user", require("./routes/authRoutes"));
+
 mongoose.connect(process.env.MONGODB_URI, {
-  writeConcern: { w: "majority" }
+  useNewUrlParser: true,
+  useUnifiedTopology: true
 })
   .then(async () => {
     console.log('✅ MongoDB Connected to:', mongoose.connection.db.databaseName);
@@ -22,13 +27,10 @@ mongoose.connect(process.env.MONGODB_URI, {
   })
   .catch((err) => console.error('❌ MongoDB Connection Error:', err));
 
-const authRoutes = require('./routes/authRoutes');
-app.use('/api/auth', authRoutes);
-
 app.get('/', (req, res) => {
   res.send('Hello from Movie Tracker Backend!');
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
 });
