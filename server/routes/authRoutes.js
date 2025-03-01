@@ -68,35 +68,73 @@ router.post("/login", async (req, res) => {
 });
 
 // ✅ Secure Route: Fetch User Data
+router.post("/login", async (req, res) => {
+  try {
+    console.log("🔹 Received Login Request:", req.body); // ✅ Log Incoming Data
+
+    const { email, password } = req.body;
+    if (!email || !password) {
+      console.log("❌ Missing email or password.");
+      return res.status(400).json({ msg: "Email and password are required." });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      console.log("❌ User not found:", email);
+      return res.status(400).json({ msg: "Invalid credentials" });
+    } else {
+      console.log("✅ User Found:", user);
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    console.log("🔹 Password Match:", isMatch);
+
+    if (!isMatch) {
+      console.log("❌ Password mismatch for:", email);
+      return res.status(400).json({ msg: "Invalid credentials" });
+    }
+
+    const token = jwt.sign(
+      { id: user._id, name: user.name },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    console.log("✅ Login successful, token issued.");
+    res.json({ token, user: { name: user.name, email: user.email } });
+
+  } catch (error) {
+    console.error("❌ Error in login route:", error);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
 router.get("/me", async (req, res) => {
   try {
     console.log("🔹 User Info API hit.");
 
-    // Extract token from headers
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({ msg: "Unauthorized: No token provided" });
     }
 
-    // ✅ Extract the token correctly
     const token = authHeader.split(" ")[1];
-
-    // ✅ Verify Token using correct secret key
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     console.log("✅ Token Decoded:", decoded);
 
-    // Fetch user from database
     const user = await User.findById(decoded.id).select("-password");
     if (!user) {
       return res.status(404).json({ msg: "User not found" });
     }
 
     console.log("✅ User Data Retrieved:", user);
-    res.json(user);
+    res.json({ name: user.name, email: user.email }); // ✅ Return correct user data
   } catch (error) {
     console.error("❌ Error in /me route:", error);
     res.status(500).json({ msg: "Server error" });
   }
 });
+
+
+
 
 module.exports = router;

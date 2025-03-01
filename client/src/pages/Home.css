@@ -136,7 +136,7 @@
     border-radius: 10px;
     overflow: hidden;
     background: rgba(255, 255, 255, 0.1);
-    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+    /* transition: transform 0.3s ease-in-out,; */
     cursor: pointer;
 }
 
