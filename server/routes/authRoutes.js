@@ -3,8 +3,10 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 require("dotenv").config();
-
+const Group = require("../models/Groups");
+const mongoose = require("mongoose");
 const router = express.Router();
+
 
 // ✅ Signup Route (Now Hashing Passwords)
 router.post("/register", async (req, res) => {
@@ -67,47 +69,8 @@ router.post("/login", async (req, res) => {
   }
 });
 
+
 // ✅ Secure Route: Fetch User Data
-router.post("/login", async (req, res) => {
-  try {
-    console.log("🔹 Received Login Request:", req.body); // ✅ Log Incoming Data
-
-    const { email, password } = req.body;
-    if (!email || !password) {
-      console.log("❌ Missing email or password.");
-      return res.status(400).json({ msg: "Email and password are required." });
-    }
-
-    const user = await User.findOne({ email });
-    if (!user) {
-      console.log("❌ User not found:", email);
-      return res.status(400).json({ msg: "Invalid credentials" });
-    } else {
-      console.log("✅ User Found:", user);
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    console.log("🔹 Password Match:", isMatch);
-
-    if (!isMatch) {
-      console.log("❌ Password mismatch for:", email);
-      return res.status(400).json({ msg: "Invalid credentials" });
-    }
-
-    const token = jwt.sign(
-      { id: user._id, name: user.name },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-
-    console.log("✅ Login successful, token issued.");
-    res.json({ token, user: { name: user.name, email: user.email } });
-
-  } catch (error) {
-    console.error("❌ Error in login route:", error);
-    res.status(500).json({ msg: "Server error" });
-  }
-});
 router.get("/me", async (req, res) => {
   try {
     console.log("🔹 User Info API hit.");
@@ -134,6 +97,65 @@ router.get("/me", async (req, res) => {
   }
 });
 
+// ✅ Secure Route: Fetch User Groups
+router.get("/groups", async (req, res) => {
+  try {
+    console.log("🔹 Fetching groups for the user...");
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.log("❌ No token provided.");
+      return res.status(401).json({ msg: "Unauthorized: No token provided" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    console.log("✅ Token Decoded, User ID (Before Conversion):", decoded.id);
+
+    const userId = new mongoose.Types.ObjectId(decoded.id);
+    console.log("🔍 Querying MongoDB for groups where members include:", userId);
+
+    const userGroups = await Group.find({ members: userId });
+
+    console.log("✅ Found Groups:", userGroups);
+    res.json(userGroups);
+  } catch (error) {
+    console.error("❌ Error fetching groups:", error);
+    res.status(500).json({ msg: "Server error", error: error.message });
+  }
+});
+
+
+router.post("/groups/create", async (req, res) => {
+  try {
+    console.log("🔹 Incoming Create Group Request:", req.body);
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ msg: "Unauthorized: No token provided" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const { name, members } = req.body;
+
+    if (!name || members.length === 0) {
+      return res.status(400).json({ msg: "Group name and members are required" });
+    }
+
+    const memberIds = members.map((id) => new mongoose.Types.ObjectId(id));
+    const newGroup = new Group({ name, members: memberIds });
+    await newGroup.save();
+
+    console.log("✅ Group Created Successfully:", newGroup);
+    res.json(newGroup);
+  } catch (error) {
+    console.error("❌ Error creating group:", error);
+    res.status(500).json({ msg: "Server error", error: error.message });
+  }
+});
 
 
 

@@ -31,6 +31,20 @@ app.get('/', (req, res) => {
   res.send('Hello from Movie Tracker Backend!');
 });
 
+
+app._router.stack.forEach((middleware) => {
+  if (middleware.route) {
+    console.log(`✅ Registered Route: ${middleware.route.path}`);
+  } else if (middleware.name === "router") {
+    middleware.handle.stack.forEach((sub) => {
+      if (sub.route) {
+        console.log(`✅ Registered Route: ${sub.route.path}`);
+      }
+    });
+  }
+});
+
+
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 });
