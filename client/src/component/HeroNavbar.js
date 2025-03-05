@@ -1,23 +1,54 @@
-import React from "react";
+import React, { useState, useRef } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import "./HeroNavbar.css";
 
-const HeroNavbar = () => {
+const HeroNavbar = ({ userName }) => {
+  const [isProfileMenuOpen, setProfileMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const timeoutRef = useRef(null);
+
+  const handleMouseEnter = () => {
+    setProfileMenuOpen(true);
+    clearTimeout(timeoutRef.current);
+  };
+
+  const handleMouseLeave = () => {
+    timeoutRef.current = setTimeout(() => {
+      setProfileMenuOpen(false);
+    }, 2000); // Close after 2 seconds
+  };
+
   return (
     <>
-    {/* Navbar */}
-        <nav className="glassy-navbar">
-          <div className="nav-left">
-            <span>Movie Tracker</span>
+      <nav className="glassy-navbar">
+        <div className="nav-left">
+          <span>Movie Tracker</span>
+        </div>
+        <div className="nav-right">
+          <a href="#">Home</a>
+          <a href="#">Movies</a>
+          <a href="#">Watchlist</a>
+          
+          {/* Profile Menu with Delayed Close */}
+          <div
+            className="profile-menu"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          >
+            <span className="profile-name">{userName} ▼</span>
+            {isProfileMenuOpen && (
+              <div className="profile-dropdown">
+                <a href="#">Profile</a>
+                <a href="#" onClick={() => navigate("/inbox")}>Inbox</a>
+                <a href="#">Logout</a>
+              </div>
+            )}
           </div>
-          <div className="nav-right">
-            <a href="#">Home</a>
-            <a href="#">Movies</a>
-            <a href="#">Watchlist</a>
-            <a href="#">Profile (Username)</a>
-          </div>
-        </nav>
+        </div>
+      </nav>
 
-        {/* Hero Section */}
+      {/* Hero Section */}
       <motion.div
         className="hero-banner"
         initial={{ opacity: 0, y: -50 }}
@@ -42,5 +73,4 @@ const HeroNavbar = () => {
     </>
   );
 };
-
 export default HeroNavbar;

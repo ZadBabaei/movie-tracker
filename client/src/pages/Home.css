@@ -98,6 +98,8 @@
 }
 
 .banner-buttons button {
+    width:150px;
+    height: 50px;
     background: linear-gradient(135deg, #f4c542, #ff9800);
     color: white;
     border: none;

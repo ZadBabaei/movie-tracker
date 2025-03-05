@@ -1,0 +1,101 @@
+/* Glassy Modal Background */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  backdrop-filter: blur(12px);
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Modal Content */
+.modal-content {
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 12px;
+  width: 700px;
+  height: 500px;
+  padding: 25px;
+  color: #fff;
+  font-family: 'Poppins', sans-serif;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Input Field */
+.modal-content input {
+  width: 90%;
+  padding: 12px;
+  margin: 10px 0;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  outline: none;
+}
+
+/* User List */
+.user-list {
+  max-height: 250px;
+  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+/* User Items */
+.user-item {
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.user-item.selected {
+  background: #f4c542;
+  color: black;
+}
+
+/* Modal Buttons */
+.modal-buttons {
+  display: flex;
+  justify-content: space-evenly;
+  gap: 15px;
+}
+
+/* Buttons Styled Like Home Page */
+.modal-buttons button {
+  width: 150px;
+  height: 50px;
+  background: linear-gradient(135deg, #f4c542, #ff9800);
+  color: white;
+  border: none;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 25px;
+  transition: 0.3s ease-in-out;
+  box-shadow: 0 4px 8px rgba(255, 152, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-buttons button:hover {
+  transform: scale(1.05);
+  background: linear-gradient(135deg, #ff9800, #f4c542);
+}
+
+/* Cancel Button */
+.modal-buttons button:last-child {
+  background: rgba(255, 255, 255, 0.2);
+}
