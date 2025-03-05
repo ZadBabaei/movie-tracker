@@ -5,6 +5,7 @@ import axios from "axios";
 import "./Home.css";
 import AnimatedMovie from "../component/AnimatedMovie";
 import HeroNavbar from "../component/HeroNavbar";
+import MovieGroupsDropdown from "../component/MovieGroupsDropdown"; // ✅ New Component
 
 
 
@@ -15,6 +16,7 @@ function Home() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentMovieIndex, setCurrentMovieIndex] = useState(0);
+  const [groups, setGroups] = useState([]); // ✅ Store groups
  
 
   useEffect(() => {
@@ -40,16 +42,43 @@ function Home() {
 
     fetchUserData();
   }, []);
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+
+        const res = await axios.get("http://localhost:5000/api/user/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        setUser(res.data);
+
+        // ✅ Fetch groups
+        const groupsRes = await axios.get("http://localhost:5000/api/user/groups", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setGroups(groupsRes.data);
+      } catch (error) {
+        console.error("❌ Error fetching user data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
 
 
 
   return (
     
     <div className="home-container">
-
-     <HeroNavbar />
-
-
+    <HeroNavbar userName={user ? user.name : "Guest"} />
 {/* Action Buttons */}
 <motion.div
   className="banner-buttons"
@@ -57,9 +86,7 @@ function Home() {
   animate={{ opacity: 1, y: 0 }}
   transition={{ duration: 1 }}
 >
-  <button>
-    <PlayIcon className="button-icon" />  Movie Groups
-  </button>
+  <MovieGroupsDropdown groups={groups} /> {/* ✅ Pass groups to dropdown */}
   <button>
     <FilmIcon className="button-icon" /> Upcoming Movies
   </button>

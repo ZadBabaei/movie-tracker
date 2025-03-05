@@ -12,6 +12,9 @@ app.use(express.json());
 
 // ✅ Correct API Route Registration
 app.use("/api/user", require("./routes/authRoutes"));
+app.use("/api/groups", require("./routes/groupRoutes"));
+app.use("/api/inbox", require("./routes/inboxRoutes")); // ✅ Added inboxRoutes
+
 
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,

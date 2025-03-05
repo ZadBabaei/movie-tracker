@@ -1,0 +1,58 @@
+/* Inbox Container */
+.inbox-container {
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  border-radius: 10px;
+  font-family: "Poppins", sans-serif;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.inbox-container h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* Message Item */
+.message-item {
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  transition: 0.3s;
+}
+
+.message-item:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Buttons */
+.message-item button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 5px;
+  margin-right: 10px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+.message-item button:first-child {
+  background: #4CAF50;
+  color: white;
+}
+
+.message-item button:first-child:hover {
+  background: #45a049;
+}
+
+.message-item button:last-child {
+  background: #f44336;
+  color: white;
+}
+
+.message-item button:last-child:hover {
+  background: #d32f2f;
+}

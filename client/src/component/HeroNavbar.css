@@ -1,0 +1,62 @@
+/* Navbar Styling */
+.glassty-navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  font-family: "Poppins", sans-serif;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Profile Menu Styling */
+.profile-menu {
+  position: relative;
+  cursor: pointer;
+}
+
+.profile-name {
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 10px;
+}
+
+/* Dropdown Styling */
+.profile-dropdown {
+  position: absolute;
+  top: 40px;
+  right: 0;
+  background: rgba(0, 0, 0, 0.9);
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(255, 255, 255, 0.2);
+  display: none;
+  flex-direction: column;
+  width: 150px;
+  padding: 10px 0;
+  z-index: 1000;
+}
+
+.profile-menu:hover .profile-dropdown,
+.profile-menu:focus-within .profile-dropdown {
+  display: flex;
+}
+
+.profile-dropdown a {
+  display: block;
+  padding: 10px 15px;
+  color: white;
+  text-decoration: none;
+  transition: background 0.3s;
+}
+
+.profile-dropdown a:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
