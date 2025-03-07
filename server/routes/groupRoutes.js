@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 const Group = require("../models/Groups");
 const User = require("../models/User");
+const { authenticate } = require("../middleware/authMiddleware");
 require("dotenv").config();
 
 const router = express.Router();
@@ -99,5 +100,71 @@ router.get("/invitations", async (req, res) => {
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 });
+// ✅ GET Group Details (Name, Members, Watched Movies)
+router.get("/:id", authenticate, async (req, res) => {
+  try {
+    const group = await Group.findById(req.params.id)
+      .populate("members", "name email")
+      .populate("movies");
+
+    if (!group) {
+      return res.status(404).json({ msg: "Group not found" });
+    }
+
+    res.json(group);
+  } catch (error) {
+    console.error("Error fetching group:", error);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
+router.post("/:id/add-movie", authenticate, async (req, res) => {
+  try {
+    const { movie } = req.body; // Movie object from frontend
+    const group = await Group.findById(req.params.id);
+
+    if (!group) {
+      return res.status(404).json({ msg: "Group not found" });
+    }
+
+    // Check if movie is already in the list
+    if (group.movies.some(m => m.imdbID === movie.imdbID)) {
+      return res.status(400).json({ msg: "Movie already added" });
+    }
+
+    group.movies.push(movie);
+    await group.save();
+
+    res.json(group);
+  } catch (error) {
+    console.error("Error adding movie:", error);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
+router.delete("/:id/remove-movie/:movieId", authenticate, async (req, res) => {
+  try {
+    const group = await Group.findById(req.params.id);
+
+    if (!group) {
+      return res.status(404).json({ msg: "Group not found" });
+    }
+
+    // Only allow creator to remove movies
+    if (group.creator.toString() !== req.user.id) {
+      return res.status(403).json({ msg: "Only the creator can remove movies" });
+    }
+
+    group.movies = group.movies.filter(
+      (movie) => movie._id.toString() !== req.params.movieId
+    );
+    await group.save();
+
+    res.json(group);
+  } catch (error) {
+    console.error("Error removing movie:", error);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
+
+
 
 module.exports = router;

@@ -1,14 +1,11 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const groupSchema = new mongoose.Schema({
   name: { type: String, required: true },
+  creator: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   members: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-  pendingInvitations: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // ✅ Track pending invites
-
+  movies: [{ type: mongoose.Schema.Types.ObjectId, ref: "Movie" }] // ✅ Ensure This Exists
 });
 
-module.exports = mongoose.models.Groups || mongoose.model("Groups", groupSchema);
-
-
-
-
+// ✅ Corrected Export
+module.exports = mongoose.models.Group || mongoose.model("Group", groupSchema);
