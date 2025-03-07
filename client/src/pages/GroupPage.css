@@ -1,0 +1,53 @@
+.group-page {
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+
+.group-hero {
+  background: url("../assets/1\ \(28\).jpg") no-repeat center center/cover;
+  padding: 50px;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.members-section {
+  margin: 20px 0;
+}
+
+.members-list {
+  display: flex;
+  overflow-x: auto;
+  padding: 10px;
+}
+
+.member-card {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 10px;
+  margin: 5px;
+  border-radius: 5px;
+}
+
+.search-bar {
+  margin: 20px 0;
+}
+
+.search-bar input {
+  padding: 10px;
+  width: 60%;
+}
+
+.movies-section {
+  margin: 20px 0;
+}
+
+.movies-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.movie-card img {
+  width: 100%;
+  border-radius: 5px;
+}

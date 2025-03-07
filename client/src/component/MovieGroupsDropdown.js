@@ -1,20 +1,23 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { PlayIcon } from "@heroicons/react/24/solid";
 import "./MovieGroupsDropdown.css"; // ✅ New CSS file
 import CreateGroupModal from "./CreateGroupModal";
 
-
 const MovieGroupsDropdown = ({ groups, refreshGroups }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleGroupClick = (groupId) => {
+    navigate(`/group/${groupId}`);
+    setIsOpen(false); // Close dropdown after clicking a group
+  };
 
   return (
     <div className="dropdown-container">
-      <a
-        className="dropdown-button"
-        onClick={() => setIsOpen(!isOpen)}
-      >
+      <a className="dropdown-button" onClick={() => setIsOpen(!isOpen)}>
         <PlayIcon className="button-icon" /> Movie Groups
       </a>
 
@@ -28,7 +31,11 @@ const MovieGroupsDropdown = ({ groups, refreshGroups }) => {
           <div className="groups-list">
             {groups.length > 0 ? (
               groups.map((group) => (
-                <div key={group._id} className="group-item">
+                <div
+                  key={group._id}
+                  className="group-item clickable"
+                  onClick={() => handleGroupClick(group._id)}
+                >
                   {group.name}
                 </div>
               ))
@@ -36,7 +43,10 @@ const MovieGroupsDropdown = ({ groups, refreshGroups }) => {
               <div className="group-item">No Groups Found</div>
             )}
           </div>
-          <button className="create-group-button" onClick={() => setIsModalOpen(true)}>
+          <button
+            className="create-group-button"
+            onClick={() => setIsModalOpen(true)}
+          >
             + Create Group
           </button>
         </motion.div>
