@@ -13,7 +13,7 @@ function Signup() {
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		try {
-			await axios.post(`${API_URL}/api/user/login`, { name, email, password });
+			await axios.post(`${API_URL}/api/user/register`, { name, email, password });
 			alert("✅ Signup successful! You can now log in.");
 			navigate("/");
 		} catch (error) {

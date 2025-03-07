@@ -29,34 +29,49 @@
   padding: 10px;
 }
 
-/* Dropdown Styling */
-.profile-dropdown {
-  position: absolute;
-  top: 40px;
-  right: 0;
-  background: rgba(0, 0, 0, 0.9);
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(255, 255, 255, 0.2);
-  display: none;
-  flex-direction: column;
-  width: 150px;
-  padding: 10px 0;
-  z-index: 1000;
+.profile-menu {
+    position: relative; /* Add this */
+    cursor: pointer;
 }
 
-.profile-menu:hover .profile-dropdown,
-.profile-menu:focus-within .profile-dropdown {
-  display: flex;
+/* Dropdown Styling */
+.profile-dropdown {
+    position: absolute;
+    top: 100%; /* Changed from 40px to 100% */
+    right: 0;
+    background: rgba(0, 0, 0, 0.9);
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(255, 255, 255, 0.2);
+    display: none;
+    flex-direction: column;
+    width: 150px;
+    padding: 10px 0;
+    z-index: 1000;
+    margin-top: 5px; /* Add some space between menu and dropdown */
+}
+
+/* Add this to create an invisible bridge between menu and dropdown */
+.profile-menu::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    height: 5px; /* Same as margin-top of dropdown */
+}
+
+.profile-menu:hover .profile-dropdown {
+    display: block;
 }
 
 .profile-dropdown a {
-  display: block;
-  padding: 10px 15px;
-  color: white;
-  text-decoration: none;
-  transition: background 0.3s;
+    display: block;
+    padding: 10px 15px;
+    color: white;
+    text-decoration: none;
+    transition: background 0.3s;
 }
 
 .profile-dropdown a:hover {
-  background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.2);
 }

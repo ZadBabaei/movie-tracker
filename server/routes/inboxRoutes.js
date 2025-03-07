@@ -8,7 +8,7 @@ require("dotenv").config();
 const router = express.Router();
 
 // ✅ Fetch Inbox Messages (Group Invitations, Notifications, etc.)
-router.get("/inbox", async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -31,13 +31,11 @@ router.get("/inbox", async (req, res) => {
       content: `You have been invited to join '${group.name}'!`,
     }));
 
-    // Future: Fetch other messages/notifications here
-    const allMessages = [...formattedInvites];
-
-    res.json(allMessages);
+    // Send a single response
+    return res.json(formattedInvites);
   } catch (error) {
     console.error("Error fetching inbox messages:", error);
-    res.status(500).json({ msg: "Server error", error: error.message });
+    return res.status(500).json({ msg: "Server error", error: error.message });
   }
 });
 

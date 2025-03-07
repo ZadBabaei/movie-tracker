@@ -6,19 +6,31 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated }) => {
   const [step, setStep] = useState(1);
   const [groupName, setGroupName] = useState("");
   const [members, setMembers] = useState([]);
-  const [allUsers, setAllUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+    const [invitationSent, setInvitationSent] = useState(false);
 
   useEffect(() => {
-    if (isOpen && step === 2) {
-      axios
-        .get("http://localhost:5000/api/user/all")
-        .then((res) => setAllUsers(res.data))
-        .catch((err) => console.error("Error fetching users:", err));
+    if (searchQuery.trim()) {
+      const fetchUsers = async () => {
+        try {
+          const token = localStorage.getItem("token");
+          const res = await axios.get(
+            `http://localhost:5000/api/user/search?query=${searchQuery}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          setSearchResults(res.data);
+        } catch (error) {
+          console.error("Error searching users:", error);
+        }
+      };
+      fetchUsers();
+    } else {
+      setSearchResults([]);
     }
-  }, [isOpen, step]);
+  }, [searchQuery]);
 
   const handleNextStep = () => {
     if (!groupName.trim()) {
@@ -37,6 +49,7 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated }) => {
         { groupName, members },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      setInvitationSent(true);
       onGroupCreated();
       onClose();
     } catch (error) {
@@ -45,13 +58,10 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated }) => {
       setLoading(false);
     }
   };
-
-  const filteredUsers = allUsers.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
+    const navigateToHome = () => {
+    window.location.href = "/home";
+  };
+  
   return isOpen ? (
     <div className="modal-overlay">
       <div className="modal-content">
@@ -80,7 +90,7 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated }) => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             <div className="user-list">
-              {filteredUsers.map((user) => (
+              {searchResults.map((user) => (
                 <div
                   key={user._id}
                   className={`user-item ${members.includes(user._id) ? "selected" : ""}`}
@@ -92,15 +102,34 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated }) => {
                     )
                   }
                 >
-                  {user.name} ({user.email}) {members.includes(user._id) && "✅ Invitation Sent"}
+                  {user.name} ({user.email}) {members.includes(user._id) && "✅ Added"}
                 </div>
               ))}
             </div>
+            
+            {/* Selected Friends List */}
+            <h3>Selected Friends:</h3>
+            <div className="selected-members">
+              {members.map((memberId) => {
+                const user = searchResults.find((u) => u._id === memberId);
+                return user ? (
+                  <div key={user._id} className="selected-member">
+                    {user.name} ({user.email})
+                    <button onClick={() => setMembers((prev) => prev.filter((id) => id !== user._id))}>
+                      ❌ Remove
+                    </button>
+                  </div>
+                ) : null;
+              })}
+            </div>
+
             <div className="modal-buttons">
               <button onClick={handleSendInvitations} disabled={loading}>
                 {loading ? "Sending..." : "Send Invitations"}
               </button>
-              <button onClick={onClose}>Skip</button>
+              <button onClick={invitationSent ? navigateToHome : onClose}>
+                  {invitationSent ? "Done" : "Skip"}
+                  </button>
             </div>
           </>
         )}
