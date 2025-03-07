@@ -3,7 +3,6 @@
 }
 
 .dropdown-button {
-  background: #222;
   color: white;
   padding: 10px 15px;
   border-radius: 5px;
@@ -38,11 +37,14 @@
 }
 
 .create-group-button {
-    height: 40px;
-  background: #444;
+  height: 40px;
+  background: #eab114;
   color: white;
   padding: 10px;
   text-align: center;
   width: 100%;
   border-top: 1px solid #555;
+}
+.create-group-button:hover {
+  background: #7d5d0a;
 }

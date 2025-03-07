@@ -157,6 +157,50 @@ router.post("/groups/create", async (req, res) => {
   }
 });
 
+router.get("/search", async (req, res) => {
+  try {
+    console.log("🔍 Search API hit with query:", req.query);
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.log("❌ Authentication failed: No token or invalid token format");
+      return res.status(401).json({ msg: "Unauthorized: No token provided" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    console.log("🔹 Token received:", token);
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("✅ Token decoded:", decoded);
+    
+    const { query } = req.query;
+    console.log("🔍 Search query:", query);
+
+    if (!query) {
+      console.log("ℹ️ No search query provided, returning empty array");
+      return res.json([]);
+    }
+
+    // Search users by name or email
+    const searchQuery = {
+      $or: [
+        { name: { $regex: query, $options: "i" } },
+        { email: { $regex: query, $options: "i" } }
+      ]
+    };
+    console.log("🔍 MongoDB query:", JSON.stringify(searchQuery));
+
+    const users = await User.find(searchQuery)
+      .select("_id name email")
+      .limit(10); // Add limit for better performance
+
+    console.log("✅ Search results:", users);
+    res.json(users);
+  } catch (error) {
+    console.error("❌ Error searching users:", error);
+    res.status(500).json({ msg: "Server error", error: error.message });
+  }
+});
 
 
 module.exports = router;
