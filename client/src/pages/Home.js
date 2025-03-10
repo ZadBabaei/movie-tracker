@@ -45,7 +45,11 @@ function Home() {
   return (
     
     <div className="home-container">
-    <HeroNavbar userName={user ? user.name : "Guest"} />
+      <HeroNavbar
+        userName={user ? user.name : "Guest"}
+        backgroundImage="https://image.tmdb.org/t/p/original/7ucaMpXAmlIM24qZZ8uI9hCY0hm.jpg"
+        heroText="WATCH, TRACK, AND RELIVE THE FUN!"
+      />
 {/* Action Buttons */}
 <motion.div
   className="banner-buttons"

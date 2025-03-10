@@ -1,13 +1,5 @@
 /* Navbar Styling */
-.glassty-navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px 20px;
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  font-family: "Poppins", sans-serif;
-}
+
 
 .nav-right {
   display: flex;
@@ -74,4 +66,16 @@
 
 .profile-dropdown a:hover {
     background: rgba(255, 255, 255, 0.2);
+}
+
+.hero-banner{
+    /* background-image: url('https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0'); */
+  background: no-repeat center center;
+  background-size: cover;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    text-align: center;
 }
