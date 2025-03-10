@@ -1,14 +1,11 @@
 .group-page {
   color: white;
-  padding: 20px;
   text-align: center;
 }
 
-.group-hero {
-  background: url("../assets/1\ \(28\).jpg") no-repeat center center/cover;
-  padding: 50px;
-  font-size: 1.5rem;
-  font-weight: bold;
+.group-page h1 {
+  font-size: 2rem;
+  margin-bottom: 20px;
 }
 
 .members-section {
@@ -35,6 +32,15 @@
 .search-bar input {
   padding: 10px;
   width: 60%;
+}
+.search-bar button {
+  width: 100px;
+  padding: 10px;
+  background: linear-gradient(135deg, #f4c542, #ff9800);
+  color: rgb(0, 0, 0);
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
 }
 
 .movies-section {

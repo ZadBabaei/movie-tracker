@@ -3,6 +3,8 @@ const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 const Group = require("../models/Groups");
 const User = require("../models/User");
+const Movie = require("../models/movie"); // ✅ Add this line
+
 const { authenticate } = require("../middleware/authMiddleware");
 require("dotenv").config();
 
@@ -166,5 +168,5 @@ router.delete("/:id/remove-movie/:movieId", authenticate, async (req, res) => {
 });
 
 
-
+console.log("zad");
 module.exports = router;

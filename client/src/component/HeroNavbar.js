@@ -1,37 +1,16 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import "./HeroNavbar.css";
 import MovieGroupsDropdown from "./MovieGroupsDropdown";
 
-const HeroNavbar = ({ userName }) => {
+const HeroNavbar = ({ userName, backgroundImage, heroText }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
-  const timeoutRef = useRef(null);
   const [groups, setGroups] = useState([]);
 
-  const getActiveSubmenu = () => {
-    if (window.location.pathname === "/inbox") return "Inbox";
-    return userName; // Default to user's name
-  };
-    // Determine Hero Section Background and Text
-  const getHeroContent = () => {
-    if (window.location.pathname === "/inbox") {
-      return {
-        image: "https://image.tmdb.org/t/p/original/dkPPPpgs9ME6V5qrdK9yIJ7JUrI.jpg",
-        text: "",
-      };
-    }
-    return {
-      image: "https://image.tmdb.org/t/p/original/7ucaMpXAmlIM24qZZ8uI9hCY0hm.jpg",
-      text: "WATCH, TRACK, AND RELIVE THE FUN!",
-    };
-  };
-
-  const heroContent = getHeroContent();
-useEffect(() => {
+  useEffect(() => {
     const fetchUserData = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -43,10 +22,8 @@ useEffect(() => {
         const res = await axios.get("http://localhost:5000/api/user/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
-
         setUser(res.data);
 
-        // ✅ Fetch groups
         const groupsRes = await axios.get("http://localhost:5000/api/user/groups", {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -57,43 +34,38 @@ useEffect(() => {
         setLoading(false);
       }
     };
-
     fetchUserData();
-}, []);
-  
+  }, []);
+
   return (
-    <div>
+    <main>
       <nav className="glassy-navbar">
-         {/* Clickable Movie Tracker Title */}
         <div className="nav-left" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>
           <span>Movie Tracker</span>
         </div>
         <div className="nav-right">
-        <MovieGroupsDropdown groups={groups} /> {/* ✅ Pass groups to dropdown */}
-          <a href="/upcoming-movies" >🎬 Upcoming Movies
-           
-          </a>
-          <a href="/watchlist" >📋 Watchlist</a>
+          <MovieGroupsDropdown groups={groups} />
+          <li href="/upcoming-movies">🎬 Upcoming Movies</li>
+          <li href="/watchlist">📋 Watchlist</li>
 
-          {/* Profile Menu with Delayed Close */}
           <div className="profile-menu">
-            <span className="profile-name">{getActiveSubmenu()} ▼</span>
-            <div className="profile-dropdown">
-              <a href="#" onClick={() => navigate("/profile")}>Profile</a>
-              <a href="#" onClick={() => navigate("/inbox")}>Inbox</a>
-              <a href="#" onClick={() => navigate("/")} >Logout</a>
-            </div>
+            <span className="profile-name">{userName || "User"} ▼</span>
+            <ul className="profile-dropdown">
+              <li  onClick={() => navigate("/profile")}>Profile</li>
+              <li  onClick={() => navigate("/inbox")}>Inbox</li>
+              <li  onClick={() => navigate("/")}>Logout</li>
+            </ul>
           </div>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <div className="hero-banner">
-        <img src={heroContent.image} alt="Banner" className="banner-image" />
+      <div className="hero-banner" style={{ backgroundImage: `url(${backgroundImage})` }}>
         <div className="banner-overlay" />
-        <h1 className="banner-text">{heroContent.text}</h1>
+        {heroText && <h1 className="banner-text">{heroText}</h1>}
       </div>
-    </div>
+    </main>
   );
 };
+
 export default HeroNavbar;
