@@ -1,7 +1,38 @@
-/* Navbar Styling */
 
+/* Glassy Navbar */
+.glassy-navbar {
+    width:inherit;
+    height: 70px;
+    position: relative;
+    top: 0;
+    display: grid;;
+    grid-template-columns: 20% 80%;
+    align-items: center;
+    align-content: center;
+    justify-content: end;
+    justify-items: end;
+    backdrop-filter: blur(12px);
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 10;
+}
+.nav-left{
+    width:60%;
+    color:aliceblue
+}
+.nav-right li {
+    color: #f4c542;
+    text-decoration: none;
+    list-style: none;
+    font-weight: bold;
+    transition: 0.3s;
+}
 
+.nav-right li:hover {
+    transform: scale(1.1);
+    color: #fff;
+}
 .nav-right {
+    width:70%;
   display: flex;
   align-items: center;
   gap: 20px;
@@ -12,7 +43,10 @@
   position: relative;
   cursor: pointer;
 }
-
+.profile-menu li{
+     transform: scale(1.1);
+    color: #fff;
+}
 .profile-name {
   font-weight: bold;
   display: flex;
@@ -66,16 +100,4 @@
 
 .profile-dropdown a:hover {
     background: rgba(255, 255, 255, 0.2);
-}
-
-.hero-banner{
-    /* background-image: url('https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0'); */
-  background: no-repeat center center;
-  background-size: cover;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    text-align: center;
 }

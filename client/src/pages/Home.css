@@ -1,3 +1,6 @@
+body{
+    background-color: aliceblue;
+}
 /* General Home Container */
 .home-container {
     width: 100vw;
@@ -11,121 +14,6 @@
     overflow-x: hidden;
 }
 
-/* Hero Banner */
-.hero-banner {
-    width: 100vw;
-    height: 50vh;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: black;
-}
-
-.banner-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    position: absolute;
-    z-index: 1;
-    filter: brightness(40%);
-}
-
-.banner-overlay {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
-    z-index: 2;
-}
-
-/* Glassy Navbar */
-.glassy-navbar {
-    width: 100vw;
-    height: 70px;
-    position: absolute;
-    top: 0;
-    /* left: 3000; */
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    
-    backdrop-filter: blur(12px);
-    background: rgba(0, 0, 0, 0.4);
-    z-index: 10;
-}
-
-/* Navbar Links */
-.nav-right {
-    display: flex;
-    gap: 100px; 
-}
-
-.nav-right a {
-    color: #f4c542;
-    text-decoration: none;
-    font-weight: bold;
-    transition: 0.3s;
-}
-
-.nav-right a:hover {
-    transform: scale(1.1);
-    color: #fff;
-}
-
-/* Centered Banner Text */
-.banner-text {
-    position: relative;
-    text-align: center;
-    color: #fff;
-    font-size: 34px;
-    font-weight: 700;
-    background: rgba(0, 0, 0, 0.6);
-    padding: 12px 25px;
-    border-radius: 8px;
-    text-transform: uppercase;
-    z-index: 2;
-    max-width: 80%;
-}
-
-/* Action Buttons */
-.banner-buttons {
-    display: flex;
-    gap: 15px;
-    justify-content: center;
-    margin-top: 20px;
-}
-
-.banner-buttons button {
-    width:150px;
-    height: 50px;
-    background: linear-gradient(135deg, #f4c542, #ff9800);
-    color: white;
-    border: none;
-    padding: 10px 18px;
-    font-size: 14px;
-    font-weight: bold;
-    cursor: pointer;
-    border-radius: 25px;
-    transition: 0.3s ease-in-out;
-    box-shadow: 0 4px 8px rgba(255, 152, 0, 0.3);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.banner-buttons button:hover {
-    transform: scale(1.05);
-    background: linear-gradient(135deg, #ff9800, #f4c542);
-}
-
-/* Icons inside buttons */
-.button-icon {
-    width: 16px;
-    height: 16px;
-    color: white;
-}
 
 /* Movie Section */
 

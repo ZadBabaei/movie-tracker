@@ -17,9 +17,9 @@ const MovieGroupsDropdown = ({ groups, refreshGroups }) => {
 
   return (
     <div className="dropdown-container">
-      <a className="dropdown-button" onClick={() => setIsOpen(!isOpen)}>
-        <PlayIcon className="button-icon" /> Movie Groups
-      </a>
+      <li className="dropdown-button" onClick={() => setIsOpen(!isOpen)}>
+         Movie Groups
+      </li>
 
       {isOpen && (
         <motion.div

@@ -4,7 +4,8 @@ import { motion } from "framer-motion";
 import axios from "axios";
 import "./Home.css";
 import AnimatedMovie from "../component/AnimatedMovie";
-import HeroNavbar from "../component/HeroNavbar";
+import Hero from "../component/Hero";
+import Navbar from "../component/Navbar";
 // import MovieGroupsDropdown from "../component/MovieGroupsDropdown"; // ✅ New Component
 
 
@@ -37,19 +38,15 @@ function Home() {
   }, []);
 
 
-  
-
-
-
-
   return (
-    
+   
     <div className="home-container">
-      <HeroNavbar
-        userName={user ? user.name : "Guest"}
-        backgroundImage="https://image.tmdb.org/t/p/original/7ucaMpXAmlIM24qZZ8uI9hCY0hm.jpg"
-        heroText="WATCH, TRACK, AND RELIVE THE FUN!"
-      />
+    <Navbar
+        // userName={user ? user.name : "Guest"}
+  ></Navbar>
+      <Hero
+      backgroundImage="https://image.tmdb.org/t/p/original/7ucaMpXAmlIM24qZZ8uI9hCY0hm.jpg"></Hero>
+
 {/* Action Buttons */}
 <motion.div
   className="banner-buttons"

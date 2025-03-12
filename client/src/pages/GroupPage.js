@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./GroupPage.css";
-import HeroNavbar from "../component/HeroNavbar";
+import HeroNavbar from "../component/Hero";
 
 
 

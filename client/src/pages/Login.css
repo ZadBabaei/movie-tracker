@@ -61,18 +61,30 @@ h1, h2, h3 {
 
 /* Center the login page */
 .wrapper {
-  width: 350px;
+  width: 600px;
   padding: 20px;
   background: white;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   border-radius: 8px;
+  display: flex;
+  flex:1;
+  grid-gap: 20px;
   text-align: center;
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
 }
-
+.left-side, .right-side {
+  padding: 10px;
+  width: 55%;
+}
+.left-side, img{
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+}
 /* Style the login heading */
 .login-text {
   font-size: 24px;
