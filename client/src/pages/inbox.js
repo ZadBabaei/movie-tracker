@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import HeroNavbar from "../component/HeroNavbar";
+import Hero from "../component/Hero";
+import Navbar from "../component/Navbar";
 import "./inbox.css";
 
 const Inbox = () => {
@@ -44,7 +45,8 @@ const Inbox = () => {
 
   return (
     <div className="home-container">
-      <HeroNavbar />
+      <Navbar></Navbar>
+      <Hero></Hero>
 
       {/* Inbox Messages */}
       <div className="inbox-container">

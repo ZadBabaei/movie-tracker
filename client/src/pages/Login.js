@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import './Login.css';
+import SinginImg from "../assets/signin-image.jpg";
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -33,28 +34,35 @@ function Login() {
 
   return (
     <div className="wrapper">
-      <h2 className='login-text'>Login</h2>
-      {error && <p className="error-message">{error}</p>} {/* ✅ Display error */}
-      <form onSubmit={handleSubmit}>
-        <input 
-          type="email" 
-          placeholder="Email" 
-          value={email} 
-          onChange={e => setEmail(e.target.value)}
-          required
-        />
-        <input 
-          type="password" 
-          placeholder="Password" 
-          value={password} 
-          onChange={e => setPassword(e.target.value)}
-          required
-        />
-        <button type="submit">Login</button>
-      </form>
-      <p>
-        Don’t have an account? <Link to="/signup">Sign up</Link>
-      </p>
+      <div className="left-side">
+        <img  className="left-side-img" src={SinginImg} alt="" />
+        <h4>Create an account</h4>
+      </div>
+      <div className="right-side">
+        <h1>SignIn</h1>
+        <form onSubmit={handleSubmit}>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <input type="checkbox" id="rememberMe" />
+          <label htmlFor="rememberMe">Remember Me</label>
+          {error && <p className="error">{error}</p>}
+          <button type="submit">Login</button>
+        </form>
+        <div className="other-logging-type">
+          <h4> or loggin with</h4>
+          <img src="" alt="" /><img src="" alt="" /><img src="" alt="" />
+      </div>
+      </div>
     </div>
   );
 }
