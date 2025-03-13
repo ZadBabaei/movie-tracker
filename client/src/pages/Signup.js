@@ -1,65 +1,138 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import signupImg from "../assets/signup-image.jpg";
+import Box from "@mui/material/Box";
+import TextField from "@mui/material/TextField";
+import EmailIcon from "@mui/icons-material/Email";
+import FormGroup from "@mui/material/FormGroup";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Checkbox from "@mui/material/Checkbox";
+
+import PersonIcon from "@mui/icons-material/Person";
+import HttpsIcon from "@mui/icons-material/Https";
+import HttpsOutlinedIcon from "@mui/icons-material/HttpsOutlined";
 import "./Signup.css";
 
 function Signup() {
 	const [name, setName] = useState("");
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
+	const [repeatPassword, setRepeatPassword] = useState("");
+	const [error, setError] = useState(null);
 	const navigate = useNavigate();
 	const API_URL = process.env.REACT_APP_API_URL;
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
+		setError(null);
+		if (password !== repeatPassword) {
+			setError("❌ Passwords do not match.");
+			return;
+		}
 		try {
-			await axios.post(`${API_URL}/api/user/register`, { name, email, password });
+			await axios.post(`${API_URL}/api/user/register`, {
+				name,
+				email,
+				password,
+			});
 			alert("✅ Signup successful! You can now log in.");
 			navigate("/");
 		} catch (error) {
-			alert("❌ Signup failed. Maybe the user already exists.");
+			setError(error.response?.data?.message || "❌ Signup failed. Maybe the user already exists.");
 		}
 	};
 
 	return (
-		<div className="auth-container">
-			<div className="auth-wrapper">
-				<h2 className="auth-title">Signup</h2>
-				<form onSubmit={handleSubmit}>
-					<input
-						type="text"
-						className="auth-input"
-						placeholder="Name"
-						value={name}
-						onChange={(e) => setName(e.target.value)}
-						required
-					/>
-					<input
-						type="email"
-						className="auth-input"
-						placeholder="Email"
-						value={email}
-						onChange={(e) => setEmail(e.target.value)}
-						required
-					/>
-					<input
-						type="password"
-						className="auth-input"
-						placeholder="Password"
-						value={password}
-						onChange={(e) => setPassword(e.target.value)}
-						required
-					/>
-					<button type="submit" className="auth-button">
-						Sign Up
-					</button>
-				</form>
-				<p className="auth-switch">
-					Already have an account? <Link to="/">Login</Link>
-				</p>
-			</div>
-		</div>
-	);
+    <div className="wrapper">
+      <div className="left-side">
+        <h1>Sign Up</h1>
+        <form onSubmit={handleSubmit}>
+          <Box sx={{ "& > :not(style)": { m: 1 } }}>
+            <Box sx={{ display: "flex", alignItems: "flex-end" }}>
+              <PersonIcon
+                sx={{ color: "action.active", mr: 1, my: 1, fontSize: 14 }}
+              />
+              <TextField
+                label="Name"
+                variant="standard"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                sx={{ width: "250px" }}
+                InputProps={{ sx: { fontSize: "14px" } }}
+                InputLabelProps={{ sx: { fontSize: "12px" } }}
+              />
+            </Box>
+          </Box>
+          <Box sx={{ "& > :not(style)": { m: 1 } }}>
+            <Box sx={{ display: "flex", alignItems: "flex-end" }}>
+              <EmailIcon
+                sx={{ color: "action.active", mr: 1, my: 1, fontSize: 14 }}
+              />
+              <TextField
+                label="E-mail"
+                variant="standard"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                sx={{ width: "250px" }}
+                InputProps={{ sx: { fontSize: "14px" } }}
+                InputLabelProps={{ sx: { fontSize: "12px" } }}
+              />
+            </Box>
+          </Box>
+          <Box sx={{ "& > :not(style)": { m: 1 } }}>
+            <Box sx={{ display: "flex", alignItems: "flex-end" }}>
+              <HttpsIcon
+                sx={{ color: "action.active", mr: 1, my: 1, fontSize: 14 }}
+              />
+              <TextField
+                label="Password"
+                variant="standard"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                sx={{ width: "250px" }}
+                InputProps={{ sx: { fontSize: "14px" } }}
+                InputLabelProps={{ sx: { fontSize: "12px" } }}
+              />
+            </Box>
+          </Box>
+          <Box sx={{ "& > :not(style)": { m: 1 } }}>
+            <Box sx={{ display: "flex", alignItems: "flex-end" }}>
+              <HttpsOutlinedIcon
+                sx={{ color: "action.active", mr: 1, my: 1, fontSize: 14 }}
+              />
+              <TextField
+                label="Repeat Password"
+                variant="standard"
+                type="password"
+                value={repeatPassword}
+                onChange={(e) => setRepeatPassword(e.target.value)}
+                sx={{ width: "250px" }}
+                InputProps={{ sx: { fontSize: "14px" } }}
+                InputLabelProps={{ sx: { fontSize: "12px" } }}
+              />
+            </Box>
+          </Box>
+          <FormGroup>
+            <FormControlLabel
+              control={<Checkbox />}
+              label="I agree to all statements in Terms of Service"
+              sx={{ "& .MuiTypography-root": { fontSize: "12px" } }}
+            />
+          </FormGroup>
+          {error && <p className="error">{error}</p>}
+          <button className="left-side-btn" type="submit">
+            Submit
+          </button>
+        </form>
+      </div>
+      <div className="right-side">
+        <img className="right-side-img" src={signupImg} alt="Sign Up" />
+        <h3 onClick={() => navigate("/")}>Already have an account?</h3>
+      </div>
+    </div>
+  );
 }
 
 export default Signup;

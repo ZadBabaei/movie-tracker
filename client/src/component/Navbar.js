@@ -38,24 +38,29 @@ const Navbar = ({ groups: initialGroups, userName }) => {
   }, []);
 
     return (
-    <nav className="glassy-navbar">
-        <div className="nav-left" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>
-        <span>Movie Tracker</span>
+      <nav className="glassy-navbar">
+        <div
+          className="nav-left"
+          onClick={() => navigate("/home")}
+          style={{ cursor: "pointer" }}
+        >
+          <span>Movie Tracker</span>
         </div>
         <ul className="nav-right">
-            <MovieGroupsDropdown groups={groups} />
-            <li > Upcoming Movies</li>
-            <li > Watchlist</li>            
-            <li className="profile-menu">
-                <span className="profile-name">{userName || "User"} </span>
-                <ul className="profile-dropdown">
-                    <li  onClick={() => navigate("/profile")}>Profile</li>
-                    <li  onClick={() => navigate("/inbox")}>Inbox</li>
-                    <li  onClick={() => navigate("/")}>Logout</li>
-                </ul>
-            </li>
-          </ul>
-    </nav>
+          <MovieGroupsDropdown groups={groups} />
+          <li> Upcoming Movies</li>
+          <li> Watchlist</li>
+          <li className="profile-menu">
+            <span className="profile-name">{user ? user.name : "User"} </span>
+
+            <ul className="profile-dropdown">
+              <li onClick={() => navigate("/profile")}>Profile</li>
+              <li onClick={() => navigate("/inbox")}>Inbox</li>
+              <li onClick={() => navigate("/")}>Logout</li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
     );
 };
 
