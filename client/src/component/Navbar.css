@@ -25,6 +25,7 @@
     list-style: none;
     font-weight: bold;
     transition: 0.3s;
+    cursor: pointer;
 }
 
 .nav-right li:hover {
@@ -35,11 +36,13 @@
     width:70%;
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 50px;
 }
 
 /* Profile Menu Styling */
 .profile-menu {
+    height: 40px;
+    width: 70px;
   position: relative;
   cursor: pointer;
 }
@@ -62,15 +65,13 @@
 
 /* Dropdown Styling */
 .profile-dropdown {
-    position: absolute;
-    top: 100%; /* Changed from 40px to 100% */
-    right: 0;
+
     background: rgba(0, 0, 0, 0.9);
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(255, 255, 255, 0.2);
     display: none;
-    flex-direction: column;
-    width: 150px;
+    width: 200px;
+    height: 150px;
     padding: 10px 0;
     z-index: 1000;
     margin-top: 5px; /* Add some space between menu and dropdown */
@@ -87,10 +88,14 @@
 }
 
 .profile-menu:hover .profile-dropdown {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+     /* justify-content: space-around; */
+    align-items: center; 
 }
 
-.profile-dropdown a {
+.profile-dropdown li {
     display: block;
     padding: 10px 15px;
     color: white;
@@ -98,6 +103,7 @@
     transition: background 0.3s;
 }
 
-.profile-dropdown a:hover {
+.profile-dropdown li:hover {
+    width: 80%;
     background: rgba(255, 255, 255, 0.2);
 }
