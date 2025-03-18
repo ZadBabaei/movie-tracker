@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import MovieGroupsDropdown from './MovieGroupsDropdown';
 import "./Navbar.css";
 import axios from "axios";
 
-const Navbar = ({ groups: initialGroups, userName }) => {
+const Navbar = ({ groups: initialGroups, userName, groupName }) => {
     const navigate = useNavigate();
       const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
@@ -51,7 +51,13 @@ const Navbar = ({ groups: initialGroups, userName }) => {
           <li> Upcoming Movies</li>
           <li> Watchlist</li>
           <li className="profile-menu">
-            <span className="profile-name">{user ? user.name : "User"} </span>
+            <span className="profile-name">
+              {useLocation().pathname.startsWith("/group/")
+                ? groupName || "Group"
+                : user
+                ? user.name
+                : "User"}
+            </span>
 
             <ul className="profile-dropdown">
               <li onClick={() => navigate("/profile")}>Profile</li>

@@ -1,18 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import axios from "axios";
 import "./GroupPage.css";
 import Navbar from "../component/Navbar";
 import Hero from "../component/Hero";
+import SearchBar from "../component/SearchBar";
+import MovieCard from "../component/MovieCard";
 
 const GroupPage = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [group, setGroup] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [addedMovies, setAddedMovies] = useState([]);
 
   useEffect(() => {
     fetchGroupDetails();
@@ -21,45 +19,34 @@ const GroupPage = () => {
   const fetchGroupDetails = async () => {
     try {
       const token = localStorage.getItem("token");
-      if (!token) {
-        setError("❌ No token found. Please log in.");
-        return;
-      }
       const res = await axios.get(`http://localhost:5000/api/groups/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setGroup(res.data);
     } catch (error) {
-      setError("❌ Failed to fetch group details. Try again.");
+      console.error("Failed to fetch group details.");
     }
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery) return;
-    try {
-      setLoading(true);
-      const res = await axios.get(
-        `https://api.themoviedb.org/3/search/movie?api_key=YOUR_TMDB_API_KEY&query=${searchQuery}`
-      );
-      setSearchResults(res.data.results || []);
-    } catch (error) {
-      setError("Failed to fetch movies.");
-    } finally {
-      setLoading(false);
-    }
+  const handleMovieAdd = (movie) => {
+    setAddedMovies((prev) => [...prev, movie]);
   };
+    const handleDeleteMovie = (movieId) => {
+      setAddedMovies((prev) => prev.filter((m) => m.id !== movieId));
+  };
+  
 
   if (!group) return <p>Loading group...</p>;
 
-
-    return (
+  return (
     <div className="group-page">
-      <Navbar userName={group.name} />
+      <Navbar groupName={group.name} />
       <Hero
-        backgroundImage="https://image.tmdb.org/t/p/original/nxmumfhlU7jCCZDlopSzO8hxjBo.jpg"
+        backgroundImage="https://image.tmdb.org/t/p/original/syF8YHGu2XY3i0mq1U998t0laEG.jpg"
         heroText="What we watched together so far!"
       />
       <div className="group-content">
+        {/* Members */}
         <div className="group-members">
           <h1 className="group-members-title">Group Members</h1>
           <div className="group-member-card-container">
@@ -76,16 +63,19 @@ const GroupPage = () => {
           </div>
           <button className="group-member-btn">Invite Friends</button>
         </div>
-        <div className="group-movie-search-container">
-          <input
-            type="text"
-            placeholder="Search for a movie..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          <button className="movie-search-bt" onClick={handleSearch}>
-            {loading ? "Searching..." : "Search"}
-          </button>
+
+        {/* Modular SearchBar */}
+        <SearchBar onMovieSelect={handleMovieAdd} />
+
+        {/* Movies Section */}
+        <div className="added-movies-container">
+          {addedMovies.map((movie) => (
+            <MovieCard
+              key={movie.id}
+              movie={movie}
+              onDelete={() => handleDeleteMovie(movie.id)}
+            />
+          ))}
         </div>
       </div>
     </div>
