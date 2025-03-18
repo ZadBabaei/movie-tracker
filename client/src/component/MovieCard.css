@@ -1,0 +1,89 @@
+.Group-movie-card {
+    width: 250px;   
+    /* height: 400px; */
+    margin: 10px;   
+      display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap:10px;
+    background-color: black;
+
+  
+}
+
+.Group-movie-card:hover {
+  transform: translateY(-5px);
+}
+
+.Group-poster-container {
+  position: relative;
+}
+
+.Group-movie-poster {
+  width: 100%;
+  display: block;
+  border-bottom: 1px solid #333;
+}
+
+/* Overlay */
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  transition: opacity 0.3s ease;
+}
+
+.Group-poster-container:hover .overlay {
+  opacity: 1;
+}
+
+.icon {
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.icon:hover {
+  transform: scale(1.2);
+}
+
+.info-icon {
+  color: #4db8ff;
+}
+
+.heart-icon {
+  color: #ff5e5e;
+}
+
+.delete-icon {
+  color: #ff4747;
+}
+
+.Group-movie-details {
+  padding: 10px;
+  color: #fff;
+}
+
+.Group-movie-details h3 {
+  font-size: 18px;
+  margin-bottom: 5px;
+}
+
+.Grou-pmovie-details p {
+background-color: aquamarine;
+color: #fff;
+  font-size: 14px;
+  margin: 2px 0;
+}
+.favorited {
+  color: #ffd700 !important; /* gold star color */
+}
