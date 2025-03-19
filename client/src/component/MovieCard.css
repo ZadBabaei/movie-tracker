@@ -1,15 +1,44 @@
 .Group-movie-card {
-    width: 250px;   
-    /* height: 400px; */
-    margin: 10px;   
-      display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap:10px;
-    background-color: black;
+  width: 200px;
+  height: 400px;
+  margin: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 
-  
+}
+.movie-title {
+  width: 180px;
+  font-family: Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif;
+  font-size: 12px;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: 700;
+  line-height: 15.4px;
+  color: white;
+  border-radius: 10px;
+  background-color: #2e2c2c;
+  text-align: center;
+   padding: 5px;
+}
+.rating {
+    width: 180px;
+     border-radius: 10px;
+    background-color: #2e2c2c;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 14px;
+  margin: 0;
+  padding: 5px;
+}
+
+.imdb-icon svg {
+  width: 20px;
+  height: 20px;
+  display: inline-block;
 }
 
 .Group-movie-card:hover {
@@ -69,7 +98,7 @@
 }
 
 .Group-movie-details {
-  padding: 10px;
+
   color: #fff;
 }
 
@@ -79,8 +108,8 @@
 }
 
 .Grou-pmovie-details p {
-background-color: aquamarine;
-color: #fff;
+  background-color: aquamarine;
+  color: #fff;
   font-size: 14px;
   margin: 2px 0;
 }

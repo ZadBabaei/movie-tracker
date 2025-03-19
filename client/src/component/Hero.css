@@ -21,20 +21,13 @@ html, body, #root {
 
 }
 
-.banner-image {
-    width: 100%;
-    height: 100%;
-    object-fit:fill;
-    position: absolute;
-    z-index: 1;
-    /* filter: brightness(40%); */
-}
+
 
 .banner-overlay {
     position: absolute;
     width: 100%;
     height: 100%;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+    /* background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent); */
     z-index: 2;
 }
 
