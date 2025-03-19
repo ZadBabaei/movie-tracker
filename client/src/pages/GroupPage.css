@@ -1,20 +1,19 @@
-/* 
-.group-page {
 
-  min-height: 100vh;
-  color: white;
-  text-align: center;
-} */
+.group-page {
+  background: rgb(15,32,39);
+background: linear-gradient(180deg, rgba(15,32,39,1) 23%, rgba(32,58,67,1) 47%, rgba(44,83,100,1) 100%);
+}
 .group-content {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: center; 
+  align-items: flex-start; 
   width: 100%;
   margin-top: 320px;
   padding: 20px;
   box-sizing: border-box;
   margin-left: 0; 
+
 }
 
 .group-page h1 {
@@ -28,44 +27,23 @@
 
 .members-list {
   display: flex;
-  overflow-x: auto;
+  overflow-x: hidden;
+  flex-wrap: nowrap;
   padding: 10px;
 }
 
 .member-card {
+  /* width: 2000px; */
   background: rgba(255, 255, 255, 0.1);
   padding: 10px;
   margin: 5px;
   border-radius: 5px;
 }
 
-.search-bar {
-  margin: 20px 0;
-}
-
-.search-bar input {
-  padding: 10px;
-  width: 60%;
-}
-.search-bar button {
-  width: 100px;
-  padding: 10px;
-  background: linear-gradient(135deg, #f4c542, #ff9800);
-  color: rgb(0, 0, 0);
-  border: none;
-  cursor: pointer;
-  border-radius: 5px;
-}
-
-
-
-
 
 .group-members {
-  background-color: red;
   width: 100%;
   max-width: 1200px;
-  margin: 0 auto;
   padding: 20px;
 }
 .group-members{
@@ -75,25 +53,42 @@
   flex-direction: column;
   justify-content: flex-start;
   align-items: flex-start;
-  gap: 20px;
+  gap: 10px;
   height: 300px;
-  color: black;
+  color: rgb(251, 247, 247);
 
 }
 .group-member-card-container {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   gap: 20px;
+  padding-bottom: 10px;
+  /* width: 100%; */
+
+  /* Scroll Timeline Animation */
+  animation: slide-left linear;
+  animation-timeline: scroll();
+  animation-range: 0 500px;
 }
+
+@keyframes slide-left {
+  from {
+    transform: translateX(0%);
+  }
+  to {
+    transform: translateX(-70%);
+  }
+}
+
 .group-members-card {
   display: flex;
-  flex-direction: row-reverse;
+  flex-direction: row;
   justify-content: space-between;
   flex-wrap: wrap ;
   align-items: center;
   background-color: rgb(209, 240, 213);
-  width: 300px;
+  width: 200px;
   max-width: 100%;
   height: 50px;
   border-radius: 10px;
@@ -112,31 +107,35 @@ color: black ;
     background-color: rgb(137, 134, 134); /* Line color */
     margin: 0 10px; /* Spacing around the line */
 }
-.group-member-btn{
-  width: 200px;
-  height: 60px;
-  background-color: #6170c7;
-  color: white;
-  border-radius: 5px;
-  padding: 5px;
-  margin: 5px;
-  cursor: pointer;
+
+  
+/* From Uiverse.io by ShrinilDhorda */ 
+.group-member-btn {
+  margin-top:10px;
+	box-shadow: 1px 2px 6px 2px #9fb4f2;
+	background:linear-gradient(to bottom, #7892c2 5%, #476e9e 100%);
+	background-color:#7892c2;
+	border-radius:16px;
+	border:1px solid #4e6096;
+	display:inline-block;
+	cursor:pointer;
+	color:#ffffff;
+	font-family:Arial;
+	font-size:19px;
+	padding:15px 60px;
+	text-decoration:none;
+	text-shadow:0px 3px 0px #283966;
+}
+.group-member-btn:hover {
+	background:linear-gradient(to bottom, #476e9e 5%, #7892c2 100%);
+	background-color:#476e9e;
+}
+.group-member-btn:active {
+	position:relative;
+	top:1px;
 }
 
-.movie-search-bt {
-  width: 200px;
-  height: 60px;
-  background-color: #6170c7;
-  color: white;
-  border-radius: 5px;
-  padding: 5px;
-  margin: 5px;
-  cursor: pointer;
-}
-
-.movie-search-bt:hover, .group-member-btn:hover {
-  background-color: #4e5aa3;
-}
+         
 .group-movie-search-container {
   width: 100%;
   max-width: 1200px;
@@ -171,6 +170,7 @@ color: black ;
   }
 }
 .added-movies-container{
+  background-size: contain;
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
@@ -178,5 +178,5 @@ color: black ;
   justify-content: center;
    width: 100%;
   max-width: 1200px;  
-  height: 700px;
+
 }

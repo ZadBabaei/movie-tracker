@@ -6,6 +6,7 @@ import Navbar from "../component/Navbar";
 import Hero from "../component/Hero";
 import SearchBar from "../component/SearchBar";
 import MovieCard from "../component/MovieCard";
+import HeroImage from "../assets/avang02.jpg";
 
 const GroupPage = () => {
   const { id } = useParams();
@@ -42,7 +43,7 @@ const GroupPage = () => {
     <div className="group-page">
       <Navbar groupName={group.name} />
       <Hero
-        backgroundImage="https://image.tmdb.org/t/p/original/syF8YHGu2XY3i0mq1U998t0laEG.jpg"
+        backgroundImage={HeroImage}
         heroText="What we watched together so far!"
       />
       <div className="group-content">
