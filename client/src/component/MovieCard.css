@@ -1,10 +1,11 @@
 .Group-movie-card {
   width: 200px;
-  height: 400px;
+  min-height: 400px;
   margin: 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 2px;
 
 }
 .movie-title {
@@ -53,6 +54,8 @@
   width: 100%;
   display: block;
   border-bottom: 1px solid #333;
+  border-radius: 10px;
+  height: 250px;
 }
 
 /* Overlay */

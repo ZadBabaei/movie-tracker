@@ -17,24 +17,46 @@ const GroupPage = () => {
     fetchGroupDetails();
   }, [id]);
 
-  const fetchGroupDetails = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await axios.get(`http://localhost:5000/api/groups/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setGroup(res.data);
-    } catch (error) {
-      console.error("Failed to fetch group details.");
-    }
-  };
+const fetchGroupDetails = async () => {
+  const token = localStorage.getItem("token");
+  const res = await axios.get(`http://localhost:5000/api/groups/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  setGroup(res.data);
+  // Populate movies from DB
+  const fetchedMovies = res.data.movies.map((m) => ({
+    id: m.imdbID,
+    title: m.title,
+    poster_path: m.poster,
+    vote_average: m.vote_average || 0, // fallback if needed
+  }));
+  setAddedMovies(fetchedMovies);
+};
 
-  const handleMovieAdd = (movie) => {
-    setAddedMovies((prev) => [...prev, movie]);
-  };
-    const handleDeleteMovie = (movieId) => {
-      setAddedMovies((prev) => prev.filter((m) => m.id !== movieId));
-  };
+
+const handleMovieAdd = async (movie) => {
+  const token = localStorage.getItem("token");
+
+  // Save movie to DB
+  await axios.post(
+    `http://localhost:5000/api/groups/${id}/add-movie`,
+    { movie },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  // Optimistically add to local state
+  setAddedMovies((prev) => [...prev, movie]);
+};
+
+const handleDeleteMovie = async (movieId) => {
+  const token = localStorage.getItem("token");
+  await axios.delete(
+    `http://localhost:5000/api/groups/${id}/remove-movie/${movieId}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  setAddedMovies((prev) => prev.filter((m) => m.id !== movieId));
+};
+
   
 
   if (!group) return <p>Loading group...</p>;
