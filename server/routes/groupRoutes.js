@@ -28,11 +28,15 @@ router.post("/invite", async (req, res) => {
     }
 
     let group = await Group.findOne({ name: groupName });
-    if (!group) {
-      group = new Group({ name: groupName, members: [userId], pendingInvitations: members });
-    } else {
-      group.pendingInvitations.push(...members);
-    }
+  if (!group) {
+    group = new Group({
+      name: groupName,
+      members: [userId],
+      pendingInvitations: members,
+      creator: userId, // ✅ FIX HERE
+    });
+  }
+
     
     await group.save();
     res.json({ msg: "Invitations sent successfully!", group });
@@ -124,24 +128,35 @@ router.post("/:id/add-movie", authenticate, async (req, res) => {
     const { movie } = req.body; // Movie object from frontend
     const group = await Group.findById(req.params.id);
 
-    if (!group) {
-      return res.status(404).json({ msg: "Group not found" });
+    if (!group) return res.status(404).json({ msg: "Group not found" });
+
+    // Check if movie already exists globally
+    let dbMovie = await Movie.findOne({ imdbID: movie.id.toString() });
+    if (!dbMovie) {
+      dbMovie = new Movie({
+        title: movie.title,
+        imdbID: movie.id.toString(),
+        poster: movie.poster_path,
+        addedBy: req.user.id,
+      });
+      await dbMovie.save();
     }
 
-    // Check if movie is already in the list
-    if (group.movies.some(m => m.imdbID === movie.imdbID)) {
-      return res.status(400).json({ msg: "Movie already added" });
+    // Prevent duplicates inside the group
+    if (group.movies.includes(dbMovie._id)) {
+      return res.status(400).json({ msg: "Movie already added to group" });
     }
 
-    group.movies.push(movie);
+    group.movies.push(dbMovie._id);
     await group.save();
 
-    res.json(group);
+    res.json({ msg: "Movie added successfully", group });
   } catch (error) {
     console.error("Error adding movie:", error);
     res.status(500).json({ msg: "Server error" });
   }
 });
+
 router.delete("/:id/remove-movie/:movieId", authenticate, async (req, res) => {
   try {
     const group = await Group.findById(req.params.id);

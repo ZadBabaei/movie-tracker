@@ -38,6 +38,7 @@ background: linear-gradient(180deg, rgba(15,32,39,1) 23%, rgba(32,58,67,1) 47%, 
   padding: 10px;
   margin: 5px;
   border-radius: 5px;
+
 }
 
 
@@ -57,19 +58,20 @@ background: linear-gradient(180deg, rgba(15,32,39,1) 23%, rgba(32,58,67,1) 47%, 
   height: 300px;
   color: rgb(251, 247, 247);
 
+
 }
 .group-member-card-container {
   display: flex;
   flex-wrap: nowrap;
-  overflow-x: auto;
   gap: 20px;
   padding-bottom: 10px;
   /* width: 100%; */
-
-  /* Scroll Timeline Animation */
+    /* Scroll Timeline Animation */
   animation: slide-left linear;
   animation-timeline: scroll();
-  animation-range: 0 500px;
+  animation-range: 0 300px;
+
+
 }
 
 @keyframes slide-left {
@@ -77,8 +79,11 @@ background: linear-gradient(180deg, rgba(15,32,39,1) 23%, rgba(32,58,67,1) 47%, 
     transform: translateX(0%);
   }
   to {
-    transform: translateX(-70%);
+    transform: translateX(-90%);
   }
+}
+.group-member-card-container.scroll-complete {
+  overflow: hidden;
 }
 
 .group-members-card {
@@ -109,7 +114,7 @@ color: black ;
 }
 
   
-/* From Uiverse.io by ShrinilDhorda */ 
+
 .group-member-btn {
   margin-top:10px;
 	box-shadow: 1px 2px 6px 2px #9fb4f2;
@@ -176,7 +181,9 @@ color: black ;
   flex-wrap: wrap;
   gap: 10px;
   justify-content: center;
+  align-items: center;
    width: 100%;
-  max-width: 1200px;  
+  min-height: 700px; 
+  /* overflow-x: hidden; */
 
 }
