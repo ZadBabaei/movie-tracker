@@ -8,7 +8,7 @@ html, body, #root {
 
 /* Hero Banner */
 .hero-banner {
-    width: 100vw;
+    width: 99vw;
     height: 50vh;
     position: absolute;
     top: 0;

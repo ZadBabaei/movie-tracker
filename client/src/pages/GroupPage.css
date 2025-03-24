@@ -1,19 +1,22 @@
-
 .group-page {
-  background: rgb(15,32,39);
-background: linear-gradient(180deg, rgba(15,32,39,1) 23%, rgba(32,58,67,1) 47%, rgba(44,83,100,1) 100%);
+  background: rgb(15, 32, 39);
+  background: linear-gradient(
+    180deg,
+    rgba(15, 32, 39, 1) 23%,
+    rgba(32, 58, 67, 1) 47%,
+    rgba(44, 83, 100, 1) 100%
+  );
 }
 .group-content {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: flex-start; 
+  align-items: flex-start;
   width: 100%;
   margin-top: 320px;
   padding: 20px;
   box-sizing: border-box;
-  margin-left: 0; 
-
+  margin-left: 0;
 }
 
 .group-page h1 {
@@ -38,109 +41,103 @@ background: linear-gradient(180deg, rgba(15,32,39,1) 23%, rgba(32,58,67,1) 47%, 
   padding: 10px;
   margin: 5px;
   border-radius: 5px;
-
 }
 
-
-.group-members {
-  width: 100%;
-  max-width: 1200px;
-  padding: 20px;
-}
-.group-members{
-  padding-top: 10px;
-  width:100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: flex-start;
-  gap: 10px;
-  height: 300px;
+.group-members-title {
+  margin: 10px;
   color: rgb(251, 247, 247);
+}
+/* Inner scrolling container */
+.group-member-card-container {
+  display: flex;
+  flex-wrap: nowrap; /* Prevent wrapping */
+  gap: 20px;
+  padding-bottom: 10px;
+
+  width: 97vw; /* Force it to be viewport width */
+  overflow-x: auto; /* Enable horizontal scrolling */
+  overflow-y: hidden; /* Optional: hide vertical scroll */
+
+  box-sizing: border-box;
 
 
 }
-.group-member-card-container {
+
+.group-member-card-container::-webkit-scrollbar {
+  display: none; /* Optional: hide scrollbar */
+}
+
+.group-member-cards-wrapper {
   display: flex;
   flex-wrap: nowrap;
   gap: 20px;
-  padding-bottom: 10px;
-  /* width: 100%; */
-    /* Scroll Timeline Animation */
+
+  /* This will now follow vertical page scroll */
   animation: slide-left linear;
-  animation-timeline: scroll();
-  animation-range: 0 300px;
-
-
+  animation-timeline: scroll(root); /* link to root vertical page scroll */
+  animation-range: 0px 600px; /* adjust as needed */
 }
 
+.group-members-card {
+  flex: 0 0 auto;
+  width: 200px;
+  height: 50px;
+  background: rgb(209, 240, 213);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Keyframes stay the same */
 @keyframes slide-left {
   from {
     transform: translateX(0%);
   }
   to {
-    transform: translateX(-90%);
+    transform: translateX(-50%); /* Adjust as needed */
   }
 }
-.group-member-card-container.scroll-complete {
-  overflow: hidden;
-}
-
-.group-members-card {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  flex-wrap: wrap ;
-  align-items: center;
-  background-color: rgb(209, 240, 213);
-  width: 200px;
-  max-width: 100%;
-  height: 50px;
-  border-radius: 10px;
-  padding: 10px;
-}
-.group-members-card img{
+.group-members-card img {
   width: 50px;
   border-radius: 50%;
 }
-.group-members-card h2{
-color: black ;
+.group-members-card h2 {
+  color: black;
 }
 .divider {
-    width: 2px; /* Line thickness */
-    height: 80%; /* 80% height */
-    background-color: rgb(137, 134, 134); /* Line color */
-    margin: 0 10px; /* Spacing around the line */
+  width: 2px; /* Line thickness */
+  height: 80%; /* 80% height */
+  background-color: rgb(137, 134, 134); /* Line color */
+  margin: 0 10px; /* Spacing around the line */
 }
-
-  
 
 .group-member-btn {
-  margin-top:10px;
-	box-shadow: 1px 2px 6px 2px #9fb4f2;
-	background:linear-gradient(to bottom, #7892c2 5%, #476e9e 100%);
-	background-color:#7892c2;
-	border-radius:16px;
-	border:1px solid #4e6096;
-	display:inline-block;
-	cursor:pointer;
-	color:#ffffff;
-	font-family:Arial;
-	font-size:19px;
-	padding:15px 60px;
-	text-decoration:none;
-	text-shadow:0px 3px 0px #283966;
+  margin: 20px 0 20px 0;
+  box-shadow: 1px 2px 6px 2px #9fb4f2;
+  background: linear-gradient(to bottom, #7892c2 5%, #476e9e 100%);
+  background-color: #7892c2;
+  border-radius: 16px;
+  border: 1px solid #4e6096;
+  display: inline-block;
+  cursor: pointer;
+  color: #ffffff;
+  font-family: Arial;
+  font-size: 19px;
+  padding: 15px 60px;
+  text-decoration: none;
+  text-shadow: 0px 3px 0px #283966;
 }
 .group-member-btn:hover {
-	background:linear-gradient(to bottom, #476e9e 5%, #7892c2 100%);
-	background-color:#476e9e;
+  background: linear-gradient(to bottom, #476e9e 5%, #7892c2 100%);
+  background-color: #476e9e;
 }
 .group-member-btn:active {
-	position:relative;
-	top:1px;
+  position: relative;
+  top: 1px;
 }
 
-         
 .group-movie-search-container {
   width: 100%;
   max-width: 1200px;
@@ -174,7 +171,7 @@ color: black ;
     margin: 10px 0;
   }
 }
-.added-movies-container{
+.added-movies-container {
   background-size: contain;
   display: flex;
   flex-direction: row;
@@ -182,8 +179,7 @@ color: black ;
   gap: 10px;
   justify-content: center;
   align-items: center;
-   width: 100%;
-  min-height: 700px; 
+  width: 100%;
+  min-height: 700px;
   /* overflow-x: hidden; */
-
 }

@@ -1,31 +1,40 @@
-
+li{
+    width: 200px;
+}
 /* Glassy Navbar */
 .glassy-navbar {
+    font-family: 'Poppins', sans-serif;
     width:inherit;
     height: 70px;
     position: relative;
     top: 0;
-    display: grid;;
-    grid-template-columns: 20% 80%;
-    align-items: center;
+    display: flex;
+    padding-left: 200px;
     align-content: center;
-    justify-content: end;
-    justify-items: end;
-    backdrop-filter: blur(12px);
-    background: rgba(0, 0, 0, 0.4);
-
+    align-items: center;
+    justify-content: flex-start;
+    align-self: center;
+    justify-items: center;
     z-index: 10;
+    gap:200px
+}
+.glassy-navbar{
+    background: linear-gradient(135deg, rgba(111, 106, 106, 0));
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px 0 rgba(0,0,0,0.37);
+    border:1px solid rgba(255, 255, 255, 0.18);
+    
 }
 .nav-left{
-    width:60%;
+    /* width:60%; */
     color:aliceblue
 }
 .nav-right li {
-    width: 200px;
+    /* width: 200px; */
     color: #ffffff;
     text-decoration: none;
     list-style: none;
-    font-weight: bold;
     transition: 0.3s;
     cursor: pointer;
 }
@@ -38,13 +47,13 @@
     width:70%;
   display: flex;
   align-items: center;
-  gap: 50px;
+  justify-content: flex-end;
+  /* gap: 50px; */
 }
 
 /* Profile Menu Styling */
 .profile-menu {
-    height: 40px;
-    width: 70px;
+    height: 20px;
   position: relative;
   cursor: pointer;
 }
@@ -53,21 +62,18 @@
     color: #fff;
 }
 .profile-name {
-  font-weight: bold;
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 10px;
 }
 
 .profile-menu {
-    position: relative; /* Add this */
+    /* position: relative;  */
     cursor: pointer;
 }
 
 /* Dropdown Styling */
 .profile-dropdown {
-
     background: rgba(0, 0, 0, 0.9);
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(255, 255, 255, 0.2);
