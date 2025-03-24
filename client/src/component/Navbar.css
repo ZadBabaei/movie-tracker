@@ -79,11 +79,24 @@ li{
     box-shadow: 0 4px 8px rgba(255, 255, 255, 0.2);
     display: none;
     width: 200px;
-    height: 150px;
     padding: 10px 0;
     z-index: 1000;
-    margin-top: 5px; /* Add some space between menu and dropdown */
+    margin-top: 5px;
+    align-items: center; /* center contents horizontally */
 }
+
+.profile-dropdown li {
+    width: 80%; /* Make them take 80% of dropdown width */
+    padding: 10px;
+    color: white;
+    text-decoration: none;
+    text-align: center;
+}
+
+.profile-dropdown li:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
 
 /* Add this to create an invisible bridge between menu and dropdown */
 .profile-menu::after {
@@ -98,20 +111,7 @@ li{
 .profile-menu:hover .profile-dropdown {
     display: flex;
     flex-direction: column;
-    gap: 15px;
-     /* justify-content: space-around; */
-    align-items: center; 
+    justify-content: flex-start;
+    align-content: flex-end;
 }
 
-.profile-dropdown li {
-    display: block;
-    padding: 10px 15px;
-    color: white;
-    text-decoration: none;
-    transition: background 0.3s;
-}
-
-.profile-dropdown li:hover {
-    width: 80%;
-    background: rgba(255, 255, 255, 0.2);
-}
