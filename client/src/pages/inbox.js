@@ -3,7 +3,7 @@ import axios from "axios";
 import Hero from "../component/Hero";
 import Navbar from "../component/Navbar";
 import "./inbox.css";
-
+import HeroImage from "../assets/avang02.jpg";
 const Inbox = () => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -45,8 +45,12 @@ const Inbox = () => {
 
   return (
     <div className="home-container">
-      <Navbar></Navbar>
-      <Hero></Hero>
+      <Navbar
+         />
+      <Hero
+        backgroundImage={HeroImage}
+        heroText="What we watched together so far!"
+      />
 
       {/* Inbox Messages */}
       <div className="inbox-container">

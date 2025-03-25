@@ -24,7 +24,7 @@ function Login() {
   const handleLogin = async () => {
     try {
       const res = await axios.post(
-        `${API_URL}/api/user/login`,
+        `${API_URL}/api/auth/login`,
         { email, password },
         { headers: { "Content-Type": "application/json" } }
       );

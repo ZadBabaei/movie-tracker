@@ -1,0 +1,142 @@
+.modal{
+  width: 700px;
+  height: 600px;
+  background-color: rgba(68, 66, 66, 0.454);
+}
+
+.modal >h2{
+  color: aliceblue;
+  padding: 15px 10px;
+}
+
+.modal >input{
+  width: 90%;
+  margin-bottom: 40px;
+}
+.invite-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.invite-modal {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(15px);
+  padding: 30px;
+  border-radius: 15px;
+  max-width: 600px;
+  width: 90%;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.invite-users-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.invite-user-card {
+  width: 100px;
+  height: 120px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.3s;
+}
+
+.invite-user-card:hover {
+  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.invite-user-card.selected {
+  border: 2px solid #eab114;
+}
+
+.invite-user-card img {
+  width: 50px;
+  border-radius: 50%;
+}
+
+.invite-user-card span {
+  margin-top: 5px;
+  color: white;
+}
+
+.invite-modal-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.btn-invite,
+.btn-cancel {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.btn-invite {
+  background: #eab114;
+  color: white;
+}
+
+.btn-cancel {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+.search-input {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 10px;
+}
+
+.autocomplete-dropdown {
+  border: 1px solid #ccc;
+  max-height: 150px;
+  overflow-y: auto;
+  background: #fff;
+  margin-bottom: 10px;
+}
+
+.autocomplete-item {
+  padding: 8px;
+  cursor: pointer;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.selected {
+  background-color: #f0f0f0;
+}
+
+.selected-users {
+  margin-bottom: 10px;
+}
+
+.selected-user-tag {
+  display: inline-block;
+  background: #d1e7dd;
+  color: #0f5132;
+  padding: 4px 8px;
+  margin: 2px;
+  border-radius: 4px;
+}
+.selected-users > h4{
+  color: rgb(236, 234, 234);
+  padding: 10px 15px;
+}

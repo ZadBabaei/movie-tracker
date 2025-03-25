@@ -7,7 +7,6 @@ import axios from "axios";
 const Navbar = ({ groups: initialGroups, userName, groupName }) => {
     const navigate = useNavigate();
       const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
   const [groups, setGroups] = useState(initialGroups);
 
   useEffect(() => {
@@ -19,14 +18,13 @@ const Navbar = ({ groups: initialGroups, userName, groupName }) => {
           return;
         }
 
-        const res = await axios.get("http://localhost:5000/api/user/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUser(res.data);
+const res = await axios.get("http://localhost:5000/api/auth/me", {
+  headers: { Authorization: `Bearer ${token}` },
+});
+const groupsRes = await axios.get("http://localhost:5000/api/auth/groups", {
+  headers: { Authorization: `Bearer ${token}` },
+});
 
-        const groupsRes = await axios.get("http://localhost:5000/api/user/groups", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
         setGroups(groupsRes.data);
       } catch (error) {
         console.error("❌ Error fetching user data:", error);
@@ -54,8 +52,8 @@ const Navbar = ({ groups: initialGroups, userName, groupName }) => {
             <span className="profile-name">
               {useLocation().pathname.startsWith("/group/")
                 ? groupName || "Group"
-                : user
-                ? user.name
+                : userName
+                ? userName
                 : "User"}
             </span>
 

@@ -7,57 +7,60 @@ import Hero from "../component/Hero";
 import SearchBar from "../component/SearchBar";
 import MovieCard from "../component/MovieCard";
 import HeroImage from "../assets/avang02.jpg";
+import InviteModal from "../component/InviteFriendsModal"; // new import
+
+
+
+
 
 const GroupPage = () => {
   const { id } = useParams();
   const [group, setGroup] = useState(null);
   const [addedMovies, setAddedMovies] = useState([]);
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   useEffect(() => {
     fetchGroupDetails();
   }, [id]);
 
-const fetchGroupDetails = async () => {
-  const token = localStorage.getItem("token");
-  const res = await axios.get(`http://localhost:5000/api/groups/${id}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  setGroup(res.data);
-  // Populate movies from DB
-  const fetchedMovies = res.data.movies.map((m) => ({
-    id: m.imdbID,
-    title: m.title,
-    poster_path: m.poster,
-    vote_average: m.vote_average || 0, // fallback if needed
-  }));
-  setAddedMovies(fetchedMovies);
-};
+  const fetchGroupDetails = async () => {
+    const token = localStorage.getItem("token");
+    const res = await axios.get(`http://localhost:5000/api/groups/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setGroup(res.data);
+    // Populate movies from DB
+    const fetchedMovies = res.data.movies.map((m) => ({
+      id: m.imdbID,
+      title: m.title,
+      poster_path: m.poster,
+      vote_average: m.vote_average || 0, // fallback if needed
+    }));
+    setAddedMovies(fetchedMovies);
+  };
 
+  const handleMovieAdd = async (movie) => {
+    const token = localStorage.getItem("token");
 
-const handleMovieAdd = async (movie) => {
-  const token = localStorage.getItem("token");
+    // Save movie to DB
+    await axios.post(
+      `http://localhost:5000/api/groups/${id}/add-movie`,
+      { movie },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
-  // Save movie to DB
-  await axios.post(
-    `http://localhost:5000/api/groups/${id}/add-movie`,
-    { movie },
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
+    // Optimistically add to local state
+    setAddedMovies((prev) => [...prev, movie]);
+  };
 
-  // Optimistically add to local state
-  setAddedMovies((prev) => [...prev, movie]);
-};
-
-const handleDeleteMovie = async (movieId) => {
-  const token = localStorage.getItem("token");
-  await axios.delete(
-    `http://localhost:5000/api/groups/${id}/remove-movie/${movieId}`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  setAddedMovies((prev) => prev.filter((m) => m.id !== movieId));
-};
-
-  
+  const handleDeleteMovie = async (movieId) => {
+    const token = localStorage.getItem("token");
+    await axios.delete(
+      `http://localhost:5000/api/groups/${id}/remove-movie/${movieId}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    setAddedMovies((prev) => prev.filter((m) => m.id !== movieId));
+  };
 
   if (!group) return <p>Loading group...</p>;
 
@@ -87,10 +90,13 @@ const handleDeleteMovie = async (movieId) => {
             </div>
           </div>
         </div>
+        <button
+          className="group-member-btn"
+          onClick={() => setShowInviteModal(true)}
+        >
+          Invite Friends
+        </button>
 
-        <button className="group-member-btn">Invite Friends</button>
-
-        {/* Modular SearchBar */}
         <SearchBar onMovieSelect={handleMovieAdd} />
 
         {/* Movies Section */}
@@ -104,6 +110,14 @@ const handleDeleteMovie = async (movieId) => {
           ))}
         </div>
       </div>
+
+      {/* ✅ Place modal inside return */}
+      {showInviteModal && (
+        <InviteModal
+          groupId={group._id}
+          onClose={() => setShowInviteModal(false)}
+        />
+      )}
     </div>
   );
 };
