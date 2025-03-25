@@ -2,6 +2,11 @@ const express = require('express');
 const cors = require('cors');
 const groupRoutes = require("./routes/groupRoutes");
 const mongoose = require('mongoose');
+const authRoutes = require("./routes/authRoutes");
+
+const userRoutes = require("./routes/userRoutes"); // adjust path if needed
+
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -15,7 +20,6 @@ app.use(cors());
 app.use(express.json());
 
 // ✅ Correct API Route Registration
-app.use("/api/user", require("./routes/authRoutes"));
 app.use("/api/groups", require("./routes/groupRoutes"));
 app.use("/api/inbox", require("./routes/inboxRoutes")); // ✅ Added inboxRoutes
 app.use((err, req, res, next) => {
@@ -25,7 +29,8 @@ app.use((err, req, res, next) => {
     error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
   });
 });
-
+app.use("/api/user", userRoutes);
+app.use("/api/auth", authRoutes);
 
 
 

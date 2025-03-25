@@ -15,7 +15,7 @@
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(255, 255, 255, 0.2);
   display: none;
-  width: 200px;
+  width: 250px;
   padding: 10px 0;
   z-index: 1000;
   position: absolute;
@@ -37,8 +37,10 @@
 .dropdown-container:hover .dropdown-menu {
   display: flex;
   flex-direction: column;
+  justify-content:flex-start;
+  align-content: start;
   gap: 10px;
-  align-items: center;
+  align-items: flex-start;
 }
 
 /* List Styling (consistent spacing) */
@@ -58,7 +60,6 @@
   width: 80%;
   padding: 10px 15px;
   color: white;
-  text-align: center;
   transition: background 0.3s;
 }
 

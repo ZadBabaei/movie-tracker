@@ -1,16 +1,51 @@
+// ✅ CLEANED BACKEND GROUP ROUTES
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 const Group = require("../models/Groups");
 const User = require("../models/User");
-const Movie = require("../models/movie"); // ✅ Add this line
+const Movie = require("../models/movie");
 
 const { authenticate } = require("../middleware/authMiddleware");
 require("dotenv").config();
 
 const router = express.Router();
 
-// ✅ Send Group Invitation
+// ✅ CREATE GROUP ONLY
+router.post("/create", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ msg: "Unauthorized: No token provided" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = new mongoose.Types.ObjectId(decoded.id);
+
+    const { groupName } = req.body;
+    if (!groupName)
+      return res.status(400).json({ msg: "Group name required." });
+
+    const existing = await Group.findOne({ name: groupName });
+    if (existing) return res.status(400).json({ msg: "Group already exists." });
+
+    const group = new Group({
+      name: groupName,
+      members: [userId],
+      pendingInvitations: [],
+      creator: userId,
+    });
+
+    await group.save();
+    return res.json({ msg: "Group created", group });
+  } catch (error) {
+    console.error("Error creating group:", error);
+    res.status(500).json({ msg: "Server error", error: error.message });
+  }
+});
+
+// ✅ INVITE MEMBERS TO EXISTING GROUP
 router.post("/invite", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -22,23 +57,19 @@ router.post("/invite", async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = new mongoose.Types.ObjectId(decoded.id);
 
-    const { groupName, members } = req.body;
-    if (!groupName || members.length === 0) {
-      return res.status(400).json({ msg: "Group name and at least one invitation required." });
+    const { groupId, members } = req.body;
+    if (!groupId || !members || members.length === 0) {
+      return res
+        .status(400)
+        .json({ msg: "Group ID and at least one member required." });
     }
 
-    let group = await Group.findOne({ name: groupName });
-  if (!group) {
-    group = new Group({
-      name: groupName,
-      members: [userId],
-      pendingInvitations: members,
-      creator: userId, // ✅ FIX HERE
-    });
-  }
+    const group = await Group.findById(groupId);
+    if (!group) return res.status(404).json({ msg: "Group not found." });
 
-    
+    group.pendingInvitations.push(...members);
     await group.save();
+
     res.json({ msg: "Invitations sent successfully!", group });
   } catch (error) {
     console.error("Error sending invitations:", error);
@@ -68,10 +99,14 @@ router.post("/respond", async (req, res) => {
       return res.status(404).json({ msg: "Group not found." });
     }
 
+    if (!Array.isArray(group.pendingInvitations)) {
+      group.pendingInvitations = [];
+    }
+
     if (response === "accept") {
       group.members.push(userId);
     }
-    
+
     group.pendingInvitations = group.pendingInvitations.filter(
       (id) => !id.equals(userId)
     );
@@ -84,104 +119,4 @@ router.post("/respond", async (req, res) => {
   }
 });
 
-// ✅ Fetch Pending Invitations
-router.get("/invitations", async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ msg: "Unauthorized: No token provided" });
-    }
-
-    const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = new mongoose.Types.ObjectId(decoded.id);
-
-    const invitations = await Group.find({ pendingInvitations: userId })
-      .select("name _id")
-      .lean();
-
-    res.json(invitations);
-  } catch (error) {
-    console.error("Error fetching invitations:", error);
-    res.status(500).json({ msg: "Server error", error: error.message });
-  }
-});
-// ✅ GET Group Details (Name, Members, Watched Movies)
-router.get("/:id", authenticate, async (req, res) => {
-  try {
-    const group = await Group.findById(req.params.id)
-      .populate("members", "name email")
-      .populate("movies");
-
-    if (!group) {
-      return res.status(404).json({ msg: "Group not found" });
-    }
-
-    res.json(group);
-  } catch (error) {
-    console.error("Error fetching group:", error);
-    res.status(500).json({ msg: "Server error" });
-  }
-});
-router.post("/:id/add-movie", authenticate, async (req, res) => {
-  try {
-    const { movie } = req.body; // Movie object from frontend
-    const group = await Group.findById(req.params.id);
-
-    if (!group) return res.status(404).json({ msg: "Group not found" });
-
-    // Check if movie already exists globally
-    let dbMovie = await Movie.findOne({ imdbID: movie.id.toString() });
-    if (!dbMovie) {
-      dbMovie = new Movie({
-        title: movie.title,
-        imdbID: movie.id.toString(),
-        poster: movie.poster_path,
-        addedBy: req.user.id,
-      });
-      await dbMovie.save();
-    }
-
-    // Prevent duplicates inside the group
-    if (group.movies.includes(dbMovie._id)) {
-      return res.status(400).json({ msg: "Movie already added to group" });
-    }
-
-    group.movies.push(dbMovie._id);
-    await group.save();
-
-    res.json({ msg: "Movie added successfully", group });
-  } catch (error) {
-    console.error("Error adding movie:", error);
-    res.status(500).json({ msg: "Server error" });
-  }
-});
-
-router.delete("/:id/remove-movie/:movieId", authenticate, async (req, res) => {
-  try {
-    const group = await Group.findById(req.params.id);
-
-    if (!group) {
-      return res.status(404).json({ msg: "Group not found" });
-    }
-
-    // Only allow creator to remove movies
-    if (group.creator.toString() !== req.user.id) {
-      return res.status(403).json({ msg: "Only the creator can remove movies" });
-    }
-
-    group.movies = group.movies.filter(
-      (movie) => movie._id.toString() !== req.params.movieId
-    );
-    await group.save();
-
-    res.json(group);
-  } catch (error) {
-    console.error("Error removing movie:", error);
-    res.status(500).json({ msg: "Server error" });
-  }
-});
-
-
-console.log("zad");
 module.exports = router;

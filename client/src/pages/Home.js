@@ -24,7 +24,7 @@ function Home() {
           setLoading(false);
           return;
         }
-        const res = await axios.get("http://localhost:5000/api/user/me", {
+        const res = await axios.get("http://localhost:5000/api/auth/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUser(res.data);
@@ -39,28 +39,22 @@ function Home() {
 
 
   return (
-   
     <div className="home-container">
-    <Navbar
-        // userName={user ? user.name : "Guest"}
-  ></Navbar>
-      <Hero
-      backgroundImage="https://image.tmdb.org/t/p/original/7ucaMpXAmlIM24qZZ8uI9hCY0hm.jpg"></Hero>
+      <Navbar
+        userName={user ? user.name : "Guest"}
+      ></Navbar>
+      <Hero backgroundImage="https://image.tmdb.org/t/p/original/7ucaMpXAmlIM24qZZ8uI9hCY0hm.jpg"></Hero>
 
-{/* Action Buttons */}
-<motion.div
-  className="banner-buttons"
-  initial={{ opacity: 0, y: 30 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 1 }}
->
-  
+      {/* Action Buttons */}
+      <motion.div
+        className="banner-buttons"
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 1 }}
+      ></motion.div>
 
-</motion.div>
-
-
-  {/* Animated Movie Poster */}
-  <AnimatedMovie />
+      {/* Animated Movie Poster */}
+      <AnimatedMovie />
     </div>
   );
 }

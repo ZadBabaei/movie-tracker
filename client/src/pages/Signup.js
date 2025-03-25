@@ -31,7 +31,7 @@ function Signup() {
 			return;
 		}
 		try {
-			await axios.post(`${API_URL}/api/user/register`, {
+			await axios.post(`${API_URL}/api/auth/register`, {
 				name,
 				email,
 				password,
