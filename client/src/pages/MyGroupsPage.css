@@ -1,0 +1,58 @@
+/* MyGroupsPage.css */
+
+.my-groups-page {
+  padding: 40px;
+  color: white;
+  min-height: 100vh;
+  background: linear-gradient(to bottom, #0f2027, #203a43, #2c5364);
+  margin-top:18%;
+}
+
+.my-groups-page h1 {
+  font-size: 32px;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.error {
+  color: #f44336;
+  text-align: center;
+  font-weight: bold;
+}
+
+.group-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.5);
+}
+
+.group-table th,
+.group-table td {
+  padding: 16px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.group-table th {
+  background: rgba(255, 255, 255, 0.1);
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.group-table td button {
+  padding: 8px 14px;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.group-table td button:hover {
+  background-color: #d32f2f;
+}
+

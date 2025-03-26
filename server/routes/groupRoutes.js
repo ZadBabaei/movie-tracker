@@ -10,6 +10,52 @@ require("dotenv").config();
 
 const router = express.Router();
 
+// ✅ GET /api/groups/mine — must come before "/:id"
+router.get("/mine", authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const groups = await Group.find({ members: userId })
+      .populate("members", "name email avatar")
+      .sort({ createdAt: -1 });
+
+    res.json(groups);
+  } catch (err) {
+    console.error("Error fetching user groups:", err);
+    res.status(500).json({ msg: "Failed to fetch groups." });
+  }
+});
+
+// ✅ POST /api/groups/:id/leave
+router.post("/:id/leave", authenticate, async (req, res) => {
+  try {
+    const groupId = req.params.id;
+    const userId = req.user.id;
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({ msg: "Group not found." });
+    }
+
+    group.members = group.members.filter(
+      (memberId) => memberId.toString() !== userId
+    );
+
+    if (group.members.length === 0) {
+      await Group.findByIdAndDelete(groupId);
+      return res.json({
+        msg: "You left the group. Group deleted because it was empty.",
+      });
+    }
+
+    await group.save();
+    res.json({ msg: "You left the group." });
+  } catch (err) {
+    console.error("Error leaving group:", err);
+    res.status(500).json({ msg: "Failed to leave group." });
+  }
+});
+
 // ✅ CREATE GROUP
 router.post("/create", async (req, res) => {
   try {
