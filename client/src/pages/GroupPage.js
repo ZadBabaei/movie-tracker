@@ -40,6 +40,7 @@ const GroupPage = () => {
   };
 
   const handleMovieAdd = async (movie) => {
+      console.log("💡 Movie being added:", movie); 
     const token = localStorage.getItem("token");
 
     // Save movie to DB

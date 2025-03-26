@@ -51,26 +51,25 @@ const InviteFriendsModal = ({ groupId, onClose }) => {
     );
   };
 
-const handleSendInvites = async () => {
-  try {
-    const token = localStorage.getItem("token");
-    await axios.post(
-      "http://localhost:5000/api/groups/invite",
-      {
-        groupId,
-        members: selectedUsers,
-      },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    setSuccess(true);
-    setTimeout(onClose, 1200); // success message delay
-  } catch (err) {
-    setError(err.response?.data?.msg || "Failed to send invitations.");
-  }
-};
-
+  const handleSendInvites = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(
+        "http://localhost:5000/api/groups/invite",
+        {
+          groupId,
+          members: selectedUsers,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      setSuccess(true);
+      setTimeout(onClose, 1200); // success message delay
+    } catch (err) {
+      setError(err.response?.data?.msg || "Failed to send invitations.");
+    }
+  };
 
   return (
     <div className="modal-overlay">

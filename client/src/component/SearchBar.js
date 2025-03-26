@@ -43,11 +43,19 @@ const SearchBar = ({ onMovieSelect }) => {
 		fetchMovies(query);
 	};
 
-	const handleSelect = (movie) => {
-		onMovieSelect(movie);
-		setQuery("");
-		setResults([]);
-	};
+const handleSelect = (movie) => {
+  const formattedMovie = {
+    imdbID: `tmdb-${movie.id}`, // fake ID since TMDB doesn’t return IMDb by default
+    title: movie.title,
+    poster_path: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+    vote_average: movie.vote_average || 0,
+  };
+
+  onMovieSelect(formattedMovie);
+  setQuery("");
+  setResults([]);
+};
+
 
 	return (
 		<div className="search-bar">

@@ -1,17 +1,16 @@
-// ✅ CLEANED BACKEND GROUP ROUTES
+// ✅ FULL groupRoutes.js with /:id/add-movie route
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 const Group = require("../models/Groups");
 const User = require("../models/User");
 const Movie = require("../models/movie");
-
 const { authenticate } = require("../middleware/authMiddleware");
 require("dotenv").config();
 
 const router = express.Router();
 
-// ✅ CREATE GROUP ONLY
+// ✅ CREATE GROUP
 router.post("/create", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -45,7 +44,7 @@ router.post("/create", async (req, res) => {
   }
 });
 
-// ✅ INVITE MEMBERS TO EXISTING GROUP
+// ✅ INVITE MEMBERS
 router.post("/invite", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -77,7 +76,7 @@ router.post("/invite", async (req, res) => {
   }
 });
 
-// ✅ Accept or Decline Group Invitation
+// ✅ RESPOND TO INVITE
 router.post("/respond", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -95,9 +94,7 @@ router.post("/respond", async (req, res) => {
     }
 
     const group = await Group.findById(groupId);
-    if (!group) {
-      return res.status(404).json({ msg: "Group not found." });
-    }
+    if (!group) return res.status(404).json({ msg: "Group not found." });
 
     if (!Array.isArray(group.pendingInvitations)) {
       group.pendingInvitations = [];
@@ -115,6 +112,80 @@ router.post("/respond", async (req, res) => {
     res.json({ msg: `You have ${response}ed the invitation.`, group });
   } catch (error) {
     console.error("Error responding to invitation:", error);
+    res.status(500).json({ msg: "Server error", error: error.message });
+  }
+});
+
+// ✅ GET GROUP DETAILS
+router.get("/:id", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ msg: "Unauthorized: No token provided" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const groupId = req.params.id;
+    const group = await Group.findById(groupId)
+      .populate("members", "_id name profilePic")
+      .populate("creator", "_id name")
+      .populate("movies", "title imdbID poster vote_average");
+
+    if (!group) return res.status(404).json({ msg: "Group not found" });
+
+    res.json(group);
+  } catch (error) {
+    console.error("❌ Error fetching group:", error);
+    res.status(500).json({ msg: "Server error", error: error.message });
+  }
+});
+
+// ✅ ADD MOVIE TO GROUP
+router.post("/:id/add-movie", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ msg: "Unauthorized: No token provided" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = new mongoose.Types.ObjectId(decoded.id);
+
+    const groupId = req.params.id;
+    const { movie } = req.body;
+
+    if (!movie || !movie.imdbID || !movie.title) {
+      return res.status(400).json({ msg: "Invalid movie data" });
+    }
+
+    let existingMovie = await Movie.findOne({ imdbID: movie.imdbID });
+
+    if (!existingMovie) {
+      existingMovie = new Movie({
+        title: movie.title,
+        imdbID: movie.imdbID,
+        poster: movie.poster_path,
+        vote_average: movie.vote_average || 0,
+        addedBy: userId,
+      });
+
+      await existingMovie.save();
+    }
+
+    const group = await Group.findById(groupId);
+    if (!group) return res.status(404).json({ msg: "Group not found" });
+
+    if (!group.movies.includes(existingMovie._id)) {
+      group.movies.push(existingMovie._id);
+      await group.save();
+    }
+
+    res.json({ msg: "Movie added", movie: existingMovie });
+  } catch (error) {
+    console.error("❌ Error adding movie:", error);
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 });
