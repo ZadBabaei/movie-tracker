@@ -11,17 +11,28 @@ const InviteFriendsModal = ({ groupId, onClose }) => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      const token = localStorage.getItem("token");
+useEffect(() => {
+  const fetchUsers = async () => {
+    const token = localStorage.getItem("token");
+    console.log("🔍 Token found in InviteFriendsModal:", token); // Add this
+
+    if (!token) return;
+
+    try {
       const res = await axios.get("http://localhost:5000/api/user/all", {
         headers: { Authorization: `Bearer ${token}` },
       });
+      console.log("✅ Fetched users:", res.data); // Add this
       setUsers(res.data);
       setFilteredUsers(res.data);
-    };
-    fetchUsers();
-  }, []);
+    } catch (err) {
+      console.error("❌ Failed to fetch users:", err); // Add this
+    }
+  };
+
+  fetchUsers();
+}, []);
+
 
   const handleSearch = (e) => {
     const query = e.target.value.toLowerCase();
@@ -70,7 +81,8 @@ const InviteFriendsModal = ({ groupId, onClose }) => {
       setError(err.response?.data?.msg || "Failed to send invitations.");
     }
   };
-
+console.log("🧠 Filtered Users:", filteredUsers);
+console.log("📦 All Users:", users);
   return (
     <div className="modal-overlay">
       <div className="modal">

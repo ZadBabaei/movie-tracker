@@ -25,8 +25,10 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated }) => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      setGroupId(res.data.group._id);
-      setShowInviteModal(true);
+setGroupId(res.data.group._id);
+setTimeout(() => {
+  setShowInviteModal(true);
+}, 100);
       onGroupCreated && onGroupCreated();
     } catch (err) {
       setError(err.response?.data?.msg || "Failed to create group.");
