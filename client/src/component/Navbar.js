@@ -37,35 +37,35 @@ const Navbar = ({ groups: initialGroups, userName, groupName }) => {
 
 	return (
     <nav className="glassy-navbar">
-      <div
-        className="nav-left"
-        onClick={() => navigate("/home")}
-        style={{ cursor: "pointer" }}
-      >
-        <span>Movie Tracker</span>
+      <div className="navbar-content">
+        <div
+          className="nav-left"
+          onClick={() => navigate("/home")}
+          style={{ cursor: "pointer" }}
+        >
+          <span>Movie Tracker</span>
+        </div>
+        <ul className="nav-right">
+          <MovieGroupsDropdown groups={groups} />
+          <li> Upcoming Movies</li>
+          <li> Watchlist</li>
+          <li className="profile-menu">
+            <span className="profile-name">
+              {useLocation().pathname.startsWith("/group/")
+                ? groupName || "Group"
+                : userName
+                ? userName
+                : "User"}
+            </span>
+            <ul className="profile-dropdown">
+              <li onClick={() => navigate("/profile")}>Profile</li>
+              <li onClick={() => navigate("/inbox")}>Inbox</li>
+              <li onClick={() => navigate("/my-groups")}>MyGroups</li>
+              <li onClick={() => navigate("/")}>Logout</li>
+            </ul>
+          </li>
+        </ul>
       </div>
-      <ul className="nav-right">
-        <MovieGroupsDropdown groups={groups} />
-        <li> Upcoming Movies</li>
-        <li> Watchlist</li>
-        <li className="profile-menu">
-          <span className="profile-name">
-            {useLocation().pathname.startsWith("/group/")
-              ? groupName || "Group"
-              : userName
-              ? userName
-              : "User"}
-          </span>
-
-          <ul className="profile-dropdown">
-            <li onClick={() => navigate("/profile")}>Profile</li>
-            <li onClick={() => navigate("/inbox")}>Inbox</li>
-            <li onClick={() => navigate("/my-groups")}>MyGroups</li>
-
-            <li onClick={() => navigate("/")}>Logout</li>
-          </ul>
-        </li>
-      </ul>
     </nav>
   );
 };

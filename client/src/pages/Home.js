@@ -40,10 +40,17 @@ function Home() {
 
   return (
     <div className="home-container">
-      <Navbar
-        userName={user ? user.name : "Guest"}
-      ></Navbar>
-      <Hero backgroundImage="https://image.tmdb.org/t/p/original/7ucaMpXAmlIM24qZZ8uI9hCY0hm.jpg"></Hero>
+      <Navbar userName={user ? user.name : "Guest"}></Navbar>
+      <Hero
+        backgroundImage="https://image.tmdb.org/t/p/original/7ucaMpXAmlIM24qZZ8uI9hCY0hm.jpg"
+        height="100vh"
+      ></Hero>
+      <div className="landing-text">
+        <h1 className="main-heading">MOVIE TRACKER</h1>
+        <p className="sub-heading">
+          Experience movies the way they were meant to be — together.
+        </p>
+      </div>
 
       {/* Action Buttons */}
       <motion.div
