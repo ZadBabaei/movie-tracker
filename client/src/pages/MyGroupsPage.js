@@ -4,12 +4,13 @@ import { jwtDecode } from "jwt-decode";
 import Navbar from "../component/Navbar";
 import Hero from "../component/Hero";
 import "./MyGroupsPage.css";
+import { useNavigate } from "react-router-dom";
 
 const MyGroupsPage = () => {
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
+  const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const decoded = token ? jwtDecode(token) : null;
   const userName = decoded?.name || "Guest";
@@ -49,10 +50,18 @@ const MyGroupsPage = () => {
       console.error(err);
     }
   };
+  const getColorClass = (name) => {
+    if (!name) return "a";
+    const char = name.trim().charAt(0).toLowerCase();
+    const index = char.charCodeAt(0) % 10; // ensures a–j
+    return String.fromCharCode(97 + index); // 'a' to 'j'
+  };
+
 
   return (
     <>
-      <Navbar userName={userName} />
+      <Navbar userName={userName}
+      />
       <Hero backgroundImage="https://image.tmdb.org/t/p/original/7ucaMpXAmlIM24qZZ8uI9hCY0hm.jpg"></Hero>
 
       <div className="my-groups-page">
@@ -69,6 +78,7 @@ const MyGroupsPage = () => {
             <thead>
               <tr>
                 <th>Group Name</th>
+                <th>Members</th>
                 <th>Created At</th>
                 <th>Actions</th>
               </tr>
@@ -76,13 +86,53 @@ const MyGroupsPage = () => {
             <tbody>
               {groups.map((group) => (
                 <tr key={group._id}>
-                  <td>{group.name}</td>
-                  <td>{new Date(group.createdAt).toLocaleDateString()}</td>
+                  <td id="GroupNameSize">
+                    <span
+                      className=" group-link"
+                      onClick={() => navigate(`/group/${group._id}`)}
+                    >
+                      {group.name}
+                    </span>
+                  </td>
+                  <td>
+                    {" "}
+                    <div className="member-avatars">
+                      {group.members?.slice(0, 5).map((member) => (
+                        <div
+                          key={member._id}
+                          className={`avatar-circle color-${getColorClass(
+                            member.name
+                          )}`}
+                          data-tooltip={member.name}
+                        >
+                          {member.profilePic ? (
+                            <img src={member.profilePic} alt={member.name} />
+                          ) : (
+                            <>
+                              <span className="initial">
+                                {member.name
+                                  ? member.name.charAt(0).toUpperCase()
+                                  : "?"}
+                              </span>
+                              <span className="full-name">{member.name}</span>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </td>
+                  <td>
+                    {new Date(group.createdAt).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </td>
+
                   <td>
                     <button onClick={() => handleLeaveGroup(group._id)}>
                       Leave
                     </button>
-                    {/* We'll conditionally render Delete button here later */}
                   </td>
                 </tr>
               ))}

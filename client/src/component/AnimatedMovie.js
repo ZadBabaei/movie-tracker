@@ -3,43 +3,43 @@ import { motion } from "framer-motion";
 import movies from "../data/movies";
 
 const randomPositions = [
-  { top: "50%", left: "5%" },
-  { top: "65%", left: "7%" },
-  { top: "65%", left: "1%" },
-  { top: "60%", left: "9%" },
-  { top: "60%", left: "11%" },
-  { top: "55%", left: "13%" },
+  { top: "30%", left: "5%" },
+  { top: "45%", left: "7%" },
+  { top: "45%", left: "1%" },
+  { top: "55%", left: "9%" },
+  { top: "53%", left: "11%" },
+  { top: "33%", left: "13%" },
   { top: "55%", left: "15%" },
   { top: "55%", left: "20%" },
-  { top: "55%", left: "17%" },
-  { top: "65%", left: "19%" },
-  { top: "65%", left: "22%" },
-  { top: "65%", left: "27%" },
-  { top: "65%", left: "30%" },
-  { top: "65%", left: "30%" },
-  { top: "65%", left: "30%" },
-  { top: "65%", left: "30%" },
-  { top: "65%", left: "30%" },
-  { top: "65%", left: "37%" },
-  { top: "65%", left: "33%" },
-  { top: "60%", left: "41%" },
-  { top: "60%", left: "45%" },
-  { top: "66%", left: "47%" },
-  { top: "67%", left: "53%" },
-  { top: "60%", left: "57%" },
+  { top: "50%", left: "17%" },
+  { top: "37%", left: "19%" },
+  { top: "50%", left: "22%" },
+  { top: "430%", left: "27%" },
+  { top: "55%", left: "30%" },
+  { top: "55%", left: "30%" },
+  { top: "57%", left: "30%" },
+  { top: "45%", left: "30%" },
+  { top: "47%", left: "30%" },
+  { top: "55%", left: "37%" },
+  { top: "55%", left: "33%" },
+  { top: "55%", left: "41%" },
+  { top: "37%", left: "45%" },
+  { top: "55%", left: "47%" },
+  { top: "55%", left: "53%" },
+  { top: "55%", left: "57%" },
   { top: "50%", right: "5%" },
-  { top: "65%", right: "7%" },
+  { top: "55%", right: "7%" },
   { top: "58%", right: "1%" },
-  { top: "60%", right: "9%" },
-  { top: "65%", right: "11%" },
-  { top: "60%", right: "13%" },
-  { top: "55%", right: "15%" },
-  { top: "50%", right: "20%" },
+  { top: "55%", right: "9%" },
+  { top: "33%", right: "11%" },
+  { top: "50%", right: "13%" },
+  { top: "58%", right: "15%" },
+  { top: "48%", right: "20%" },
   { top: "55%", right: "17%" },
-  { top: "65%", right: "19%" },
-  { top: "65%", right: "22%" },
-  { top: "65%", right: "27%" },
-  { top: "65%", right: "30%" }
+  { top: "53%", right: "19%" },
+  { top: "44%", right: "22%" },
+  { top: "55%", right: "27%" },
+  { top: "50%", right: "30%" }
   
 ];
 
@@ -51,7 +51,7 @@ const AnimatedMovie = () => {
     const interval = setInterval(() => {
       setCurrentMovieIndex((prevIndex) => (prevIndex + 1) % movies.length);
       setPosition(randomPositions[Math.floor(Math.random() * randomPositions.length)]);
-    }, 1500); // Change movie every 3 seconds
+    }, 1000); // Change movie every 3 seconds
 
     return () => clearInterval(interval);
   }, []);

@@ -7,7 +7,8 @@ import Home from "./pages/Home";
 import Inbox from "./pages/inbox";
 // import MovieGroupsDropdown from "./components/MovieGroupsDropdown";
 import GroupPage from "./pages/GroupPage";
-import MyGroupsPage from "./pages/MyGroupsPage"; 
+import MyGroupsPage from "./pages/MyGroupsPage";
+import "./App.css";
 
 
 

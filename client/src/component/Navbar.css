@@ -1,31 +1,37 @@
-li{
+/* .nav-right>li{
     width: 200px;
 }
+.profile-dropdown>li{
+    width: 200px;
+} */
 /* Glassy Navbar */
+.navbar-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box; /* 🔥 KEY FIX */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 40px;
+}
+
+
 .glassy-navbar {
     font-family: 'Poppins', sans-serif;
-    width:inherit;
     height: 70px;
+    width: 100%;
     position: relative;
     top: 0;
-    display: flex;
-    padding-left: 200px;
-    align-content: center;
-    align-items: center;
-    justify-content: flex-start;
-    align-self: center;
-    justify-items: center;
     z-index: 10;
-    gap:200px
-}
-.glassy-navbar{
     background: linear-gradient(135deg, rgba(111, 106, 106, 0));
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     box-shadow: 0 8px 32px 0 rgba(0,0,0,0.37);
     border:1px solid rgba(255, 255, 255, 0.18);
-    
 }
+
+
 .nav-left{
     /* width:60%; */
     color:aliceblue
@@ -48,7 +54,7 @@ li{
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  /* gap: 50px; */
+  gap: 50px;
 }
 
 /* Profile Menu Styling */
