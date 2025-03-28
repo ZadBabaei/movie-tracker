@@ -1,25 +1,20 @@
-/* .nav-right>li{
-    width: 200px;
-}
-.profile-dropdown>li{
-    width: 200px;
-} */
+
 /* Glassy Navbar */
 .navbar-content {
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
-  box-sizing: border-box; /* 🔥 KEY FIX */
+  box-sizing: border-box; 
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 40px;
+  padding: 10px 40px;
 }
 
 
 .glassy-navbar {
     font-family: 'Poppins', sans-serif;
-    height: 70px;
+    height: 40px;
     width: 100%;
     position: relative;
     top: 0;
@@ -33,11 +28,11 @@
 
 
 .nav-left{
-    /* width:60%; */
+
     color:aliceblue
 }
 .nav-right li {
-    /* width: 200px; */
+ 
     color: #ffffff;
     text-decoration: none;
     list-style: none;
@@ -74,7 +69,7 @@
 }
 
 .profile-menu {
-    /* position: relative;  */
+
     cursor: pointer;
 }
 
@@ -88,11 +83,11 @@
     padding: 10px 0;
     z-index: 1000;
     margin-top: 5px;
-    align-items: center; /* center contents horizontally */
+    align-items: center;
 }
 
 .profile-dropdown li {
-    width: 80%; /* Make them take 80% of dropdown width */
+    width: 80%; 
     padding: 10px;
     color: white;
     text-decoration: none;
@@ -104,14 +99,13 @@
 }
 
 
-/* Add this to create an invisible bridge between menu and dropdown */
 .profile-menu::after {
     content: '';
     position: absolute;
     top: 100%;
     left: 0;
     right: 0;
-    height: 5px; /* Same as margin-top of dropdown */
+    height: 5px; 
 }
 
 .profile-menu:hover .profile-dropdown {

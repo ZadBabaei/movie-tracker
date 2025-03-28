@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-// import { PlayIcon, FilmIcon } from "@heroicons/react/24/solid"; // ✅ Correct import for Heroicons v2
 import axios from "axios";
 import "./Home.css";
 import AnimatedMovie from "../component/AnimatedMovie";
-import Hero from "../component/Hero";
 import Navbar from "../component/Navbar";
-// import MovieGroupsDropdown from "../component/MovieGroupsDropdown"; // ✅ New Component
+import Hero from "../component/Hero";
+
 
 
 function Home() {
@@ -44,15 +43,11 @@ function Home() {
       <Hero
         backgroundImage="https://image.tmdb.org/t/p/original/7ucaMpXAmlIM24qZZ8uI9hCY0hm.jpg"
         height="100vh"
-      ></Hero>
-      <div className="landing-text">
-        <h1 className="main-heading">MOVIE TRACKER</h1>
-        <p className="sub-heading">
-          Experience movies the way they were meant to be — together.
-        </p>
-      </div>
+        heroText="MOVIE TRACKER"
+        heroTextSub="Experience movies the way they were meant to be — together."
+        variant="home"
+      />
 
-      {/* Action Buttons */}
       <motion.div
         className="banner-buttons"
         initial={{ opacity: 0, y: 30 }}

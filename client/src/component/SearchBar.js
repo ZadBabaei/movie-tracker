@@ -58,25 +58,31 @@ const handleSelect = (movie) => {
 
 
 	return (
-		<div className="search-bar">
-			<div className="search-bar-input-group">
-				<input type="text" placeholder="Search for a movie..." value={query} onChange={handleChange} />
-				<button onClick={handleSearchClick} className="search-btn">
-					{loading ? "Searching..." : "Search"}
-				</button>
-			</div>
+    <div className="search-bar-glass-wrapper">
+      <div className="search-bar-glass">
+        <input
+          type="text"
+          placeholder="Search for a movie..."
+          value={query}
+          onChange={handleChange}
+        />
+        <button onClick={handleSearchClick} className="search-btn-glass">
+          {loading ? "Searching..." : "Search"}
+        </button>
+      </div>
 
-			{results.length > 0 && (
-				<ul className="suggestions-list">
-					{results.slice(0, 5).map((movie) => (
-						<li key={movie.id} onClick={() => handleSelect(movie)}>
-							{movie.title} ({movie.release_date?.substring(0, 4)})
-						</li>
-					))}
-				</ul>
-			)}
-		</div>
-	);
+      {results.length > 0 && (
+        <ul className="suggestions-list-glass">
+          {results.slice(0, 5).map((movie) => (
+            <li key={movie.id} onClick={() => handleSelect(movie)}>
+              {movie.title} ({movie.release_date?.substring(0, 4)})
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+
 };
 
 export default SearchBar;

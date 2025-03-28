@@ -2,12 +2,12 @@ import React, { useState } from "react";
 import { FaTrashAlt, FaInfoCircle, FaHeart } from "react-icons/fa";
 import "./MovieCard.css";
 
-const MovieCard = ({ movie, onDelete }) => {
-     const [favorited, setFavorited] = useState(false);
+const MovieCard = ({ movie, onDelete, onInfoClick }) => {
+  const [favorited, setFavorited] = useState(false);
 
-     const toggleFavorite = () => {
-       setFavorited((prev) => !prev);
-     };
+  const toggleFavorite = () => {
+    setFavorited((prev) => !prev);
+  };
   return (
     <div className="Group-movie-card">
       <div className="movie-title">
@@ -26,8 +26,9 @@ const MovieCard = ({ movie, onDelete }) => {
         <div className="overlay">
           <FaInfoCircle
             className="icon info-icon"
-            onClick={() => alert("Info modal coming soon")}
+            onClick={() => onInfoClick(movie)} // ⬅️ NEW PROP
           />
+
           <FaHeart
             className={`icon heart-icon ${favorited ? "favorited" : ""}`}
             onClick={toggleFavorite}
