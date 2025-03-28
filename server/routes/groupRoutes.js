@@ -10,7 +10,7 @@ require("dotenv").config();
 
 const router = express.Router();
 
-// ✅ GET /api/groups/mine — must come before "/:id"
+//  GET /api/groups/mine 
 router.get("/mine", authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -26,7 +26,7 @@ router.get("/mine", authenticate, async (req, res) => {
   }
 });
 
-// ✅ POST /api/groups/:id/leave
+//  POST /api/groups/:id/leave
 router.post("/:id/leave", authenticate, async (req, res) => {
   try {
     const groupId = req.params.id;
@@ -56,7 +56,7 @@ router.post("/:id/leave", authenticate, async (req, res) => {
   }
 });
 
-// ✅ CREATE GROUP
+// CREATE GROUP
 router.post("/create", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -90,7 +90,7 @@ router.post("/create", async (req, res) => {
   }
 });
 
-// ✅ INVITE MEMBERS
+//  INVITE MEMBERS
 router.post("/invite", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -122,7 +122,7 @@ router.post("/invite", async (req, res) => {
   }
 });
 
-// ✅ RESPOND TO INVITE
+//  RESPOND TO INVITE
 router.post("/respond", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -162,7 +162,7 @@ router.post("/respond", async (req, res) => {
   }
 });
 
-// ✅ GET GROUP DETAILS
+//  GET GROUP DETAILS
 router.get("/:id", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -188,7 +188,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// ✅ ADD MOVIE TO GROUP
+//  ADD MOVIE TO GROUP
 router.post("/:id/add-movie", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -235,5 +235,25 @@ router.post("/:id/add-movie", async (req, res) => {
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 });
+// ❌ DELETE /api/groups/:groupId/remove-movie/:movieId
+router.delete("/:groupId/remove-movie/:movieId", async (req, res) => {
+  try {
+    const { groupId, movieId } = req.params;
+
+    const group = await Group.findById(groupId);
+    if (!group) return res.status(404).json({ msg: "Group not found" });
+
+    group.movies = group.movies.filter(
+      (id) => id.toString() !== movieId
+    );
+    await group.save();
+
+    res.json({ msg: "Movie removed from group" });
+  } catch (error) {
+    console.error("❌ Error removing movie:", error);
+    res.status(500).json({ msg: "Server error", error: error.message });
+  }
+});
+
 
 module.exports = router;

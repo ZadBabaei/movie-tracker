@@ -1,0 +1,46 @@
+.movie-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.movie-modal-content {
+  background: #1a1a1a;
+  padding: 30px;
+  border-radius: 20px;
+  display: flex;
+  gap: 30px;
+  color: white;
+  max-width: 800px;
+  width: 90%;
+}
+
+.movie-modal-content img {
+  height: 300px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.movie-info h2 {
+  margin-top: 0;
+  font-size: 2rem;
+}
+
+.movie-info p {
+  margin: 10px 0;
+  color: #ccc;
+}
+
+.movie-modal-content button {
+  margin-top: auto;
+  padding: 10px 20px;
+  background: #ff4747;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}

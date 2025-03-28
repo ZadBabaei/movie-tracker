@@ -109,7 +109,7 @@
   margin-bottom: 5px;
 }
 
-.Grou-pmovie-details p {
+.Group-movie-details p {
   background-color: aquamarine;
   color: #fff;
   font-size: 14px;
@@ -117,4 +117,31 @@
 }
 .favorited {
   color: #ffd700 !important; /* gold star color */
+}
+.Group-movie-card {
+  width: 200px;
+  margin: 10px;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  background: #121212;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.Group-movie-card:hover {
+  transform: scale(1.05) translateY(-5px);
+  box-shadow: 0 12px 30px rgba(255, 255, 255, 0.1);
+}
+
+.Group-movie-poster {
+  width: 100%;
+  height: 250px;
+  object-fit: cover;
+  border-radius: 10px;
+  transition: transform 0.3s ease;
+}
+
+.Group-poster-container:hover .Group-movie-poster {
+  transform: scale(1.03);
 }

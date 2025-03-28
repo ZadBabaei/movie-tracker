@@ -6,8 +6,8 @@ import Navbar from "../component/Navbar";
 import Hero from "../component/Hero";
 import SearchBar from "../component/SearchBar";
 import MovieCard from "../component/MovieCard";
-import HeroImage from "../assets/avang02.jpg";
 import InviteModal from "../component/InviteFriendsModal"; // new import
+import MovieModal from "../component/MovieModal"; // import MovieModal
 
 
 
@@ -18,6 +18,8 @@ const GroupPage = () => {
   const [group, setGroup] = useState(null);
   const [addedMovies, setAddedMovies] = useState([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [selectedMovie, setSelectedMovie] = useState(null);
+
 
   useEffect(() => {
     fetchGroupDetails();
@@ -32,6 +34,7 @@ const GroupPage = () => {
     // Populate movies from DB
     const fetchedMovies = res.data.movies.map((m) => ({
       id: m.imdbID,
+      _id: m._id,
       title: m.title,
       poster_path: m.poster,
       vote_average: m.vote_average || 0, // fallback if needed
@@ -60,7 +63,8 @@ const GroupPage = () => {
       `http://localhost:5000/api/groups/${id}/remove-movie/${movieId}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
-    setAddedMovies((prev) => prev.filter((m) => m.id !== movieId));
+    setAddedMovies((prev) => prev.filter((m) => m._id !== movieId));
+
   };
 
   if (!group) return <p>Loading group...</p>;
@@ -69,9 +73,19 @@ const GroupPage = () => {
     <div className="group-page">
       <Navbar groupName={group.name} />
       <Hero
-        backgroundImage={HeroImage}
-        heroText="What we watched together so far!"
+        backgroundImage="https://image.tmdb.org/t/p/original/7ucaMpXAmlIM24qZZ8uI9hCY0hm.jpg"
+        heroText={`🎬 ${group.name} Watch Club`}
+        heroTextSub="lets watch movies like there is no tomorrow"
+        variant="group"
       />
+
+      <div className="group-stats-bar">
+        <p>
+          👥 <strong>{group.members.length}</strong> Members &nbsp;&nbsp; 🎞️{" "}
+          <strong>{addedMovies.length}</strong> Movies Watched
+        </p>
+      </div>
+
       <div className="group-content">
         {/* Members */}
         <h1 className="group-members-title">Group Members</h1>
@@ -79,13 +93,27 @@ const GroupPage = () => {
           <div className="group-member-card-container">
             <div className="group-member-cards-wrapper">
               {group.members.map((member) => (
-                <div key={member._id} className="group-members-card">
-                  <img
-                    src={member.profilePic || "https://i.pravatar.cc/100"}
-                    alt={member.name}
-                  />
-                  <div className="divider"></div>
-                  <h2>{member.name}</h2>
+                <div key={member._id} className="member-card-glow">
+                  <div className="member-avatar-wrapper">
+                    <img
+                      src={
+                        member.profilePic ||
+                        "https://i.pravatar.cc/100?u=" + member._id
+                      }
+                      alt={member.name}
+                      className="member-avatar"
+                    />
+                    <span
+                      className={`status-dot ${
+                        member._id.endsWith("1") ? "online" : "offline"
+                      }`}
+                    ></span>
+                  </div>
+                  <div className="member-name">{member.name}</div>
+                  {/* Optional badge */}
+                  {member._id.endsWith("2") && (
+                    <div className="badge">Top Contributor</div>
+                  )}
                 </div>
               ))}
             </div>
@@ -99,16 +127,35 @@ const GroupPage = () => {
         </button>
 
         <SearchBar onMovieSelect={handleMovieAdd} />
+        <div style={{ marginTop: "30px", textAlign: "center" }}>
+          <div className="movie-callout">
+            <h2>🎬 Add a new movie or scroll down to relive the magic!</h2>
+            <p>
+              Want to talk about the latest movie? Head to the group chat and
+              share your thoughts!
+            </p>
+          </div>
+        </div>
 
         {/* Movies Section */}
-        <div className="added-movies-container">
-          {addedMovies.map((movie) => (
-            <MovieCard
-              key={movie.id}
-              movie={movie}
-              onDelete={() => handleDeleteMovie(movie.id)}
-            />
-          ))}
+        <div className="added-movies-wrapper">
+          {addedMovies.length === 0 ? (
+            <div className="empty-state">
+              <h2>🎬 No movies yet!</h2>
+              <p>Start adding your favorites using the search bar above.</p>
+            </div>
+          ) : (
+            <div className="movie-grid fade-in-grid">
+              {addedMovies.map((movie) => (
+                <MovieCard
+                  key={movie._id}
+                  movie={movie}
+                  onDelete={() => handleDeleteMovie(movie._id)}
+                  onInfoClick={(m) => setSelectedMovie(m)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -117,6 +164,12 @@ const GroupPage = () => {
         <InviteModal
           groupId={group._id}
           onClose={() => setShowInviteModal(false)}
+        />
+      )}
+      {selectedMovie && (
+        <MovieModal
+          movie={selectedMovie}
+          onClose={() => setSelectedMovie(null)}
         />
       )}
     </div>
