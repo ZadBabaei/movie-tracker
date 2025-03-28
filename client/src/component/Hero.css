@@ -11,82 +11,17 @@ body,
 .hero-banner {
   width: 100%;
   position: relative;
-  top: 0;
-  left: 0;
+  z-index: 2; /* ✅ add this */
   overflow: hidden;
   display: flex;
   justify-content: center;
   align-items: center;
   background-size: cover;
-}
-
-.banner-overlay {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  z-index: 2;
-}
-
-/* Centered Banner Text */
-.banner-text {
-  font-size: 3rem;
-  font-weight: 700;
-  color: white;
-  padding: 20px 40px;
-  border-radius: 12px;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
-  animation: fadeInSlideUp 0.8s ease-out;
-}
-
-/* Action Buttons */
-.banner-buttons {
-  display: flex;
-  gap: 15px;
-  justify-content: center;
-  margin-top: 20px;
-}
-
-.banner-buttons button {
-  width: 150px;
-  height: 50px;
-  background: linear-gradient(135deg, #f4c542, #ff9800);
-  color: white;
-  border: none;
-  padding: 10px 18px;
-  font-size: 14px;
-  font-weight: bold;
-  cursor: pointer;
-  border-radius: 25px;
-  transition: 0.3s ease-in-out;
-  box-shadow: 0 4px 8px rgba(255, 152, 0, 0.3);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.banner-buttons button:hover {
-  transform: scale(1.05);
-  background: linear-gradient(135deg, #ff9800, #f4c542);
-}
-
-/* Icons inside buttons */
-.button-icon {
-  width: 16px;
-  height: 16px;
-  color: white;
-}
-/* 🌀 Parallax & Blur Overlay */
-.parallax-hero {
-  background-attachment: fixed;
-  background-repeat: no-repeat;
   background-position: center;
-  background-size: cover;
-  position: relative;
-  z-index: 1;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
+
 
 .banner-overlay {
   position: absolute;
@@ -96,7 +31,7 @@ body,
   z-index: 1;
 }
 
-/* 🎬 Fade-in Text Animation */
+/* Fade-in Animation */
 .fade-in {
   animation: fadeInSlideUp 1s ease-out forwards;
   opacity: 0;
@@ -112,6 +47,8 @@ body,
     opacity: 1;
   }
 }
+
+/* Group Variant Layout */
 .group-title-container {
   display: flex;
   justify-content: center;
@@ -126,7 +63,7 @@ body,
   padding: 30px 50px;
   border-radius: 20px;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
-  border-left: 8px solid #ff4747; /* red accent line */
+  border-left: 8px solid #ff4747;
   max-width: 800px;
 }
 
@@ -146,8 +83,10 @@ body,
   font-weight: 400;
   font-family: "Poppins", sans-serif;
 }
+
+/* Home Variant Layout */
 .home-title-container {
-  position: absolute;
+  position: relative;
   top: 40%;
   left: 8%;
   transform: translateY(-50%);
@@ -161,7 +100,7 @@ body,
   animation: fadeInSlideUp 1s ease forwards;
 }
 
-.home-title-container .main-heading {
+.main-heading {
   font-size: 64px;
   font-family: 'Bebas Neue', 'Poppins', sans-serif;
   letter-spacing: 3px;
@@ -170,45 +109,18 @@ body,
   color: #fff;
 }
 
-.home-title-container .sub-heading {
-  font-size: 20px;
-  font-weight: 300;
-  margin-top: 10px;
-  line-height: 1.5;
-  opacity: 0.85;
-  color: #ccc;
-}
-/* .home-title-container {
-  position: absolute;
-  top: 40%;
-  left: 8%;
-  transform: translateY(-50%);
-  z-index: 5;
-  color: #fff;
-  max-width: 600px;
-  padding: 20px 30px;
-  background: rgba(0, 0, 0, 0.5);
-  border-left: 5px solid #ff9800;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
-  border-radius: 12px;
-  animation: fadeInSlideUp 1s ease forwards;
-} */
-
-/* .home-title-container .main-heading {
-  font-size: 64px;
-  font-family: 'Bebas Neue', 'Poppins', sans-serif;
-  letter-spacing: 3px;
-  margin: 0;
-  line-height: 1.1;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
-}
-
-.home-title-container .sub-heading {
+.sub-heading {
   font-size: 20px;
   font-weight: 300;
   margin-top: 10px;
   font-family: 'Poppins', sans-serif;
   line-height: 1.5;
   opacity: 0.85;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
-} */
+  color: #ccc;
+}
+.hero-navbar {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}

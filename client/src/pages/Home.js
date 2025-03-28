@@ -6,14 +6,9 @@ import AnimatedMovie from "../component/AnimatedMovie";
 import Navbar from "../component/Navbar";
 import Hero from "../component/Hero";
 
-
-
 function Home() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [currentMovieIndex, setCurrentMovieIndex] = useState(0);
- 
- 
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -36,10 +31,9 @@ function Home() {
     fetchUserData();
   }, []);
 
-
   return (
     <div className="home-container">
-      <Navbar userName={user ? user.name : "Guest"}></Navbar>
+      <Navbar userName={user ? user.name : "Guest"} />
       <Hero
         backgroundImage="https://image.tmdb.org/t/p/original/7ucaMpXAmlIM24qZZ8uI9hCY0hm.jpg"
         height="100vh"
@@ -55,7 +49,6 @@ function Home() {
         transition={{ duration: 1 }}
       ></motion.div>
 
-      {/* Animated Movie Poster */}
       <AnimatedMovie />
     </div>
   );
