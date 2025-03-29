@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { PlayIcon } from "@heroicons/react/24/solid";
 import "./MovieGroupsDropdown.css"; // ✅ New CSS file
-import CreateGroupModal from "./CreateGroupModal";
+import CreateGroupModal from "./GroupsModal";
 
 const MovieGroupsDropdown = ({ groups, refreshGroups }) => {
   const [isOpen, setIsOpen] = useState(false);

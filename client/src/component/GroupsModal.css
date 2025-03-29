@@ -10,39 +10,59 @@
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(12px);
   display: flex;
-  justify-content: center;
+  justify-content: flex-start; /* Modal enters from left */
   align-items: center;
   z-index: 9999;
 }
 
 /* Modal Content */
 .modal-content {
-  width: 700px;
-  max-width: 90%;
-  height: auto;
-  max-height: 90%;
-  background-color: rgba(68, 66, 66, 0.95);
+  width: 400px;
+  height: 300px;
+  background-color: rgba(22, 13, 13, 0.692);
   border-radius: 16px;
-  padding: 30px;
+  padding: 20px;
   color: white;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  animation: slideInFromLeft 0.4s ease forwards;
   z-index: 10000;
 }
 
-/* Input Field */
-.modal-content input {
-  width: 90%;
-  padding: 12px;
-  margin: 10px 0;
-  border: none;
-  border-radius: 5px;
-  font-size: 16px;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  outline: none;
+/* Slide-in Animation */
+@keyframes slideInFromLeft {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Group List */
+.group-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+.group-item {
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.group-item:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 /* Modal Buttons */
@@ -50,11 +70,12 @@
   display: flex;
   justify-content: space-evenly;
   gap: 15px;
+  margin-top: 10px;
 }
 
 .modal-buttons button {
-  width: 150px;
-  height: 50px;
+  width: 130px;
+  height: 45px;
   background: linear-gradient(135deg, #f4c542, #ff9800);
   color: white;
   border: none;
@@ -76,4 +97,20 @@
 
 .modal-buttons button:last-child {
   background: rgba(255, 255, 255, 0.2);
+}
+.modal-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 18px;
+  background: transparent;
+  color: white;
+  font-size: 1.5rem;
+  border: none;
+  cursor: pointer;
+  z-index: 10001;
+  transition: transform 0.2s ease;
+}
+
+.modal-close-btn:hover {
+  transform: scale(1.2);
 }
