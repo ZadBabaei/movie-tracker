@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import axios from "axios";
 import "./Home.css";
 import AnimatedMovie from "../component/AnimatedMovie";
+import VerticalNavbar from "../component/VerticalNavbar";
+
 import Navbar from "../component/Navbar";
 import Hero from "../component/Hero";
 
@@ -32,26 +34,27 @@ function Home() {
   }, []);
 
   return (
-    <div className="home-container">
-      <Navbar userName={user ? user.name : "Guest"} />
-      <Hero
-        backgroundImage="https://image.tmdb.org/t/p/original/7ucaMpXAmlIM24qZZ8uI9hCY0hm.jpg"
-        height="100vh"
-        heroText="MOVIE TRACKER"
-        heroTextSub="Experience movies the way they were meant to be — together."
-        variant="home"
-      />
-
-      <motion.div
-        className="banner-buttons"
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1 }}
-      ></motion.div>
-
-      <AnimatedMovie />
+  <div className="home-container">
+   
+<VerticalNavbar></VerticalNavbar>
+    <div
+      className="landing-banner"
+      style={{
+        backgroundImage: `url("https://image.tmdb.org/t/p/original/7ucaMpXAmlIM24qZZ8uI9hCY0hm.jpg")`,
+      }}
+    >
+      <div className="landing-text">
+        <h1 className="main-heading">MOVIE TRACKER</h1>
+        <p className="sub-heading">
+          Experience movies the way they were meant to be — together.
+        </p>
+      </div>
     </div>
-  );
+
+    <AnimatedMovie />
+  </div>
+);
+
 }
 
 export default Home;
