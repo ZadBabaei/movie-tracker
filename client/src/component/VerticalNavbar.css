@@ -4,7 +4,7 @@
   top: 1rem;
   left: 1rem;
  background: #283048;  /* fallback for old browsers */
-background: -webkit-linear-gradient(to top, #c06312, #26345d);  /* Chrome 10-25, Safari 5.1-6 */
+background: -webkit-linear-gradient(to top, #17421d, #040a1c);  /* Chrome 10-25, Safari 5.1-6 */
 background: linear-gradient(to top, #17421d, #040a1c); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
 
   border-radius: 12px;

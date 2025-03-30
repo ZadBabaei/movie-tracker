@@ -2,12 +2,12 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import "./GroupPage.css";
-import Navbar from "../component/Navbar";
 import Hero from "../component/Hero";
 import SearchBar from "../component/SearchBar";
 import MovieCard from "../component/MovieCard";
-import InviteModal from "../component/InviteFriendsModal"; // new import
-import MovieModal from "../component/MovieModal"; // import MovieModal
+import InviteModal from "../component/InviteFriendsModal"; 
+import VerticalNavbar from "../component/VerticalNavbar";
+import MovieModal from "../component/MovieModal";
 
 
 
@@ -71,9 +71,10 @@ const GroupPage = () => {
 
   return (
     <div className="group-page">
-      <Navbar groupName={group.name} />
+      <VerticalNavbar></VerticalNavbar>
       <Hero
-        backgroundImage="https://image.tmdb.org/t/p/original/7ucaMpXAmlIM24qZZ8uI9hCY0hm.jpg"
+        height="60vh"
+        backgroundImage="https://image.tmdb.org/t/p/original/vW7JMRiXuXGfxgUYovvR7iqRGtl.jpg"
         heroText={`🎬 ${group.name} Watch Club`}
         heroTextSub="lets watch movies like there is no tomorrow"
         variant="group"

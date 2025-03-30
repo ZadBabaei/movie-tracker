@@ -20,6 +20,7 @@
   background-color: #2e2c2c;
   text-align: center;
    padding: 5px;
+   margin:10px;
 }
 .rating {
     width: 180px;
@@ -110,7 +111,7 @@
 }
 
 .Group-movie-details p {
-  background-color: aquamarine;
+  background-color: rgb(41, 43, 42);
   color: #fff;
   font-size: 14px;
   margin: 2px 0;
