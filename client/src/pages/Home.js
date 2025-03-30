@@ -7,9 +7,6 @@ import VerticalNavbar from "../component/VerticalNavbar";
 import GroupsModal from '../component/GroupsModal'; // adjust path if needed
 
 
-import Navbar from "../component/Navbar";
-import Hero from "../component/Hero";
-
 function Home() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);

@@ -5,9 +5,13 @@ import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import Home from "./pages/Home";
 import Inbox from "./pages/inbox";
-// import MovieGroupsDropdown from "./components/MovieGroupsDropdown";
 import GroupPage from "./pages/GroupPage";
 import MyGroupsPage from "./pages/MyGroupsPage";
+import Watchlist from "./pages/Watchlist";
+import Profile from "./pages/Profile";
+import About from "./pages/About";
+
+
 import "./App.css";
 
 
@@ -23,6 +27,9 @@ function App() {
         <Route path="/inbox" element={<Inbox />} />
         <Route path="/group/:id" element={<GroupPage />} />
         <Route path="/my-groups" element={<MyGroupsPage />} />
+        <Route path="/watchlist" element={<Watchlist />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/about" element={<About />} />
       </Routes>
     </Router>
   );

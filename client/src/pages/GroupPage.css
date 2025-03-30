@@ -1,11 +1,17 @@
 .group-page {
-  background: rgb(15, 32, 39);
+  /* background: rgb(15, 32, 39);
   background: linear-gradient(
     180deg,
     rgba(15, 32, 39, 1) 23%,
     rgba(32, 58, 67, 1) 47%,
-    rgba(44, 83, 100, 1) 100%
-  );
+    rgba(44, 83, 100, 1) 100% */
+  background: #283048; /* fallback for old browsers */
+  background: -webkit-linear-gradient(
+    to top,
+    #17421d,
+    #040a1c
+  ); /* Chrome 10-25, Safari 5.1-6 */
+  background: linear-gradient(to top, #17421d, #040a1c);
 }
 .group-content {
   display: flex;
@@ -22,7 +28,7 @@
 .group-page h1 {
   font-size: 2rem;
   margin-bottom: 20px;
-  margin-left:180px
+  margin-left: 180px;
 }
 
 .members-section {
@@ -53,14 +59,13 @@
   flex-wrap: nowrap; /* Prevent wrapping */
   gap: 20px;
   padding-bottom: 10px;
-
+  margin-inline-start: 10px;
+  padding-inline-start: 150px;
   width: 97vw; /* Force it to be viewport width */
   overflow-x: auto; /* Enable horizontal scrolling */
   overflow-y: hidden; /* Optional: hide vertical scroll */
 
   box-sizing: border-box;
-
-
 }
 
 .group-member-card-container::-webkit-scrollbar {
@@ -107,32 +112,12 @@
   color: black;
 }
 .divider {
-  width: 2px; /* Line thickness */
-  height: 80%; /* 80% height */
-  background-color: rgb(137, 134, 134); /* Line color */
-  margin: 0 10px; /* Spacing around the line */
+  width: 2px;
+  height: 80%;
+  background-color: rgb(137, 134, 134);
+  margin: 0 10px;
 }
 
-/* .group-member-btn {
-  margin: 20px 0 20px 180px;
-  box-shadow: 1px 2px 6px 2px #9fb4f2;
-  background: linear-gradient(to bottom, #7892c2 5%, #476e9e 100%);
-  background-color: #7892c2;
-  border-radius: 16px;
-  border: 1px solid #4e6096;
-  display: inline-block;
-  cursor: pointer;
-  color: #ffffff;
-  font-family: Arial;
-  font-size: 19px;
-  padding: 15px 60px;
-  text-decoration: none;
-  text-shadow: 0px 3px 0px #283966;
-} */
-/* .group-member-btn:hover {
-  background: linear-gradient(to bottom, #476e9e 5%, #7892c2 100%);
-  background-color: #476e9e;
-} */
 .group-member-btn:active {
   position: relative;
   top: 1px;
@@ -278,7 +263,7 @@
   justify-content: center;
   align-items: center;
   gap: 30px;
- 
+
   padding: 16px 0;
   color: #e2e2e2;
   font-weight: 700;
@@ -287,7 +272,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-   font-size: 1.5rem;
+  font-size: 1.5rem;
 }
 .added-movies-wrapper {
   width: 100%;
@@ -296,7 +281,6 @@
   padding: 40px 20px;
 }
 .group-members-title {
-  margin: 50px auto 20px;
   font-size: 1.8rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -319,8 +303,8 @@
 }
 .movie-callout {
   text-align: center;
-  padding: 40px 20px 20px;
-  max-width: 900px;
+  padding: 0px 20px 20px;
+  max-width: 1000px;
   margin: 0 auto;
   color: #f5f5f5;
 }
@@ -330,6 +314,7 @@
   font-weight: 600;
   color: #ffffff;
   margin-bottom: 12px;
+  padding-inline-start: 50px;
 }
 
 .movie-callout p {
