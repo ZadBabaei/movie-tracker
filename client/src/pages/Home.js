@@ -4,14 +4,18 @@ import axios from "axios";
 import "./Home.css";
 import AnimatedMovie from "../component/AnimatedMovie";
 import VerticalNavbar from "../component/VerticalNavbar";
-import GroupsModal from '../component/GroupsModal'; // adjust path if needed
+import GroupsModal from '../component/GroupsModal';
+import quotes from "../data/Quotes"; 
+
 
 
 function Home() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 const [showGroupsModal, setShowGroupsModal] = useState(false);
-const [groupList, setGroupList] = useState([]);
+  const [groupList, setGroupList] = useState([]);
+  const [quote, setQuote] = useState("");
+
 
 
 
@@ -28,10 +32,12 @@ const [groupList, setGroupList] = useState([]);
         });
         setUser(res.data);
       } catch (error) {
-        console.error("❌ Error fetching user data:", error);
+        console.error(" Error fetching user data:", error);
       } finally {
         setLoading(false);
       }
+      const randomIndex = Math.floor(Math.random() * quotes.length);
+      setQuote(quotes[randomIndex]);
     };
     fetchUserData();
   }, []);
@@ -46,11 +52,12 @@ useEffect(() => {
       setGroupList(res.data);
     } catch (error) {
       console.error(
-        "❌ Error fetching groups:",
+        " Error fetching groups:",
         error.response?.data?.msg || error.message
       );
     }
   };
+  
 
   if (showGroupsModal) fetchGroups();
 }, [showGroupsModal]);
@@ -66,10 +73,12 @@ useEffect(() => {
         }}
       >
         <div className="landing-text">
-          <h1 className="main-heading">MOVIE TRACKER</h1>
-          <p className="sub-heading">
-            Experience movies the way they were meant to be — together.
-          </p>
+          {user && (
+            <>
+              <h1 className="main-heading">Welcome, {user.name}!</h1>
+              <p className="sub-heading italic text-gray-200">“{quote}”</p>
+            </>
+          )}
         </div>
       </div>
 
@@ -80,7 +89,6 @@ useEffect(() => {
         groups={groupList}
         onCreateGroup={() => {
           setShowGroupsModal(false);
-          // You can route to group creation or open another modal
         }}
         onShowAll={() => {
           setShowGroupsModal(false);

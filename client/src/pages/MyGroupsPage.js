@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
-import Navbar from "../component/Navbar";
+import VerticalNavbar from "../component/VerticalNavbar"; 
 import Hero from "../component/Hero";
 import "./MyGroupsPage.css";
 import { useNavigate } from "react-router-dom";
@@ -13,8 +13,8 @@ const MyGroupsPage = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const decoded = token ? jwtDecode(token) : null;
-  const userName = decoded?.name || "Guest";
-  const userId = decoded?.id;
+  // const userName = decoded?.name || "Guest";
+  // const userId = decoded?.id;
 
   useEffect(() => {
     const fetchGroups = async () => {
@@ -53,19 +53,25 @@ const MyGroupsPage = () => {
   const getColorClass = (name) => {
     if (!name) return "a";
     const char = name.trim().charAt(0).toLowerCase();
-    const index = char.charCodeAt(0) % 10; // ensures a–j
-    return String.fromCharCode(97 + index); // 'a' to 'j'
+    const index = char.charCodeAt(0) % 10; 
+    return String.fromCharCode(97 + index); 
   };
 
 
   return (
     <>
-      <Navbar userName={userName}
-      />
-      <Hero backgroundImage="https://image.tmdb.org/t/p/original/7ucaMpXAmlIM24qZZ8uI9hCY0hm.jpg"></Hero>
+      <VerticalNavbar></VerticalNavbar>
+      <Hero
+        height="80vh"
+        heroText={"Your Movie Groups at a Glance 🎬"}
+        heroTextSub={
+          "“Manage every group you’re part of — friends, films, fun.”"
+        }
+        backgroundImage="https://image.tmdb.org/t/p/original/edKpE9B5qN3e559OuMCLZdW1iBZ.jpg"
+      ></Hero>
 
       <div className="my-groups-page">
-        <h1>My Groups</h1>
+        <h1 className="my-Group-page-title">My Groups</h1>
 
         {loading ? (
           <p>Loading...</p>

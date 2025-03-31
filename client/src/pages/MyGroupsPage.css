@@ -1,16 +1,22 @@
 /* MyGroupsPage.css */
 
 .my-groups-page {
-  padding: 40px;
+  padding: 0px 100px 0px 100px;
   color: white;
   min-height: 100vh;
-  background: linear-gradient(to bottom, #0f2027, #203a43, #2c5364);
-  margin-top:18%;
+    background: #283048; /* fallback for old browsers */
+  background: -webkit-linear-gradient(
+    to top,
+    #17421d,
+    #040a1c
+  ); 
+  background: linear-gradient(to top, #17421d, #040a1c);
 }
 
-.my-groups-page h1 {
+.my-Group-page-title {
   font-size: 32px;
   margin-bottom: 30px;
+  padding-top: 20px;
   text-align: center;
 }
 

@@ -71,14 +71,13 @@ const GroupPage = () => {
 
   return (
     <div className="group-page">
-      <VerticalNavbar></VerticalNavbar>
+      <VerticalNavbar ></VerticalNavbar>
       <Hero
         height="60vh"
         backgroundImage="https://image.tmdb.org/t/p/original/vW7JMRiXuXGfxgUYovvR7iqRGtl.jpg"
         heroText={`🎬 ${group.name} Watch Club`}
         heroTextSub="lets watch movies like there is no tomorrow"
-        variant="group"
-      />
+        />
 
       <div className="group-stats-bar">
         <p>
