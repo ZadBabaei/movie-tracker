@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { jwtDecode } from "jwt-decode";
-import VerticalNavbar from "../component/VerticalNavbar"; 
+import { useNavigate } from "react-router-dom";
+import { fetchMyGroups, leaveGroup } from "../api/groupApi";
+import { toast } from "react-toastify";
+import VerticalNavbar from "../component/VerticalNavbar";
 import Hero from "../component/Hero";
 import "./MyGroupsPage.css";
-import { useNavigate } from "react-router-dom";
 
 const MyGroupsPage = () => {
   const [groups, setGroups] = useState([]);
@@ -13,54 +14,46 @@ const MyGroupsPage = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const decoded = token ? jwtDecode(token) : null;
-  // const userName = decoded?.name || "Guest";
-  // const userId = decoded?.id;
 
   useEffect(() => {
     const fetchGroups = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/groups/mine", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setGroups(res.data);
+        const data = await fetchMyGroups();
+        setGroups(data);
       } catch (err) {
         setError("Failed to load your groups.");
+        toast.error("Unable to load groups.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchGroups();
-  }, [token]);
+  }, []);
 
   const handleLeaveGroup = async (groupId) => {
     if (!window.confirm("Are you sure you want to leave this group?")) return;
 
     try {
-      await axios.post(
-        `http://localhost:5000/api/groups/${groupId}/leave`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await leaveGroup(groupId);
       setGroups((prev) => prev.filter((group) => group._id !== groupId));
+      toast.success("You’ve left the group.");
     } catch (err) {
-      alert("Failed to leave group.");
+      toast.error("Failed to leave group.");
       console.error(err);
     }
   };
+
   const getColorClass = (name) => {
     if (!name) return "a";
     const char = name.trim().charAt(0).toLowerCase();
-    const index = char.charCodeAt(0) % 10; 
-    return String.fromCharCode(97 + index); 
+    const index = char.charCodeAt(0) % 10;
+    return String.fromCharCode(97 + index);
   };
-
 
   return (
     <>
-      <VerticalNavbar></VerticalNavbar>
+      <VerticalNavbar />
       <Hero
         height="80vh"
         heroText={"Your Movie Groups at a Glance 🎬"}
@@ -68,8 +61,7 @@ const MyGroupsPage = () => {
           "“Manage every group you’re part of — friends, films, fun.”"
         }
         backgroundImage="https://image.tmdb.org/t/p/original/edKpE9B5qN3e559OuMCLZdW1iBZ.jpg"
-      ></Hero>
-
+      />
       <div className="my-groups-page">
         <h1 className="my-Group-page-title">My Groups</h1>
 
@@ -94,14 +86,13 @@ const MyGroupsPage = () => {
                 <tr key={group._id}>
                   <td id="GroupNameSize">
                     <span
-                      className=" group-link"
+                      className="group-link"
                       onClick={() => navigate(`/group/${group._id}`)}
                     >
                       {group.name}
                     </span>
                   </td>
                   <td>
-                    {" "}
                     <div className="member-avatars">
                       {group.members?.slice(0, 5).map((member) => (
                         <div
@@ -134,7 +125,6 @@ const MyGroupsPage = () => {
                       year: "numeric",
                     })}
                   </td>
-
                   <td>
                     <button onClick={() => handleLeaveGroup(group._id)}>
                       Leave

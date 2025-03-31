@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Hero from "../component/Hero";
-import Navbar from "../component/Navbar";
+import VerticalNavbar from "../component/VerticalNavbar";
 import "./inbox.css";
 import HeroImage from "../assets/avang02.jpg";
 const Inbox = () => {
@@ -45,7 +45,7 @@ const Inbox = () => {
 
   return (
     <div className="home-container">
-      <Navbar
+      <VerticalNavbar
          />
       <Hero
         backgroundImage={HeroImage}
