@@ -6,11 +6,7 @@
     rgba(32, 58, 67, 1) 47%,
     rgba(44, 83, 100, 1) 100% */
   background: #283048; /* fallback for old browsers */
-  background: -webkit-linear-gradient(
-    to top,
-    #17421d,
-    #040a1c
-  ); /* Chrome 10-25, Safari 5.1-6 */
+  background: -webkit-linear-gradient(to top, #17421d, #040a1c);
   background: linear-gradient(to top, #17421d, #040a1c);
 }
 .group-content {
@@ -25,10 +21,7 @@
   margin-left: 0;
 }
 
-.group-page h1 {
-  font-size: 2rem;
-  margin-bottom: 20px;
-  margin-left: 180px;
+.group-members-title {
 }
 
 .members-section {
@@ -50,7 +43,9 @@
 }
 
 .group-members-title {
-  margin: 10px;
+  font-size: 2rem;
+  margin-bottom: 20px;
+  margin-left: 180px;
   color: rgb(251, 247, 247);
 }
 /* Inner scrolling container */

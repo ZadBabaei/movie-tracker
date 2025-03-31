@@ -74,6 +74,7 @@ body,
   margin: 0;
   font-family: "Poppins", sans-serif;
   letter-spacing: 1px;
+line-height: 50px;
 }
 
 .group-title-sub {

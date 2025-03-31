@@ -77,22 +77,22 @@
   opacity: 1;
 }
 
-.icon {
+.icon  {
   color: #fff;
   font-size: 20px;
   cursor: pointer;
   transition: transform 0.2s ease;
 }
 
-.icon:hover {
+.icon:hover  {
   transform: scale(1.2);
 }
 
-.info-icon {
+.info-icon  {
   color: #4db8ff;
 }
 
-.heart-icon {
+.heart-icon  {
   color: #ff5e5e;
 }
 

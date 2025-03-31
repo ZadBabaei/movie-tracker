@@ -13,7 +13,7 @@ const groupSchema = new mongoose.Schema(
     movies: [{ type: mongoose.Schema.Types.ObjectId, ref: "Movie" }],
   },
   {
-    timestamps: true, // ✅ this adds createdAt and updatedAt
+    timestamps: true, 
   }
 );
 
