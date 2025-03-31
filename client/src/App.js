@@ -10,14 +10,15 @@ import MyGroupsPage from "./pages/MyGroupsPage";
 import Watchlist from "./pages/Watchlist";
 import Profile from "./pages/Profile";
 import About from "./pages/About";
-
-
+import GroupsModal from "./component/GroupsModal";
+import ToastWrapper from "./component/ToastWrapper";
+import { useModal } from "./context/ModalContext"; 
 import "./App.css";
 
-
-
 function App() {
-	return (
+  const { isGroupsModalOpen, closeGroupsModal, groupList } = useModal();
+
+  return (
     <Router>
       <Routes>
         <Route path="/" element={<Login />} />
@@ -31,6 +32,15 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/about" element={<About />} />
       </Routes>
+
+
+      <GroupsModal
+        isOpen={isGroupsModalOpen}
+        onClose={closeGroupsModal}
+        groups={groupList}
+        onCreateGroup={closeGroupsModal}
+      />
+      <ToastWrapper />
     </Router>
   );
 }

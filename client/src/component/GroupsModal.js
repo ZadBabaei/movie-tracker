@@ -1,16 +1,10 @@
-// GroupsModal.js
 import React from "react";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { useNavigate } from "react-router-dom";
 import "./GroupsModal.css";
 
-const GroupsModal = ({
-  isOpen,
-  onClose,
-  groups = [],
-  onCreateGroup,
-  onShowAll,
-}) => {
-  const navigate = useNavigate(); // Use the hook here
+const GroupsModal = ({ isOpen, onClose, groups = [], onCreateGroup }) => {
+  const navigate = useNavigate();
+
   if (!isOpen) return null;
 
   return (
@@ -26,7 +20,10 @@ const GroupsModal = ({
               <li
                 key={group._id}
                 className="group-item"
-                onClick={() => navigate(`/group/${group._id}`)}
+                onClick={() => {
+                  navigate(`/group/${group._id}`);
+                  onClose();
+                }}
               >
                 {group.name}
               </li>
@@ -38,7 +35,14 @@ const GroupsModal = ({
 
         <div className="modal-buttons">
           <button onClick={onCreateGroup}>Create Group</button>
-          <button onClick={() => navigate("/my-groups")}>Show All</button>
+          <button
+            onClick={() => {
+              navigate("/my-groups");
+              onClose();
+            }}
+          >
+            Show All
+          </button>
         </div>
       </div>
     </div>

@@ -20,7 +20,7 @@ background: linear-gradient(to top, #17421d, #040a1c); /* W3C, IE 10+/ Edge, Fir
 
 .logo {
   font-size: 2rem;
-  margin-bottom: 2rem;
+  margin-bottom: 3rem;
 }
 
 .navbar-menu {
@@ -42,9 +42,9 @@ background: linear-gradient(to top, #17421d, #040a1c); /* W3C, IE 10+/ Edge, Fir
   justify-content: center;
   color: #6a778e;
   height: 56px;
-  width: 100%;
+  width: 70px;
   text-decoration: none;
-  transition: background 0.3s, color 0.3s;
+  transition: ease-in-out 0.3s, color 0.3s;
   position: relative;
 }
 
@@ -57,9 +57,10 @@ background: linear-gradient(to top, #17421d, #040a1c); /* W3C, IE 10+/ Edge, Fir
   position: absolute;
   left: 100%;
   top: 50%;
-  transform: translateY(-50%) translateX(-10px);
+
+  transform: translateY(-50%) translateX(-50px);
   background-color: white;
-  padding: 0.4rem 1rem;
+  padding: 1rem 1rem;
   border-radius: 20px;
   white-space: nowrap;
   color: #406ff3;
@@ -72,7 +73,7 @@ background: linear-gradient(to top, #17421d, #040a1c); /* W3C, IE 10+/ Edge, Fir
 .navbar-link:hover {
   background-color: #0a5329;
   color: white;
-  border-radius: 40px;
+  border-radius: 30px;
 }
 
 .navbar-link:hover .label {

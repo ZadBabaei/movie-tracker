@@ -1,82 +1,81 @@
+// VerticalNavbar.js
 import React from "react";
-import "./VerticalNavbar.css";
-import logo from "../assets/Logo PM.png";
-import { Link } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import {
   FaHome,
   FaUsers,
-  FaListUl,
   FaEnvelope,
   FaUser,
   FaInfoCircle,
+  FaFilm,
+  FaThList,
 } from "react-icons/fa";
+import { useModal } from "../context/ModalContext";
+import "./VerticalNavbar.css";
+import logo from "../assets/Logo PM.png"; 
 
-const VerticalNavbar = ({ onGroupsClick }) => {
+const VerticalNavbar = () => {
+  const location = useLocation();
+  const { openGroupsModal } = useModal();
+
+  const handleGroupsClick = (e) => {
+    e.preventDefault();
+    if (location.pathname !== "/my-groups") {
+      openGroupsModal();
+    }
+  };
+
   return (
     <nav className="vertical-navbar">
-      <div className="logo">
-        <img src={logo} alt="Movie Tracker Logo" className="logo-img" />
-      </div>
-      <ul className="navbar-menu">
+      <img className = "logo logo-img"  src={logo} alt="Logo" />
+      <ul className="navbar-list">
         <li className="navbar-item">
-          <Link to="/home " className="navbar-link">
+          <a href="/home" className="navbar-link">
             <span className="icon">
               <FaHome />
             </span>
             <span className="label">Home</span>
-          </Link>
+          </a>
         </li>
-
         <li className="navbar-item">
-          <a
-            href="#"
-            className="navbar-link"
-            onClick={(e) => {
-              e.preventDefault();
-              onGroupsClick();
-            }}
-          >
+          <a href="#" className="navbar-link" onClick={handleGroupsClick}>
             <span className="icon">
               <FaUsers />
             </span>
             <span className="label">Groups</span>
           </a>
         </li>
-
         <li className="navbar-item">
-          <Link to="/watchlist" className="navbar-link">
+          <a href="/watchlist" className="navbar-link">
             <span className="icon">
-              <FaListUl />
+              <FaThList />
             </span>
             <span className="label">Watchlist</span>
-          </Link>
+          </a>
         </li>
-
         <li className="navbar-item">
-          <Link to="/inbox" className="navbar-link">
+          <a href="/inbox" className="navbar-link">
             <span className="icon">
               <FaEnvelope />
             </span>
             <span className="label">Messages</span>
-          </Link>
+          </a>
         </li>
-
         <li className="navbar-item">
-          <Link to="/profile" className="navbar-link">
+          <a href="/profile" className="navbar-link">
             <span className="icon">
               <FaUser />
             </span>
             <span className="label">Profile</span>
-          </Link>
+          </a>
         </li>
-
         <li className="navbar-item">
-          <Link to="/about" className="navbar-link">
+          <a href="/about" className="navbar-link">
             <span className="icon">
               <FaInfoCircle />
             </span>
             <span className="label">About</span>
-          </Link>
+          </a>
         </li>
       </ul>
     </nav>
