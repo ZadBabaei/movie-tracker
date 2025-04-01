@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
@@ -12,14 +12,41 @@ import Profile from "./pages/Profile";
 import About from "./pages/About";
 import GroupsModal from "./component/GroupsModal";
 import ToastWrapper from "./component/ToastWrapper";
-import { useModal } from "./context/ModalContext"; 
+import GroupNameModal from "./component/GroupNameModal";
+import InviteFriendsModal from "./component/InviteFriendsModal";
+import { useModal } from "./context/ModalContext";
 import "./App.css";
 
-function App() {
-  const { isGroupsModalOpen, closeGroupsModal, groupList } = useModal();
+function App({ isAuthenticated, isAuthPage }) {
+  const {
+    isGroupsModalOpen,
+    closeGroupsModal,
+    groupList,
+    isGroupNameModalOpen,
+    closeGroupNameModal,
+    isInviteFriendsModalOpen,
+    closeInviteFriendsModal,
+    createGroup,
+    openInviteFriendsModal,
+    setPendingGroupName,
+  } = useModal();
+
+  const showModals = isAuthenticated && !isAuthPage;
+
+  const handleInvite = async (groupName) => {
+    setPendingGroupName(groupName);
+    await createGroup(groupName);
+    closeGroupNameModal();
+    openInviteFriendsModal();
+  };
+
+  const handleSkip = async (groupName) => {
+    await createGroup(groupName);
+    closeGroupNameModal();
+  };
 
   return (
-    <Router>
+    <>
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
@@ -33,15 +60,28 @@ function App() {
         <Route path="/about" element={<About />} />
       </Routes>
 
+      {showModals && (
+        <>
+          <GroupsModal
+            isOpen={isGroupsModalOpen}
+            onClose={closeGroupsModal}
+            groups={groupList}
+          />
+          <GroupNameModal
+            isOpen={isGroupNameModalOpen}
+            onClose={closeGroupNameModal}
+            onInvite={handleInvite}
+            onSkip={handleSkip}
+          />
+          <InviteFriendsModal
+            isOpen={isInviteFriendsModalOpen}
+            onClose={closeInviteFriendsModal}
+          />
+        </>
+      )}
 
-      <GroupsModal
-        isOpen={isGroupsModalOpen}
-        onClose={closeGroupsModal}
-        groups={groupList}
-        onCreateGroup={closeGroupsModal}
-      />
       <ToastWrapper />
-    </Router>
+    </>
   );
 }
 
