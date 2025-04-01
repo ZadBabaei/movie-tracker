@@ -1,9 +1,11 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useModal } from "../context/ModalContext";
 import "./GroupsModal.css";
 
-const GroupsModal = ({ isOpen, onClose, groups = [], onCreateGroup }) => {
+const GroupsModal = ({ isOpen, onClose, groups = [] }) => {
   const navigate = useNavigate();
+  const { openGroupNameModal } = useModal();
 
   if (!isOpen) return null;
 
@@ -34,7 +36,14 @@ const GroupsModal = ({ isOpen, onClose, groups = [], onCreateGroup }) => {
         </ul>
 
         <div className="modal-buttons">
-          <button onClick={onCreateGroup}>Create Group</button>
+          <button
+            onClick={() => {
+              onClose(); // close GroupsModal
+              openGroupNameModal(); // open GroupNameModal
+            }}
+          >
+            Create Group
+          </button>
           <button
             onClick={() => {
               navigate("/my-groups");

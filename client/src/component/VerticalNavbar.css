@@ -71,6 +71,7 @@ background: linear-gradient(to top, #17421d, #040a1c); /* W3C, IE 10+/ Edge, Fir
 }
 
 .navbar-link:hover {
+  height:66px;
   background-color: #0a5329;
   color: white;
   border-radius: 30px;
