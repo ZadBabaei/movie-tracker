@@ -7,27 +7,37 @@ const GroupNameModal = ({ isOpen, onClose, onInvite, onSkip }) => {
 
   if (!isOpen) return null;
 
+  const handleInviteClick = () => {
+    if (!groupName.trim()) return;
+    onInvite(groupName.trim());
+    setGroupName("");
+  };
+
+  const handleSkipClick = () => {
+    if (!groupName.trim()) return;
+    onSkip(groupName.trim());
+    setGroupName("");
+  };
+
   return (
-    <div className="modal-overlay">
-      <div className="modal">
+    <div className="GroupName-modal-overlay">
+      <div className="GroupName-modal">
+        <button className="group-name-modal-close-btn" onClick={onClose}>
+          &times;
+        </button>
         <h2>Name Your Group</h2>
         <input
+          className="group-name-input"
           type="text"
-          placeholder="Enter group name"
+          placeholder="Enter group name..."
           value={groupName}
           onChange={(e) => setGroupName(e.target.value)}
-          className="group-name-input"
         />
-
-        <div className="modal-buttons">
-          <button disabled={!groupName} onClick={() => onInvite(groupName)}>
+        <div className="GroupName-modal-buttons">
+          <button className="group-name-invite-btn" onClick={handleInviteClick}>
             Invite Friends
           </button>
-          <button
-            disabled={!groupName}
-            onClick={() => onSkip(groupName)}
-            className="cancel-button"
-          >
+          <button className="group-name-cancel-btn" onClick={handleSkipClick}>
             Skip
           </button>
         </div>

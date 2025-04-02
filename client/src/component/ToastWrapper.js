@@ -4,7 +4,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const ToastWrapper = () => (
-  <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
+  <ToastContainer position="top-right" autoClose={2000} hideProgressBar />
 );
 
 export default ToastWrapper;

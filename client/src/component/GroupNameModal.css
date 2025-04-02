@@ -1,4 +1,4 @@
-.modal-overlay {
+.GroupName-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -11,20 +11,23 @@
   z-index: 1000;
 }
 
-.modal {
-  background-color: white;
+.GroupName-modal {
+  position: relative;
+
+  background-color: rgba(62, 56, 56, 0.556);
   padding: 2rem;
   border-radius: 1rem;
   width: 90%;
-  max-width: 400px;
+  max-width: 500px;
+  max-height: 300px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
   animation: fadeIn 0.3s ease;
   text-align: center;
 }
 
-.modal h2 {
+.GroupName-modal h2 {
   margin-bottom: 1rem;
-  color: #333;
+  color: #ffffff;
 }
 
 .group-name-input {
@@ -37,22 +40,38 @@
   outline: none;
 }
 
-.modal-buttons {
+.GroupName-modal-buttons {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
 }
 
-.modal-buttons button {
+.group-name-invite-btn, .group-name-cancel-btn {
   flex: 1;
   padding: 0.6rem 1rem;
   font-size: 1rem;
   border: none;
   border-radius: 0.5rem;
   cursor: pointer;
-  background-color: #0a5329;
+  background-color: #d9a60e;
   color: white;
   transition: background 0.3s ease;
+}
+.group-name-modal-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 18px;
+  background: transparent;
+  color: white;
+  font-size: 1.5rem;
+  border: none;
+  cursor: pointer;
+  z-index: 10;
+  transition: transform 0.2s ease;
+}
+
+.group-name-modal-close-btn:hover {
+  transform: scale(1.2);
 }
 
 .modal-buttons button:hover {
@@ -63,8 +82,9 @@
   background-color: #888;
 }
 
-.cancel-button:hover {
-  background-color: #666;
+.group-name-invite-btn:hover,
+.group-name-cancel-btn:hover {
+  background-color: #0f5722;
 }
 
 @keyframes fadeIn {
