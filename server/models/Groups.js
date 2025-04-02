@@ -9,13 +9,20 @@ const groupSchema = new mongoose.Schema(
       required: true,
     },
     members: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-    pendingInvitations: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+
+    // ✅ Updated: invitation includes inviter name
+    pendingInvitations: [
+      {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        inviterName: { type: String },
+      },
+    ],
+
     movies: [{ type: mongoose.Schema.Types.ObjectId, ref: "Movie" }],
   },
   {
-    timestamps: true, 
+    timestamps: true,
   }
 );
-
 
 module.exports = mongoose.models.Group || mongoose.model("Group", groupSchema);

@@ -90,7 +90,8 @@ router.post("/create", async (req, res) => {
   }
 });
 
-//  INVITE MEMBERS
+// INVITE MEMBERS
+// INVITE MEMBERS
 router.post("/invite", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -102,25 +103,34 @@ router.post("/invite", async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = new mongoose.Types.ObjectId(decoded.id);
 
-    const { groupId, members } = req.body;
-    if (!groupId || !members || members.length === 0) {
-      return res
-        .status(400)
-        .json({ msg: "Group ID and at least one member required." });
-    }
-
+    const { groupId, members, inviterName } = req.body;
     const group = await Group.findById(groupId);
     if (!group) return res.status(404).json({ msg: "Group not found." });
 
+    // ✅ Ensure the fields exist
+    if (!group.invitations) group.invitations = [];
+    if (!group.pendingInvitations) group.pendingInvitations = [];
+
+    // Add invitations with inviter's name
+    group.invitations.push(
+      ...members.map((memberId) => ({
+        userId: memberId,
+        inviterName,
+      }))
+    );
+
+    // Also track pending invitations
     group.pendingInvitations.push(...members);
+
     await group.save();
 
-    res.json({ msg: "Invitations sent successfully!", group });
+    return res.status(200).json({ msg: "Invitations sent successfully!", group });
   } catch (error) {
-    console.error("Error sending invitations:", error);
-    res.status(500).json({ msg: "Server error", error: error.message });
+    console.error("❌ Error sending invitations:", error);
+    return res.status(500).json({ msg: "Server error", error: error.message });
   }
 });
+
 
 //  RESPOND TO INVITE
 router.post("/respond", async (req, res) => {

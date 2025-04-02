@@ -3,6 +3,8 @@ import "./InviteFriendsModal.css";
 import axios from "axios";
 import { useModal } from "../context/ModalContext";
 import { toast } from "react-toastify";
+import { jwtDecode } from "jwt-decode";
+
 
 const InviteFriendsModal = ({ isOpen, onClose }) => {
   const [allUsers, setAllUsers] = useState([]);
@@ -59,11 +61,14 @@ const InviteFriendsModal = ({ isOpen, onClose }) => {
     }
 
     try {
+       const decoded = jwtDecode(token);
+       const inviterName = decoded.name;
       await axios.post(
         "http://localhost:5000/api/groups/invite",
         {
           groupId: createdGroupId,
           members: [userId],
+          inviterName,
         },
         {
           headers: { Authorization: `Bearer ${token}` },
