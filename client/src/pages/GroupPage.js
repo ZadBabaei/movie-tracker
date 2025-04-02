@@ -8,6 +8,8 @@ import MovieCard from "../component/MovieCard";
 import InviteModal from "../component/InviteFriendsModal"; 
 import VerticalNavbar from "../component/VerticalNavbar";
 import MovieModal from "../component/MovieModal";
+import { useModal } from "../context/ModalContext";
+
 
 
 
@@ -66,18 +68,23 @@ const GroupPage = () => {
     setAddedMovies((prev) => prev.filter((m) => m._id !== movieId));
 
   };
+const { openInviteFriendsModal } = useModal();
+
+
+
+
 
   if (!group) return <p>Loading group...</p>;
 
   return (
     <div className="group-page">
-      <VerticalNavbar ></VerticalNavbar>
+      <VerticalNavbar></VerticalNavbar>
       <Hero
         height="60vh"
         backgroundImage="https://image.tmdb.org/t/p/original/vW7JMRiXuXGfxgUYovvR7iqRGtl.jpg"
         heroText={`🎬 ${group.name} Watch Club`}
         heroTextSub="lets watch movies like there is no tomorrow"
-        />
+      />
 
       <div className="group-stats-bar">
         <p>
@@ -121,7 +128,7 @@ const GroupPage = () => {
         </div>
         <button
           className="group-member-btn"
-          onClick={() => setShowInviteModal(true)}
+          onClick={() => openInviteFriendsModal(group._id)}
         >
           Invite Friends
         </button>

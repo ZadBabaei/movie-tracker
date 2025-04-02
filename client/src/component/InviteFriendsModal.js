@@ -1,146 +1,145 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import React, { useEffect, useState } from "react";
 import "./InviteFriendsModal.css";
+import axios from "axios";
+import { useModal } from "../context/ModalContext";
+import { toast } from "react-toastify";
 
-const InviteFriendsModal = ({ groupId, onClose }) => {
-  const [users, setUsers] = useState([]);
+const InviteFriendsModal = ({ isOpen, onClose }) => {
+  const [allUsers, setAllUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
-  const [selectedUsers, setSelectedUsers] = useState([]);
-  const [search, setSearch] = useState("");
-  const [typingTimeout, setTypingTimeout] = useState(null);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [invitedUserIds, setInvitedUserIds] = useState([]);
 
-useEffect(() => {
-  const fetchUsers = async () => {
-    const token = localStorage.getItem("token");
-    console.log("🔍 Token found in InviteFriendsModal:", token); // Add this
+  const { createdGroupId } = useModal();
 
-    if (!token) return;
-
-    try {
-      const res = await axios.get("http://localhost:5000/api/user/all", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      console.log("✅ Fetched users:", res.data); // Add this
-      setUsers(res.data);
-      setFilteredUsers(res.data);
-    } catch (err) {
-      console.error("❌ Failed to fetch users:", err); // Add this
-    }
-  };
-
-  fetchUsers();
-}, []);
-
-
-  const handleSearch = (e) => {
-    const query = e.target.value.toLowerCase();
-    setSearch(query);
-
-    if (typingTimeout) {
-      clearTimeout(typingTimeout);
-    }
-
-    setTypingTimeout(
-      setTimeout(() => {
-        const filtered = users.filter(
-          (user) =>
-            user.name.toLowerCase().includes(query) ||
-            user.email.toLowerCase().includes(query)
-        );
-        setFilteredUsers(filtered);
-      }, 300)
-    );
-  };
-
-  const handleUserSelect = (userId) => {
-    setSelectedUsers((prev) =>
-      prev.includes(userId)
-        ? prev.filter((id) => id !== userId)
-        : [...prev, userId]
-    );
-  };
-
-  const handleSendInvites = async () => {
-    try {
+  useEffect(() => {
+    const fetchUsers = async () => {
       const token = localStorage.getItem("token");
+      if (!token) return;
+
+      try {
+        const response = await axios.get("http://localhost:5000/api/user/all", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const users = response.data;
+        setAllUsers(users);
+        setFilteredUsers(users);
+      } catch (error) {
+        console.error("❌ Error fetching users:", error);
+        toast.error("Failed to load users.");
+      }
+    };
+
+    if (isOpen) {
+      fetchUsers();
+      setInvitedUserIds([]);
+    }
+  }, [isOpen]);
+
+  const handleInvite = async (userId) => {
+    const token = localStorage.getItem("token");
+
+    console.log("📨 Attempting to invite:", userId);
+    console.log("📨 Group ID:", createdGroupId);
+
+    if (!token) {
+      toast.error("No token found.");
+      return;
+    }
+
+    if (!createdGroupId) {
+      toast.error("Group was not created properly.");
+      return;
+    }
+
+    if (invitedUserIds.includes(userId)) {
+      toast.warning("User already invited.");
+      return;
+    }
+
+    try {
       await axios.post(
         "http://localhost:5000/api/groups/invite",
         {
-          groupId,
-          members: selectedUsers,
+          groupId: createdGroupId,
+          members: [userId],
         },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      setSuccess(true);
-      setTimeout(onClose, 1200); // success message delay
-    } catch (err) {
-      setError(err.response?.data?.msg || "Failed to send invitations.");
+
+      setInvitedUserIds((prev) => {
+        const updated = [...prev, userId];
+        console.log("✅ Invited so far:", updated);
+        return updated;
+      });
+
+      toast.success("User invited!");
+    } catch (error) {
+      console.error("❌ Error inviting user:", error);
+      toast.error("Failed to send invitation.");
     }
   };
-console.log("🧠 Filtered Users:", filteredUsers);
-console.log("📦 All Users:", users);
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value.toLowerCase();
+    setSearchTerm(value);
+    setFilteredUsers(
+      allUsers.filter((user) => user.name.toLowerCase().includes(value))
+    );
+  };
+
+  if (!isOpen) return null;
+
   return (
-    <div className="modal-overlay">
-      <div className="modal">
-        <h2>Invite Friends</h2>
+    <div className="InviteFriendsModal-overlay">
+      <div className="InviteFriendsModal-container">
+        <button className="InviteFriendsModal-close-btn" onClick={onClose}>
+          &times;
+        </button>
+        <h2 className="InviteFriendsModal-title">Invite Friends to Group</h2>
 
         <input
           type="text"
-          placeholder="Search friends by name or email"
-          value={search}
-          onChange={handleSearch}
-          className="search-input"
+          placeholder="Search users..."
+          value={searchTerm}
+          onChange={handleSearchChange}
+          className="InviteFriendsModal-search-input"
         />
 
-        {search.length > 0 && (
-          <div className="autocomplete-dropdown">
-            {filteredUsers.length > 0 ? (
-              filteredUsers.map((user) => (
-                <div
-                  key={user._id}
-                  className={`autocomplete-item ${
-                    selectedUsers.includes(user._id) ? "selected" : ""
-                  }`}
-                  onClick={() => handleUserSelect(user._id)}
+        <ul className="InviteFriendsModal-user-list">
+          {filteredUsers.length === 0 ? (
+            <li key="no-users">No users found</li>
+          ) : (
+            filteredUsers.map((user) => (
+              <li key={user._id} className="InviteFriendsModal-user-item">
+                <span>{user.name}</span>
+                <button
+                  onClick={() => handleInvite(user._id)}
+                  disabled={invitedUserIds.includes(user._id)}
+                  style={{
+                    backgroundColor: invitedUserIds.includes(user._id)
+                      ? "#e74c3c"
+                      : "#eab114",
+                    cursor: invitedUserIds.includes(user._id)
+                      ? "not-allowed"
+                      : "pointer",
+                  }}
                 >
-                  {user.name} ({user.email})
-                </div>
-              ))
-            ) : (
-              <div className="autocomplete-item">No users found</div>
-            )}
-          </div>
-        )}
+                  {invitedUserIds.includes(user._id) ? "Invited" : "Invite"}
+                </button>
+              </li>
+            ))
+          )}
+        </ul>
 
-        {selectedUsers.length > 0 && (
-          <div className="selected-users">
-            <h4>Selected:</h4>
-            {selectedUsers.map((id) => {
-              const user = users.find((u) => u._id === id);
-              return (
-                <span key={id} className="selected-user-tag">
-                  {user?.name} ({user?.email})
-                </span>
-              );
-            })}
-          </div>
-        )}
-
-        {error && <p style={{ color: "#f44336" }}>{error}</p>}
-        {success && <p style={{ color: "#4caf50" }}>Invitations sent!</p>}
-
-        <div className="modal-buttons">
-          <button
-            onClick={handleSendInvites}
-            disabled={selectedUsers.length === 0}
-          >
-            Send Invites
+        <div className="InviteFriendsModal-btns-container">
+          <button className="InviteFriendsModal-btn-submit" onClick={onClose}>
+            Submit
           </button>
-          <button onClick={onClose} className="cancel-button">
+          <button className="InviteFriendsModal-btn-cancel" onClick={onClose}>
             Cancel
           </button>
         </div>

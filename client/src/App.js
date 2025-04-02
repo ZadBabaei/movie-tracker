@@ -11,24 +11,24 @@ import Watchlist from "./pages/Watchlist";
 import Profile from "./pages/Profile";
 import About from "./pages/About";
 import GroupsModal from "./component/GroupsModal";
-import ToastWrapper from "./component/ToastWrapper";
 import GroupNameModal from "./component/GroupNameModal";
 import InviteFriendsModal from "./component/InviteFriendsModal";
+import ToastWrapper from "./component/ToastWrapper";
 import { useModal } from "./context/ModalContext";
 import "./App.css";
 
 function App({ isAuthenticated, isAuthPage }) {
   const {
     isGroupsModalOpen,
-    closeGroupsModal,
-    groupList,
     isGroupNameModalOpen,
-    closeGroupNameModal,
     isInviteFriendsModalOpen,
+    closeGroupsModal,
+    closeGroupNameModal,
     closeInviteFriendsModal,
-    createGroup,
     openInviteFriendsModal,
+    createGroup,
     setPendingGroupName,
+    groupList,
   } = useModal();
 
   const showModals = isAuthenticated && !isAuthPage;
@@ -36,8 +36,8 @@ function App({ isAuthenticated, isAuthPage }) {
   const handleInvite = async (groupName) => {
     setPendingGroupName(groupName);
     await createGroup(groupName);
-    closeGroupNameModal();
     openInviteFriendsModal();
+    closeGroupNameModal();
   };
 
   const handleSkip = async (groupName) => {
