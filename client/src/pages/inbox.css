@@ -1,58 +1,103 @@
-/* Inbox Container */
+.inbox-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 60px 20px;
+  /* min-height: 100vh; */
+  background: #283048; /* fallback for old browsers */
+  background: -webkit-linear-gradient(to top, #17421d, #040a1c);
+  background: linear-gradient(to top, #17421d, #040a1c);
+}
+
 .inbox-container {
-  max-width: 600px;
-  margin-top: 350px;
-  padding: 20px;
-  background: rgba(0, 0, 0, 0.8);
+  width: 100%;
+  max-width: 850px;
+  padding: 35px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
   color: white;
-  border-radius: 10px;
   font-family: "Poppins", sans-serif;
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  animation: fadeInUp 0.4s ease;
 }
 
 .inbox-container h2 {
-  text-align: center;
-  margin-bottom: 20px;
+  text-align: left;
+  margin-bottom: 25px;
+  font-size: 2rem;
+  font-weight: 600;
+  color: #ffffff;
 }
 
-/* Message Item */
 .message-item {
-  padding: 15px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  margin-bottom: 10px;
-  transition: 0.3s;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 20px 25px;
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
 }
 
 .message-item:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
 }
 
-/* Buttons */
-.message-item button {
-  padding: 8px 12px;
+.message-item p {
+  margin-bottom: 16px;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.message-buttons {
+  display: flex;
+  gap: 15px;
+}
+
+.message-buttons button {
+  padding: 10px 20px;
+  border-radius: 8px;
   border: none;
-  border-radius: 5px;
-  margin-right: 10px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: 0.3s;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: background 0.3s ease, transform 0.2s ease;
 }
 
-.message-item button:first-child {
-  background: #4CAF50;
+.message-buttons button:first-child {
+  background-color: #27ae60;
   color: white;
 }
 
-.message-item button:first-child:hover {
-  background: #45a049;
+.message-buttons button:first-child:hover {
+  background-color: #219150;
+  transform: scale(1.05);
 }
 
-.message-item button:last-child {
-  background: #f44336;
+.message-buttons button:last-child {
+  background-color: #e74c3c;
   color: white;
 }
 
-.message-item button:last-child:hover {
-  background: #d32f2f;
+.message-buttons button:last-child:hover {
+  background-color: #c0392b;
+  transform: scale(1.05);
+}
+
+.no-messages {
+  text-align: center;
+  font-style: italic;
+  opacity: 0.75;
+  font-size: 1rem;
+  padding: 40px 0;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

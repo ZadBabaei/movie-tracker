@@ -24,7 +24,7 @@ export const ModalProvider = ({ children }) => {
 
 const openInviteFriendsModal = (groupId = null) => {
   if (groupId) {
-    setCreatedGroupId(groupId); // 🔁 Use this as "targetGroupId" from now on
+    setCreatedGroupId(groupId); 
   }
   setIsInviteFriendsModalOpen(true);
 };
@@ -39,7 +39,7 @@ const openInviteFriendsModal = (groupId = null) => {
       });
       setGroupList(res.data);
     } catch (err) {
-      console.error("Error fetching groups:", err);
+      // console.error("Error fetching groups:", err);
     }
   };
 
@@ -50,20 +50,19 @@ const createGroup = async (name) => {
   try {
     const res = await axios.post(
       "http://localhost:5000/api/groups/create",
-      { groupName: name }, // ✅ correct key
+      { groupName: name }, 
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    const newGroup = res.data.group; // ✅ fixed line
-    setCreatedGroupId(newGroup._id); // ✅ now works
+    const newGroup = res.data.group; 
+    setCreatedGroupId(newGroup._id); 
     setGroupList((prev) => [...prev, newGroup]);
 
     console.log("✅ Group created with ID:", newGroup._id);
   } catch (err) {
-    console.error("Error creating group:", err);
+    // console.error("Error creating group:", err);
   }
 };
-
 
 
   // Reset all modals when app loads

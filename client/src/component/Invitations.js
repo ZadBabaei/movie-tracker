@@ -49,9 +49,17 @@ const Invitations = () => {
       ) : (
         invitations.map((inv) => (
           <div key={inv._id} className="invitation-item">
-            <p>Invitation to join <strong>{inv.name}</strong></p>
-            <button onClick={() => handleResponse(inv._id, "accept")}>Accept</button>
-            <button onClick={() => handleResponse(inv._id, "decline")}>Decline</button>
+            <p>
+              <strong>{inv.inviterName}</strong> invited you to join{" "}
+              <strong>{inv.name}</strong>
+            </p>
+
+            <button onClick={() => handleResponse(inv._id, "accept")}>
+              Accept
+            </button>
+            <button onClick={() => handleResponse(inv._id, "decline")}>
+              Decline
+            </button>
           </div>
         ))
       )}
