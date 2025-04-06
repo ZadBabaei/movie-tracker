@@ -31,18 +31,19 @@ const Inbox = () => {
 
   const handleResponse = async (messageId, action) => {
     try {
-      await axios.post(
-        "http://localhost:5000/api/inbox/respond",
-        {
-          messageId,
-          action,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+     await axios.post(
+       "http://localhost:5000/api/groups/respond",
+       {
+         groupId: messageId,
+         response: action,
+       },
+       {
+         headers: {
+           Authorization: `Bearer ${token}`,
+         },
+       }
+     );
+
       // Remove the message after responding
       setMessages((prev) => prev.filter((msg) => msg._id !== messageId));
     } catch (err) {

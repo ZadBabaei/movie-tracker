@@ -90,8 +90,7 @@ router.post("/create", async (req, res) => {
   }
 });
 
-// INVITE MEMBERS
-// INVITE MEMBERS
+// ✅ FIXED INVITE MEMBERS ROUTE
 router.post("/invite", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -107,29 +106,28 @@ router.post("/invite", async (req, res) => {
     const group = await Group.findById(groupId);
     if (!group) return res.status(404).json({ msg: "Group not found." });
 
-    // ✅ Ensure the fields exist
     if (!group.invitations) group.invitations = [];
     if (!group.pendingInvitations) group.pendingInvitations = [];
 
-    // Add invitations with inviter's name
-    group.invitations.push(
-      ...members.map((memberId) => ({
-        userId: memberId,
-        inviterName,
-      }))
-    );
+    const invitations = members.map((memberId) => ({
+      userId: memberId,
+      inviterName,
+    }));
 
-    // Also track pending invitations
-    group.pendingInvitations.push(...members);
+    group.invitations.push(...invitations);
+    group.pendingInvitations.push(...invitations);
 
     await group.save();
 
-    return res.status(200).json({ msg: "Invitations sent successfully!", group });
+    return res
+      .status(200)
+      .json({ msg: "Invitations sent successfully!", group });
   } catch (error) {
     console.error("❌ Error sending invitations:", error);
     return res.status(500).json({ msg: "Server error", error: error.message });
   }
 });
+
 
 
 //  RESPOND TO INVITE
@@ -161,8 +159,9 @@ router.post("/respond", async (req, res) => {
     }
 
     group.pendingInvitations = group.pendingInvitations.filter(
-      (id) => !id.equals(userId)
+      (inv) => inv.userId.toString() !== userId.toString()
     );
+
 
     await group.save();
     res.json({ msg: `You have ${response}ed the invitation.`, group });

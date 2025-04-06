@@ -2,7 +2,7 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 const Group = require("../models/Groups");
-const User = require("../models/User");
+const user = require("../models/user");
 require("dotenv").config();
 
 const router = express.Router();
@@ -20,15 +20,17 @@ router.get("/", async (req, res) => {
     const userId = new mongoose.Types.ObjectId(decoded.id);
 
     // Fetch groups where the user has pending invitations
-    const groups = await Group.find({ "invitations.userId": userId })
-      .select("name _id invitations")
+    const groups = await Group.find({
+      pendingInvitations: { $elemMatch: { userId: userId } },
+    })
+      .select("name _id pendingInvitations")
       .lean();
 
     // Format invitations as messages with inviterName
     const formattedInvites = groups.map((group) => {
-      const invitation = group.invitations.find(
-        (inv) => inv.userId.toString() === userId.toString()
-      );
+   const invitation = group.pendingInvitations.find(
+     (inv) => inv.userId.toString() === userId.toString()
+   );
 
       return {
         _id: group._id,
