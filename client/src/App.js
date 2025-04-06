@@ -15,6 +15,8 @@ import GroupNameModal from "./component/GroupNameModal";
 import InviteFriendsModal from "./component/InviteFriendsModal";
 import ToastWrapper from "./component/ToastWrapper";
 import { useModal } from "./context/ModalContext";
+import WhatToWatchPage from "./pages/WhatToWatchPage";
+
 import "./App.css";
 
 function App({ isAuthenticated, isAuthPage }) {
@@ -58,6 +60,7 @@ function App({ isAuthenticated, isAuthPage }) {
         <Route path="/watchlist" element={<Watchlist />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/about" element={<About />} />
+        <Route path="/group/:id/what-to-watch" element={<WhatToWatchPage />} />
       </Routes>
 
       {showModals && (

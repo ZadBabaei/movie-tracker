@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./GroupPage.css";
 import Hero from "../component/Hero";
@@ -17,6 +17,7 @@ import { useModal } from "../context/ModalContext";
 
 const GroupPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [group, setGroup] = useState(null);
   const [addedMovies, setAddedMovies] = useState([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -39,7 +40,7 @@ const GroupPage = () => {
       _id: m._id,
       title: m.title,
       poster_path: m.poster,
-      vote_average: m.vote_average || 0, // fallback if needed
+      vote_average: m.vote_average || 0, 
     }));
     setAddedMovies(fetchedMovies);
   };
@@ -126,12 +127,21 @@ const { openInviteFriendsModal } = useModal();
             </div>
           </div>
         </div>
-        <button
-          className="group-member-btn"
-          onClick={() => openInviteFriendsModal(group._id)}
-        >
-          Invite Friends
-        </button>
+
+        <div className="group-member-btns">
+          <button
+            className="group-member-btn"
+            onClick={() => openInviteFriendsModal(group._id)}
+          >
+            Invite Friends
+          </button>
+          <button
+            className="group-member-btn"
+            onClick={() => navigate(`/group/${group._id}/what-to-watch`)}
+          >
+            What to Watch
+          </button>
+        </div>
 
         <SearchBar onMovieSelect={handleMovieAdd} />
         <div style={{ marginTop: "30px", textAlign: "center" }}>

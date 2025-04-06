@@ -1,0 +1,99 @@
+.WhatToWatchPage-content-container {
+  display: flex;
+  flex-direction: column;
+    background: #283048; 
+  background: -webkit-linear-gradient(to top, #17421d, #040a1c);
+  background: linear-gradient(to top, #17421d, #040a1c);
+}
+#root{
+background: #283048; /* fallback for old browsers */
+  background: -webkit-linear-gradient(to top, #17421d, #040a1c);
+  background: linear-gradient(to top, #17421d, #040a1c);
+}
+.WhatToWatchPage-main {
+  padding: 20px;
+}
+
+.WhatToWatchPage-section {
+  margin-bottom: 40px;
+  margin-inline-start: 6vw;
+  background-color: #f4f4f4;
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.WhatToWatchPage-section-title {
+  margin-bottom: 10px;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.WhatToWatchPage-placeholder {
+  color: #666;
+  font-style: italic;
+}
+.WhatToWatchPage-layout {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  margin-top: 20px;
+}
+
+.WhatToWatchPage-left {
+  flex: 1;
+  padding: 20px;
+}
+
+.WhatToWatchPage-search-section {
+  width: 50vh;
+  margin-inline-end: 20px;
+  background-color: #011405b9;
+  padding: 16px;
+  border-left: 2px solid #05012c;
+  position: relative;
+}
+.WhatToWatchPage-selected-movie {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin-bottom: 12px;
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 10px;
+}
+.WhatToWatchPage-selected-movie {
+  max-height: 600px; /* or whatever fits your design */
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+
+.WhatToWatchPage-movie-list {
+  /* max-height: 50px; */
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+@keyframes scrollUp {
+  0% {
+    transform: translateY(0%);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+
+
+
+.WhatToWatchPage-scroll-wrapper {
+  display: flex;
+  flex-direction: column;
+  animation: scrollUp 60s linear infinite;
+}
+
+.WhatToWatchPage-movie-list >div{
+width:150px;
+ /* height: 1200px; */
+}
