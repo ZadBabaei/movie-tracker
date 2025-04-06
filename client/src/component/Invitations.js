@@ -11,7 +11,7 @@ const Invitations = () => {
     const fetchInvitations = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get("http://localhost:5000/api/groups/invitations", {
+        const res = await axios.get("http://localhost:5000/api/inbox", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setInvitations(res.data);
