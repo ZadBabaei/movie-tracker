@@ -21,7 +21,13 @@
   margin-left: 0;
 }
 
-.group-members-title {
+.group-member-btns{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 200px;
+  margin-top: 20px;
+  margin-inline-start: 30%;
 }
 
 .members-section {
