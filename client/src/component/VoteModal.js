@@ -1,6 +1,6 @@
 import React from "react";
 import "./VoteModal.css";
-import MovieCard from "../component/MovieCard"; // Adjust path as needed
+import MovieCard from "../component/MovieCard";
 import { useModal } from "../context/ModalContext";
 
 const VoteModal = () => {
@@ -23,6 +23,7 @@ const VoteModal = () => {
         <button className="VoteModal-close-btn" onClick={closeVoteModal}>
           ✖
         </button>
+
         <h2 className="VoteModal-title">Vote for Tonight's Movie</h2>
 
         <div className="VoteModal-movie-grid">
@@ -37,41 +38,48 @@ const VoteModal = () => {
                 key={movie.id + "-vote-" + index}
                 className="VoteModal-movie-wrapper"
               >
-                <MovieCard
-                  movie={movie}
-                  onDelete={() => {}}
-                  onInfoClick={() => {}}
-                />
+                <div className="VoteModal-card-shell">
+                  <div className="VoteModal-badge">
+                    {suggestedBy.profilePic ? (
+                      <img
+                        src={suggestedBy.profilePic}
+                        alt={suggestedBy.name}
+                      />
+                    ) : (
+                      <span>{suggestedBy.initials}</span>
+                    )}
+                  </div>
 
-                <div className="VoteModal-badge">
-                  {suggestedBy.profilePic ? (
-                    <img src={suggestedBy.profilePic} alt={suggestedBy.name} />
-                  ) : (
-                    <span>{suggestedBy.initials}</span>
-                  )}
-                </div>
+                  <MovieCard
+                    movie={movie}
+                    onDelete={() => {}}
+                    onInfoClick={() => {}}
+                  />
 
-                <button
-                  className="VoteModal-vote-btn"
-                  onClick={() => handleVote(movie.id)}
-                  disabled={hasVoted}
-                >
-                  {hasVoted ? "Voted ✅" : "Vote 🎬"}
-                </button>
-
-                <div className="VoteModal-voter-list">
-                  {movieVotes.map((v, i) => (
-                    <div
-                      key={v.userId + "-voter-" + i}
-                      className="VoteModal-voter"
+                  <div className="VoteModal-bottom">
+                    <button
+                      className="VoteModal-vote-btn"
+                      onClick={() => handleVote(movie.id)}
+                      disabled={hasVoted}
                     >
-                      {v.profilePic ? (
-                        <img src={v.profilePic} alt={v.name} />
-                      ) : (
-                        <span>{v.initials}</span>
-                      )}
+                      {hasVoted ? "Voted ✅" : "Vote 🎬"}
+                    </button>
+
+                    <div className="VoteModal-voter-list">
+                      {movieVotes.map((v, i) => (
+                        <div
+                          key={v.userId + "-voter-" + i}
+                          className="VoteModal-voter"
+                        >
+                          {v.profilePic ? (
+                            <img src={v.profilePic} alt={v.name} />
+                          ) : (
+                            <span>{v.initials}</span>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
                 </div>
               </div>
             );
