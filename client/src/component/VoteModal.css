@@ -67,9 +67,10 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 30px;
+  gap: 20px; /* was 30px */
   padding-bottom: 30px;
 }
+
 
 .VoteModal-movie-wrapper {
   position: relative;
@@ -158,4 +159,34 @@
   height: 100%;
   object-fit: cover;
   border-radius: 50%;
+}
+.VoteModal-movie-wrapper {
+  width: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.VoteModal-card-shell {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(4px);
+  border-radius: 16px;
+  padding: 10px;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.25);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  
+  /* 🔥 Add this line to scale down MovieCard cleanly */
+  transform: scale(0.75);
+  transform-origin: top center;
+}
+
+.VoteModal-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 10px;
 }
