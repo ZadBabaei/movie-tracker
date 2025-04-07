@@ -1,19 +1,34 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import VerticalNavbar from "../component/VerticalNavbar";
 import Hero from "../component/Hero";
 import "../pages/WhatToWatchPage.css";
 import SearchBar from "../component/SearchBar";
 import MovieCard from "../component/MovieCard";
+import VoteModal from "../component/VoteModal"; 
 import axios from "axios";
+import { useModal } from "../context/ModalContext"; // Import your custom context
 
 const WhatToWatchPage = () => {
-  const [suggestedMovies, setSuggestedMovies] = useState([]);
-  const [movieList, setMovieList] = useState([]);
+  const {
+    suggestedMovies,
+    addSuggestedMovie,
+    isVoteModalOpen,
+    openVoteModal,
+    closeVoteModal,
+  } = useModal();
 
-  const handleMovieSelect = (movie) => {
-    setSuggestedMovies((prev) => [...prev, movie]);
+  const currentUser = {
+    name: "Zad Babaei",
+    initials: "ZB",
+    profilePic: null,
+    userId: "user-zad", // you can customize as needed
   };
 
+  const handleMovieSelect = (movie) => {
+    addSuggestedMovie(movie, currentUser);
+  };
+
+  const [movieList, setMovieList] = useState([]);
   const TMDB_API_KEY = process.env.REACT_APP_TMDB_API_KEY;
 
   useEffect(() => {
@@ -26,7 +41,6 @@ const WhatToWatchPage = () => {
           const res = await axios.get(
             `https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}&language=en-US&page=${page}`
           );
-
           allMovies.push(...res.data.results);
         }
 
@@ -38,40 +52,6 @@ const WhatToWatchPage = () => {
 
     fetchPopularMovies();
   }, []);
-    
-    useEffect(() => {
-      const container = document.querySelector(
-        ".WhatToWatchPage-selected-movie"
-      );
-
-      const handleWheel = (e) => {
-        if (!container) return;
-
-        const atBottom =
-          container.scrollTop + container.clientHeight >=
-          container.scrollHeight;
-
-        if (atBottom && e.deltaY > 0) {
-          e.preventDefault();
-          window.scrollBy({
-            top: e.deltaY,
-            left: 0,
-            behavior: "smooth",
-          });
-        }
-      };
-
-      if (container) {
-        container.addEventListener("wheel", handleWheel, { passive: false });
-      }
-
-      return () => {
-        if (container) {
-          container.removeEventListener("wheel", handleWheel);
-        }
-      };
-    }, []);
-
 
   return (
     <div className="WhatToWatchPage-content-container">
@@ -88,9 +68,39 @@ const WhatToWatchPage = () => {
       <div className="WhatToWatchPage-layout">
         <div className="WhatToWatchPage-left">
           <section className="WhatToWatchPage-section WhatToWatchPage-banner-section">
-            <p className="WhatToWatchPage-placeholder">
-              [Winning movie banner or poll results here]
-            </p>
+            <h2 className="WhatToWatchPage-section-title">Suggested Movies</h2>
+
+            <div className="WhatToWatchPage-suggested-container">
+              {suggestedMovies.map(({ movie, suggestedBy }, index) => (
+                <div
+                  key={movie.id + "-suggested-" + index}
+                  className="WhatToWatchPage-suggested-wrapper"
+                >
+                  <MovieCard
+                    movie={movie}
+                    onDelete={() => {}}
+                    onInfoClick={() => {}}
+                  />
+                  <div className="WhatToWatchPage-movie-badge">
+                    {suggestedBy.profilePic ? (
+                      <img
+                        src={suggestedBy.profilePic}
+                        alt={suggestedBy.name}
+                      />
+                    ) : (
+                      <span>{suggestedBy.initials}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              className="WhatToWatchPage-vote-btn"
+              onClick={openVoteModal}
+            >
+              Let's Vote
+            </button>
           </section>
 
           <section className="WhatToWatchPage-section WhatToWatchPage-chat-section">
@@ -103,19 +113,7 @@ const WhatToWatchPage = () => {
 
         <div className="WhatToWatchPage-search-section">
           <h2 className="WhatToWatchPage-section-title">Search & Suggest</h2>
-
           <SearchBar onMovieSelect={handleMovieSelect} />
-
-          <div className="WhatToWatchPage-selected-movie">
-            {suggestedMovies.map((movie, index) => (
-              <MovieCard
-                key={movie.id + "-selected-" + index}
-                movie={movie}
-                onDelete={() => {}}
-                onInfoClick={() => {}}
-              />
-            ))}
-          </div>
 
           <div className="WhatToWatchPage-movie-list">
             <div className="WhatToWatchPage-scroll-wrapper">
@@ -131,6 +129,8 @@ const WhatToWatchPage = () => {
           </div>
         </div>
       </div>
+
+      {isVoteModalOpen && <VoteModal />}
     </div>
   );
 };
