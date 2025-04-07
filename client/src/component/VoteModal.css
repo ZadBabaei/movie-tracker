@@ -190,3 +190,17 @@
   margin-top: auto;
   padding-top: 10px;
 }
+.VoteModal-rank-overlay {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background-color: rgba(229, 9, 20, 0.8);
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: bold;
+  color: white;
+  z-index: 10;
+  box-shadow: 0 0 8px rgba(229, 9, 20, 0.6);
+  pointer-events: none;
+}

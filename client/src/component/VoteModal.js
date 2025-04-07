@@ -1,20 +1,22 @@
-import React from "react";
+import React, { useState } from "react";
 import "./VoteModal.css";
 import MovieCard from "../component/MovieCard";
 import { useModal } from "../context/ModalContext";
 
 const VoteModal = () => {
-  const { suggestedMovies, votes, castVote, closeVoteModal } = useModal();
+  const { suggestedMovies, closeVoteModal } = useModal();
 
-  const currentUser = {
-    name: "Zad Babaei",
-    initials: "ZB",
-    profilePic: null,
-    userId: "user-zad",
-  };
+  const [selectedMovies, setSelectedMovies] = useState([]);
 
-  const handleVote = (movieId) => {
-    castVote(movieId, currentUser);
+  const handleClick = (movie) => {
+    setSelectedMovies((prevList) => {
+      const exists = prevList.find((m) => m.id === movie.id);
+      if (exists) return prevList; // prevent re-adding
+
+      if (prevList.length >= 4) return prevList; // max 4
+
+      return [...prevList, movie];
+    });
   };
 
   return (
@@ -24,19 +26,28 @@ const VoteModal = () => {
           ✖
         </button>
 
-        <h2 className="VoteModal-title">Vote for Tonight's Movie</h2>
+        <h2 className="VoteModal-title">Click Movies to Add to Your List</h2>
+
+        <div
+          style={{
+            textAlign: "center",
+            marginBottom: "1rem",
+            color: "white",
+          }}
+        >
+          Selected: {selectedMovies.length} / 4
+        </div>
 
         <div className="VoteModal-movie-grid">
-          {suggestedMovies.map(({ movie, suggestedBy }, index) => {
-            const movieVotes = votes[movie.id] || [];
-            const hasVoted = movieVotes.some(
-              (v) => v.userId === currentUser.userId
-            );
+          {suggestedMovies.map(({ movie, suggestedBy }) => {
+            const index = selectedMovies.findIndex((m) => m.id === movie.id);
+            const rank = index !== -1 ? index + 1 : null;
 
             return (
               <div
-                key={movie.id + "-vote-" + index}
+                key={movie.id}
                 className="VoteModal-movie-wrapper"
+                onClick={() => handleClick(movie)}
               >
                 <div className="VoteModal-card-shell">
                   <div className="VoteModal-badge">
@@ -56,30 +67,7 @@ const VoteModal = () => {
                     onInfoClick={() => {}}
                   />
 
-                  <div className="VoteModal-bottom">
-                    <button
-                      className="VoteModal-vote-btn"
-                      onClick={() => handleVote(movie.id)}
-                      disabled={hasVoted}
-                    >
-                      {hasVoted ? "Voted ✅" : "Vote 🎬"}
-                    </button>
-
-                    <div className="VoteModal-voter-list">
-                      {movieVotes.map((v, i) => (
-                        <div
-                          key={v.userId + "-voter-" + i}
-                          className="VoteModal-voter"
-                        >
-                          {v.profilePic ? (
-                            <img src={v.profilePic} alt={v.name} />
-                          ) : (
-                            <span>{v.initials}</span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  {rank && <div className="VoteModal-rank-overlay">{rank}</div>}
                 </div>
               </div>
             );
