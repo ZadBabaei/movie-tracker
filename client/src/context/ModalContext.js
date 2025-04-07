@@ -1,12 +1,17 @@
-
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+} from "react";
 import axios from "axios";
 
 const ModalContext = createContext();
-
 export const useModal = () => useContext(ModalContext);
 
 export const ModalProvider = ({ children }) => {
+  // --- Existing Modals ---
   const [isGroupsModalOpen, setIsGroupsModalOpen] = useState(false);
   const [isGroupNameModalOpen, setIsGroupNameModalOpen] = useState(false);
   const [isInviteFriendsModalOpen, setIsInviteFriendsModalOpen] =
@@ -15,19 +20,63 @@ export const ModalProvider = ({ children }) => {
   const [pendingGroupName, setPendingGroupName] = useState("");
   const [createdGroupId, setCreatedGroupId] = useState(null);
 
-  // Modal control functions
+  // --- New Voting Logic ---
+  const [suggestedMovies, setSuggestedMovies] = useState([]);
+  const [votes, setVotes] = useState({});
+  const [isVoteModalOpen, setIsVoteModalOpen] = useState(false);
+
+  const openVoteModal = () => setIsVoteModalOpen(true);
+  const closeVoteModal = () => setIsVoteModalOpen(false);
+
+  const addSuggestedMovie = (movie, suggestedBy) => {
+    setSuggestedMovies((prev) => {
+      if (prev.length >= 6) return prev;
+      return [...prev, { movie, suggestedBy }];
+    });
+  };
+
+  const castVote = (movieId, voter) => {
+    setVotes((prev) => {
+      const updatedVotes = { ...prev };
+      const currentVotes = updatedVotes[movieId] || [];
+
+      // Prevent duplicate voting by same user
+      if (currentVotes.some((v) => v.userId === voter.userId)) return prev;
+
+      updatedVotes[movieId] = [...currentVotes, voter];
+      return updatedVotes;
+    });
+  };
+
+  const winningMovie = useMemo(() => {
+    let maxVotes = 0;
+    let winner = null;
+
+    for (const movie of suggestedMovies) {
+      const movieId = movie.movie.id;
+      const voteCount = votes[movieId]?.length || 0;
+
+      if (voteCount > maxVotes) {
+        maxVotes = voteCount;
+        winner = movie;
+      }
+    }
+
+    return winner;
+  }, [votes, suggestedMovies]);
+
+  // --- Group Modal Logic ---
   const openGroupsModal = () => setIsGroupsModalOpen(true);
   const closeGroupsModal = () => setIsGroupsModalOpen(false);
 
   const openGroupNameModal = () => setIsGroupNameModalOpen(true);
   const closeGroupNameModal = () => setIsGroupNameModalOpen(false);
 
-const openInviteFriendsModal = (groupId = null) => {
-  if (groupId) {
-    setCreatedGroupId(groupId); 
-  }
-  setIsInviteFriendsModalOpen(true);
-};
+  const openInviteFriendsModal = (groupId = null) => {
+    if (groupId) setCreatedGroupId(groupId);
+    setIsInviteFriendsModalOpen(true);
+  };
+
   const closeInviteFriendsModal = () => setIsInviteFriendsModalOpen(false);
 
   const fetchGroups = async () => {
@@ -43,29 +92,27 @@ const openInviteFriendsModal = (groupId = null) => {
     }
   };
 
-const createGroup = async (name) => {
-  const token = localStorage.getItem("token");
-  if (!token || !name) return;
+  const createGroup = async (name) => {
+    const token = localStorage.getItem("token");
+    if (!token || !name) return;
 
-  try {
-    const res = await axios.post(
-      "http://localhost:5000/api/groups/create",
-      { groupName: name }, 
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+    try {
+      const res = await axios.post(
+        "http://localhost:5000/api/groups/create",
+        { groupName: name },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-    const newGroup = res.data.group; 
-    setCreatedGroupId(newGroup._id); 
-    setGroupList((prev) => [...prev, newGroup]);
+      const newGroup = res.data.group;
+      setCreatedGroupId(newGroup._id);
+      setGroupList((prev) => [...prev, newGroup]);
 
-    console.log("✅ Group created with ID:", newGroup._id);
-  } catch (err) {
-    // console.error("Error creating group:", err);
-  }
-};
+      console.log("✅ Group created with ID:", newGroup._id);
+    } catch (err) {
+      // console.error("Error creating group:", err);
+    }
+  };
 
-
-  // Reset all modals when app loads
   useEffect(() => {
     setIsGroupsModalOpen(false);
     setIsGroupNameModalOpen(false);
@@ -76,7 +123,7 @@ const createGroup = async (name) => {
   return (
     <ModalContext.Provider
       value={{
-        // state
+        // Existing modal state
         isGroupsModalOpen,
         isGroupNameModalOpen,
         isInviteFriendsModalOpen,
@@ -84,18 +131,25 @@ const createGroup = async (name) => {
         pendingGroupName,
         createdGroupId,
 
-        // modal handlers
         openGroupsModal,
         closeGroupsModal,
         openGroupNameModal,
         closeGroupNameModal,
         openInviteFriendsModal,
         closeInviteFriendsModal,
-
-        // actions
         createGroup,
         setPendingGroupName,
         fetchGroups,
+
+        // Voting state
+        suggestedMovies,
+        addSuggestedMovie,
+        votes,
+        castVote,
+        winningMovie,
+        isVoteModalOpen,
+        openVoteModal,
+        closeVoteModal,
       }}
     >
       {children}
