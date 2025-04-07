@@ -20,7 +20,7 @@ export const ModalProvider = ({ children }) => {
   const [pendingGroupName, setPendingGroupName] = useState("");
   const [createdGroupId, setCreatedGroupId] = useState(null);
 
-  // --- New Voting Logic ---
+  // --- Ranked Voting State ---
   const [suggestedMovies, setSuggestedMovies] = useState([]);
   const [votes, setVotes] = useState({});
   const [isVoteModalOpen, setIsVoteModalOpen] = useState(false);
@@ -35,34 +35,106 @@ export const ModalProvider = ({ children }) => {
     });
   };
 
-  const castVote = (movieId, voter) => {
-    setVotes((prev) => {
-      const updatedVotes = { ...prev };
-      const currentVotes = updatedVotes[movieId] || [];
+// const castVote = (movieId, voter) => {
+//   setVotes((prevVotes) => {
+//     const newVotes = { ...prevVotes };
 
-      // Prevent duplicate voting by same user
-      if (currentVotes.some((v) => v.userId === voter.userId)) return prev;
+//     // Remove the vote from this movie if it already exists
+//     const alreadyVoted = newVotes[movieId]?.find(
+//       (v) => v.userId === voter.userId
+//     );
 
-      updatedVotes[movieId] = [...currentVotes, voter];
-      return updatedVotes;
-    });
-  };
+//     if (alreadyVoted) {
+//       // Remove this vote
+//       newVotes[movieId] = newVotes[movieId].filter(
+//         (v) => v.userId !== voter.userId
+//       );
 
+//       // Now re-rank all votes from this user across all movies
+//       const remainingVotes = Object.entries(newVotes)
+//         .flatMap(([mId, userVotes]) =>
+//           userVotes
+//             .filter((v) => v.userId === voter.userId)
+//             .map((v) => ({ ...v, movieId: mId }))
+//         )
+//         .sort((a, b) => a.rank - b.rank);
+
+//       remainingVotes.forEach((v, i) => {
+//         const mId = v.movieId;
+//         newVotes[mId] = newVotes[mId].map((entry) =>
+//           entry.userId === voter.userId ? { ...entry, rank: i + 1 } : entry
+//         );
+//       });
+
+//       return { ...newVotes };
+//     }
+
+//     // Get all current user votes (after removal)
+//     const currentUserVotes = Object.entries(newVotes)
+//       .flatMap(([mId, userVotes]) =>
+//         userVotes
+//           .filter((v) => v.userId === voter.userId)
+//           .map((v) => ({ ...v, movieId: mId }))
+//       )
+//       .sort((a, b) => a.rank - b.rank);
+
+//     if (currentUserVotes.length >= 4) return prevVotes;
+
+//     const nextRank = currentUserVotes.length + 1;
+
+//     const newVote = {
+//       userId: voter.userId,
+//       rank: nextRank,
+//       initials: voter.initials,
+//       profilePic: voter.profilePic,
+//     };
+
+//     newVotes[movieId] = [...(newVotes[movieId] || []), newVote];
+//     return { ...newVotes };
+//   });
+// };
+
+
+
+
+  // Winner calculation per priority logic
   const winningMovie = useMemo(() => {
-    let maxVotes = 0;
-    let winner = null;
+    if (suggestedMovies.length === 0 || Object.keys(votes).length === 0)
+      return null;
 
-    for (const movie of suggestedMovies) {
-      const movieId = movie.movie.id;
-      const voteCount = votes[movieId]?.length || 0;
+    const calculateStats = (movieId) => {
+      const vList = votes[movieId] || [];
+      const rankSum = vList.reduce((sum, v) => sum + v.rank, 0);
+      const rankCounts = [0, 0, 0, 0, 0]; // index = rank (1 to 4)
 
-      if (voteCount > maxVotes) {
-        maxVotes = voteCount;
-        winner = movie;
+      vList.forEach((v) => {
+        if (v.rank >= 1 && v.rank <= 4) rankCounts[v.rank]++;
+      });
+
+      return { movieId, rankSum, rankCounts };
+    };
+
+    const movieStats = suggestedMovies.map(({ movie }) =>
+      calculateStats(movie.id)
+    );
+
+    // Sort logic
+    movieStats.sort((a, b) => {
+      if (a.rankSum !== b.rankSum) return a.rankSum - b.rankSum;
+
+      // Compare number of 1st, 2nd... votes
+      for (let i = 1; i <= 4; i++) {
+        if (b.rankCounts[i] !== a.rankCounts[i]) {
+          return b.rankCounts[i] - a.rankCounts[i];
+        }
       }
-    }
 
-    return winner;
+      // Final tiebreaker: random
+      return Math.random() - 0.5;
+    });
+
+    const winnerId = movieStats[0]?.movieId;
+    return suggestedMovies.find(({ movie }) => movie.id === winnerId) || null;
   }, [votes, suggestedMovies]);
 
   // --- Group Modal Logic ---
@@ -145,7 +217,7 @@ export const ModalProvider = ({ children }) => {
         suggestedMovies,
         addSuggestedMovie,
         votes,
-        castVote,
+        // castVote,
         winningMovie,
         isVoteModalOpen,
         openVoteModal,

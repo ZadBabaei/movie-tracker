@@ -1,0 +1,29 @@
+// Voting Logic for Movie Tracker App
+
+// USERS:
+// - Can vote up to 4 movies out of 6 suggested
+// - Voting is done by clicking movie cards in the VoteModal
+// - Each click assigns a priority value (1 to 4) per user per movie
+// - The vote is displayed as: "[User Initials] [Rank] Voted" (e.g., "ZB 2 Voted")
+
+// VOTE STORAGE STRUCTURE (per movie):
+// votes = {
+//   movieId1: [
+//     { userId: 'u1', rank: 1 },
+//     { userId: 'u2', rank: 2 },
+//     ...
+//   ],
+//   movieId2: [...],
+// }
+
+// WINNER SELECTION LOGIC:
+// 1. Sum all ranks for each movie
+//    - e.g., Movie A: 1 + 2 + 3 = 6; Movie B: 2 + 2 + 1 = 5 → B wins
+// 2. If tied, compare how many users voted it as rank 1
+// 3. If still tied, compare rank 2, then 3, then 4...
+// 4. If all equal → choose randomly between tied movies
+
+// This logic can be computed from the context or backend when votes are finalized
+
+// UI will reflect vote rank per movie per user in real time
+// Users can deselect/change their votes by clicking again
