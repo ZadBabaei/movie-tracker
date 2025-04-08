@@ -24,6 +24,8 @@
     "react-router-dom": "^7.2.0",
     "react-scripts": "5.0.1",
     "react-toastify": "^11.0.5",
+    "stream-chat": "^8.58.0",
+    "stream-chat-react": "^12.14.0",
     "toastify": "^2.0.1",
     "web-vitals": "^2.1.4"
   },

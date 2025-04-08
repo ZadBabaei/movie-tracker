@@ -34,7 +34,9 @@ const ChatBox = () => {
           }
         );
 
-        const { token: chatToken, apiKey, userId, name } = res.data;
+          const { token: chatToken, apiKey, userId, name } = res.data;
+console.log(res.data);
+
         const client = StreamChat.getInstance(apiKey);
 
         await client.connectUser(
