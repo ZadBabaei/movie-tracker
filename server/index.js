@@ -3,13 +3,15 @@ const cors = require('cors');
 const groupRoutes = require("./routes/groupRoutes");
 const mongoose = require('mongoose');
 const authRoutes = require("./routes/authRoutes");
-
 const userRoutes = require("./routes/userRoutes"); // adjust path if needed
 
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
+const chatRoutes = require("./routes/chatRoutes"); // ✅ Added chatRoutes
+const { StreamChat } = require("stream-chat"); // ✅ Ensure StreamChat is loaded
+const inboxRoutes = require("./routes/inboxRoutes"); // ✅ Added inboxRoutes
+const Movie = require("./models/movie"); // ✅ Ensure Movie model is loaded
 
 require("./models/movie");  // ✅ Ensure Movie model is loaded
 require('dotenv').config();
@@ -32,7 +34,7 @@ app.use((err, req, res, next) => {
 app.use("/api/user", userRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/groups", require("./routes/groupRoutes"));
-
+app.use("/api/chat", chatRoutes);
 
 
 
