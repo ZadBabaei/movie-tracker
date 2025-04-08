@@ -6,6 +6,7 @@ import SearchBar from "../component/SearchBar";
 import MovieCard from "../component/MovieCard";
 import VoteModal from "../component/VoteModal"; 
 import axios from "axios";
+import ChatBox from "../component/ChatBox"; // Assuming you have a ChatBox component
 import { useModal } from "../context/ModalContext"; // Import your custom context
 
 const WhatToWatchPage = () => {
@@ -104,10 +105,7 @@ const WhatToWatchPage = () => {
           </section>
 
           <section className="WhatToWatchPage-section WhatToWatchPage-chat-section">
-            <h2 className="WhatToWatchPage-section-title">Group Chat</h2>
-            <p className="WhatToWatchPage-placeholder">
-              [Chat box will go here]
-            </p>
+           <ChatBox /> {/* Assuming you have a ChatBox component */}
           </section>
         </div>
 
