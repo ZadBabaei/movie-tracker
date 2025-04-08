@@ -1,1 +1,1 @@
-# movie-traker
+# movie-tracker
