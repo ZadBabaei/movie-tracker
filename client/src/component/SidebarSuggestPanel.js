@@ -1,5 +1,5 @@
 import React from "react";
-import "../pages/WhatToWatchPage.css";
+import "../pages/GroupChat.css";
 import MovieCard from "../component/MovieCard";
 import SearchBar from "../component/SearchBar";
 import { useModal } from "../context/ModalContext";

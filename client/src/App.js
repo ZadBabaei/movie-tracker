@@ -15,7 +15,8 @@ import GroupNameModal from "./component/GroupNameModal";
 import InviteFriendsModal from "./component/InviteFriendsModal";
 import ToastWrapper from "./component/ToastWrapper";
 import { useModal } from "./context/ModalContext";
-import WhatToWatchPage from "./pages/WhatToWatchPage";
+import GroupChat from "./pages/GroupChat";
+import ProtectedRoute from "./utils/ProtectedRoute";
 
 import "./App.css";
 
@@ -50,17 +51,22 @@ function App({ isAuthenticated, isAuthPage }) {
   return (
     <>
       <Routes>
+        {/* Public Routes */}
         <Route path="/" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/home" element={<Home />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/inbox" element={<Inbox />} />
-        <Route path="/group/:id" element={<GroupPage />} />
-        <Route path="/my-groups" element={<MyGroupsPage />} />
-        <Route path="/watchlist" element={<Watchlist />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/group/:id/what-to-watch" element={<WhatToWatchPage />} />
+
+        {/* Protected Routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/home" element={<Home />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/inbox" element={<Inbox />} />
+          <Route path="/group/:id" element={<GroupPage />} />
+          <Route path="/group/:id/chat" element={<GroupChat />} />
+          <Route path="/my-groups" element={<MyGroupsPage />} />
+          <Route path="/watchlist" element={<Watchlist />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/about" element={<About />} />
+        </Route>
       </Routes>
 
       {showModals && (

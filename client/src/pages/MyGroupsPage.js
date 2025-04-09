@@ -76,7 +76,7 @@ const MyGroupsPage = () => {
             <thead>
               <tr>
                 <th>Group Name</th>
-                <th>Members</th>
+                <th>Group Members</th>
                 <th>Created At</th>
                 <th>Actions</th>
               </tr>
@@ -126,6 +126,12 @@ const MyGroupsPage = () => {
                     })}
                   </td>
                   <td>
+                    <button
+                      className="group-table-chat-btn"
+                      onClick={() => navigate(`/group/${group._id}/chat`)}
+                    >
+                      Group Chat
+                    </button>
                     <button onClick={() => handleLeaveGroup(group._id)}>
                       Leave
                     </button>

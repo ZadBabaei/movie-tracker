@@ -1,4 +1,4 @@
-.WhatToWatchPage-content-container {
+.GroupChatPage-content-container {
   display: flex;
   flex-direction: column;
     background: #283048; 
@@ -10,11 +10,11 @@ background: #283048; /* fallback for old browsers */
   background: -webkit-linear-gradient(to top, #17421d, #040a1c);
   background: linear-gradient(to top, #17421d, #040a1c);
 }
-.WhatToWatchPage-main {
+.GroupChatPage-main {
   padding: 20px;
 }
 
-.WhatToWatchPage-section {
+.GroupChatPage-section {
   margin-bottom: 40px;
   margin-inline-start: 6vw;
   background-color: #f4f4f4;
@@ -22,32 +22,32 @@ background: #283048; /* fallback for old browsers */
   border-radius: 8px;
 }
 
-.WhatToWatchPage-section-title {
+.GroupChatPage-section-title {
   margin-bottom: 10px;
   font-size: 1.2rem;
   font-weight: bold;
   text-align: center;
 }
 
-.WhatToWatchPage-placeholder {
+.GroupChatPage-placeholder {
   color: #666;
   font-style: italic;
 }
-.WhatToWatchPage-layout {
+.GroupChatPage-layout {
   display: flex;
   flex-direction: row;
   width: 100%;
   margin-top: 20px;
 }
 
-.WhatToWatchPage-left {
+.GroupChatPage-left {
   flex: 1;
   padding-inline: 20px;
 }
 .search-bar-glass{
 margin-left: 20px;
 }
-.WhatToWatchPage-search-section {
+.GroupChatPage-search-section {
   width: 50vh;
   margin-inline-end: 20px;
  
@@ -59,7 +59,7 @@ margin-left: 20px;
   color: white;
   text-align: center;
 }
-.WhatToWatchPage-selected-movie {
+.GroupChatPage-selected-movie {
   position: sticky;
   top: 0;
   z-index: 1;
@@ -72,14 +72,14 @@ margin-left: 20px;
   padding:0px;
   margin-top:20px;
 }
-.WhatToWatchPage-selected-movie {
+.GroupChatPage-selected-movie {
   max-height: 600px; /* or whatever fits your design */
   overflow-y: auto;
   padding-right: 4px;
 }
 
 
-.WhatToWatchPage-movie-list {
+.GroupChatPage-movie-list {
   /* max-height: 50px; */
   overflow-y: auto;
   padding-left:75px;
@@ -97,17 +97,17 @@ margin-left: 20px;
 }
 
 
-.WhatToWatchPage-scroll-wrapper {
+.GroupChatPage-scroll-wrapper {
   display: flex;
   flex-direction: column;
   animation: scrollUp 150s linear infinite;
 }
 
-.WhatToWatchPage-movie-list >div{
+.GroupChatPage-movie-list >div{
 width:150px;
  /* height: 1200px; */
 }
-.WhatToWatchPage-suggested-container {
+.GroupChatPage-suggested-container {
   display: flex;
   flex-direction: row;
   flex-grow: unset;
@@ -120,12 +120,12 @@ width:150px;
 }
 
 
-.WhatToWatchPage-suggested-wrapper {
+.GroupChatPage-suggested-wrapper {
   position: relative;
   width: 150px;
 }
 
-.WhatToWatchPage-movie-badge {
+.GroupChatPage-movie-badge {
   position: absolute;
   top: 8px;
   left: 8px;
@@ -143,14 +143,14 @@ width:150px;
   border: 2px solid white;
 }
 
-.WhatToWatchPage-movie-badge img {
+.GroupChatPage-movie-badge img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   border-radius: 50%;
 }
 
-.WhatToWatchPage-vote-btn {
+.GroupChatPage-vote-btn {
   display: block;
   margin-inline: auto;
   margin-top: 24px;
@@ -167,10 +167,10 @@ width:150px;
 }
 
 
-.WhatToWatchPage-vote-btn:hover {
+.GroupChatPage-vote-btn:hover {
   background-color: #ff2e2e;
 }
-.WhatToWatchPage-banner-section {
+.GroupChatPage-banner-section {
     background-color: #011405b9;
   /* background: rgba(0, 0, 0, 0.5); */
   backdrop-filter: blur(6px);
@@ -179,7 +179,7 @@ width:150px;
   padding: 20px;
   color: white;
 }
-.WhatToWatchPage-banner-title {
+.GroupChatPage-banner-title {
   font-size: 2rem;
   font-weight: bold;
   margin-bottom: 10px;

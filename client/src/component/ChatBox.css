@@ -1,0 +1,50 @@
+.custom-chat-container {
+  background-color: #0f1a2c;
+  border-radius: 12px;
+  overflow: hidden;
+  padding: 0;
+  height: 500px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  font-family: 'Segoe UI', sans-serif;
+}
+
+/* Optional scroll styles */
+.str-chat__list {
+  background-color: #101e32;
+  padding: 16px;
+  overflow-y: auto;
+  max-height: 400px;
+  border-bottom: 1px solid #23334f;
+}
+
+/* Chat input styling */
+.str-chat__input-flat {
+  background-color: #1b2b45;
+  padding: 10px;
+  border-top: 1px solid #23334f;
+}
+
+.str-chat__input-flat textarea {
+  background-color: #1b2b45;
+  color: white;
+}
+
+.str-chat__message {
+  color: white;
+}
+
+.str-chat__message--me {
+  background-color: #2a4d69;
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.str-chat__message--other {
+  background-color: #394867;
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.str-chat__avatar {
+  border: 2px solid #5588aa;
+}

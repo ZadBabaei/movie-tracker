@@ -1,6 +1,7 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const { StreamChat } = require("stream-chat");
+const Group = require("../models/Groups"); // ✅ import your Group model
 require("dotenv").config();
 
 const router = express.Router();
@@ -15,16 +16,29 @@ router.post("/token", async (req, res) => {
 
     const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-   console.log("Decoded JWT:", decoded); // optional check
+
     const userId = decoded.id;
     const userName = decoded.name;
+
+    const { groupId } = req.body;
+    if (!groupId) {
+      return res.status(400).json({ msg: "Group ID is required." });
+    }
+
+    // ✅ Fetch group and its members
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({ msg: "Group not found." });
+    }
+
+    const groupMembers = group.members.map((m) => m.toString());
 
     const chatClient = StreamChat.getInstance(
       process.env.STREAM_API_KEY,
       process.env.STREAM_API_SECRET
     );
 
-    // ✅ Create token & register user with Stream
+    // ✅ Create Stream token & ensure user is registered
     const chatToken = chatClient.createToken(userId);
     await chatClient.upsertUser({
       id: userId,
@@ -36,6 +50,7 @@ router.post("/token", async (req, res) => {
       apiKey: process.env.STREAM_API_KEY,
       userId,
       name: userName,
+      groupMembers, // ✅ send the group member IDs
     });
   } catch (error) {
     console.error("❌ Error in /api/chat/token:", error);
