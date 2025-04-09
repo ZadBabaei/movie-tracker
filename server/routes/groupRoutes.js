@@ -110,7 +110,7 @@ router.post("/invite", async (req, res) => {
     if (!group.pendingInvitations) group.pendingInvitations = [];
 
     const invitations = members.map((memberId) => ({
-      userId: memberId,
+      userId: new mongoose.Types.ObjectId(memberId),
       inviterName,
     }));
 

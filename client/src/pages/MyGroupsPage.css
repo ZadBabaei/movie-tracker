@@ -38,7 +38,7 @@
 .group-table th,
 .group-table td {
   padding: 16px;
-  text-align: left;
+  text-align: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 #GroupNameSize{
@@ -52,6 +52,7 @@
 
 .group-table td button {
   padding: 8px 14px;
+  min-width: 90px;
   background-color: #f44336;
   color: white;
   border: none;
@@ -59,9 +60,18 @@
   cursor: pointer;
   transition: background-color 0.2s ease-in-out;
 }
+.group-table-chat-btn {
+  margin-inline: 10px;
+  background-color: #2196f3 !important; 
+
+}
+
+.group-table-chat-btn:hover {
+  background-color: #125422 !important;
+}
 
 .group-table td button:hover {
-  background-color: #d32f2f;
+  background-color: #840b0b;
 }
 
 .member-avatars {

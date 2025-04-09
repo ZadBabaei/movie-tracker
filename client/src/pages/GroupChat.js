@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from "react";
 import VerticalNavbar from "../component/VerticalNavbar";
 import Hero from "../component/Hero";
-import "../pages/WhatToWatchPage.css";
+import "./GroupChat.css";
 import SearchBar from "../component/SearchBar";
 import MovieCard from "../component/MovieCard";
 import VoteModal from "../component/VoteModal"; 
 import axios from "axios";
-import ChatBox from "../component/ChatBox"; // Assuming you have a ChatBox component
-import { useModal } from "../context/ModalContext"; // Import your custom context
+import ChatBox from "../component/ChatBox"; 
+import { useModal } from "../context/ModalContext"; 
+import { useParams } from "react-router-dom";
 
-const WhatToWatchPage = () => {
+const GroupChat = () => {
   const {
     suggestedMovies,
     addSuggestedMovie,
@@ -18,16 +19,10 @@ const WhatToWatchPage = () => {
     closeVoteModal,
   } = useModal();
 
-  const currentUser = {
-    name: "Zad Babaei",
-    initials: "ZB",
-    profilePic: null,
-    userId: "user-zad", // you can customize as needed
-  };
+const { id } = useParams();
+const [groupName, setGroupName] = useState("Loading...");
 
-  const handleMovieSelect = (movie) => {
-    addSuggestedMovie(movie, currentUser);
-  };
+
 
   const [movieList, setMovieList] = useState([]);
   const TMDB_API_KEY = process.env.REACT_APP_TMDB_API_KEY;
@@ -53,36 +48,51 @@ const WhatToWatchPage = () => {
 
     fetchPopularMovies();
   }, []);
+useEffect(() => {
+  const fetchGroupDetails = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`/api/groups/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setGroupName(res.data.name);
+    } catch (error) {
+      console.error("❌ Failed to fetch group info:", error);
+      setGroupName("Unknown Group");
+    }
+  };
+
+  fetchGroupDetails();
+}, [id]);
 
   return (
-    <div className="WhatToWatchPage-content-container">
+    <div className="GroupChatPage-content-container">
       <VerticalNavbar />
-
       <Hero
         backgroundImage="https://image.tmdb.org/t/p/original/2Epx7F9X7DrFptn4seqn4mzBVks.jpg"
-        heroText="What to Watch"
-        heroTextSub="Pick your next group movie night!"
+        heroText={`Group: ${groupName}`}
+        heroTextSub="Plan your next movie night!"
         variant="group"
         height="50vh"
       />
 
-      <div className="WhatToWatchPage-layout">
-        <div className="WhatToWatchPage-left">
-          <section className="WhatToWatchPage-section WhatToWatchPage-banner-section">
-            <h2 className="WhatToWatchPage-section-title">Suggested Movies</h2>
+      <div className="GroupChatPage-layout">
+        <div className="GroupChatPage-left">
+          <section className="GroupChatPage-section GroupChatPage-banner-section">
+            <h2 className="GroupChatPage-section-title">Suggested Movies</h2>
 
-            <div className="WhatToWatchPage-suggested-container">
+            <div className="GroupChatPage-suggested-container">
               {suggestedMovies.map(({ movie, suggestedBy }, index) => (
                 <div
                   key={movie.id + "-suggested-" + index}
-                  className="WhatToWatchPage-suggested-wrapper"
+                  className="GroupChatPage-suggested-wrapper"
                 >
                   <MovieCard
                     movie={movie}
                     onDelete={() => {}}
                     onInfoClick={() => {}}
                   />
-                  <div className="WhatToWatchPage-movie-badge">
+                  <div className="GroupChatPage-movie-badge">
                     {suggestedBy.profilePic ? (
                       <img
                         src={suggestedBy.profilePic}
@@ -96,25 +106,22 @@ const WhatToWatchPage = () => {
               ))}
             </div>
 
-            <button
-              className="WhatToWatchPage-vote-btn"
-              onClick={openVoteModal}
-            >
+            <button className="GroupChatPage-vote-btn" onClick={openVoteModal}>
               Let's Vote
             </button>
           </section>
 
-          <section className="WhatToWatchPage-section WhatToWatchPage-chat-section">
-           <ChatBox /> {/* Assuming you have a ChatBox component */}
+          <section className="GroupChatPage-section GroupChatPage-chat-section">
+            <ChatBox groupId={id} />
+            
           </section>
         </div>
+        <div className="GroupChatPage-search-section">
+          <h2 className="GroupChatPage-section-title">Search & Suggest</h2>
+          <SearchBar onMovieSelect={""} />
 
-        <div className="WhatToWatchPage-search-section">
-          <h2 className="WhatToWatchPage-section-title">Search & Suggest</h2>
-          <SearchBar onMovieSelect={handleMovieSelect} />
-
-          <div className="WhatToWatchPage-movie-list">
-            <div className="WhatToWatchPage-scroll-wrapper">
+          <div className="GroupChatPage-movie-list">
+            <div className="GroupChatPage-scroll-wrapper">
               {[...movieList, ...movieList].map((movie, index) => (
                 <MovieCard
                   key={movie.id + "-loop-" + index}
@@ -133,4 +140,4 @@ const WhatToWatchPage = () => {
   );
 };
 
-export default WhatToWatchPage;
+export default GroupChat;
