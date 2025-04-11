@@ -137,9 +137,9 @@ const { openInviteFriendsModal } = useModal();
           </button>
           <button
             className="group-member-btn"
-            onClick={() => navigate(`/group/${group._id}/what-to-watch`)}
+            onClick={() => navigate(`/group/${group._id}/chat`)}
           >
-            What to Watch
+            Group chat
           </button>
         </div>
 

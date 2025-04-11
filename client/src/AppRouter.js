@@ -1,4 +1,4 @@
-// AppRouter.js
+
 import React from "react";
 import { useLocation } from "react-router-dom";
 import App from "./App";
