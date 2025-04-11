@@ -1,4 +1,3 @@
-// GroupNameModal.js
 import React, { useState } from "react";
 import "./GroupNameModal.css";
 
