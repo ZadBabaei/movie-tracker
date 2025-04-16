@@ -31,15 +31,13 @@ const GroupChatSidbar = ({ members, onSelectMember }) => {
                 />
               </div>
             </div>
-            <button
-              className="GroupSidebar-dm-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectMember(member);
-              }}
-            >
-              Message
-            </button>
+            <li
+              key={member.id}
+              className={`group-member ${
+                onSelectMember?.id === member.id ? "active" : ""
+              }`}
+              onClick={() => onSelectMember(member)}
+            ></li>
           </li>
         ))}
       </ul>
