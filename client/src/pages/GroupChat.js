@@ -82,7 +82,7 @@ useEffect(() => {
             <h2 className="GroupChatPage-section-title">Suggested Movies</h2>
 
             <div className="GroupChatPage-suggested-container">
-              {suggestedMovies.map(({ movie, suggestedBy }, index) => (
+              {suggestedMovies?.map(({ movie, suggestedBy }, index) => (
                 <div
                   key={movie.id + "-suggested-" + index}
                   className="GroupChatPage-suggested-wrapper"

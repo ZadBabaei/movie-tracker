@@ -10,57 +10,65 @@ import {
 import { StreamChat } from "stream-chat";
 import "stream-chat-react/dist/css/v2/index.css";
 import axios from "axios";
+import GroupChatSidbar from "./GroupChatSidbar";
 import "./ChatBox.css";
 
 const ChatBox = ({ groupId }) => {
   const [chatClient, setChatClient] = useState(null);
   const [channel, setChannel] = useState(null);
+  const [members, setMembers] = useState([]);
 
-useEffect(() => {
-  const initChat = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
+  useEffect(() => {
+    const initChat = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
 
-      const res = await axios.post(
-        "/api/chat/token",
-        { groupId },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+        const res = await axios.post(
+          "/api/chat/token",
+          { groupId },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
-      const { token: chatToken, apiKey, userId, name, groupMembers } = res.data;
+        const {
+          token: chatToken,
+          apiKey,
+          userId,
+          name,
+          groupMembers,
+        } = res.data;
 
-      const client = new StreamChat(apiKey); // ✅ fresh instance
+        const client = new StreamChat(apiKey);
+        await client.connectUser({ id: userId, name }, chatToken);
 
-      await client.connectUser({ id: userId, name }, chatToken);
+        const channel = client.channel("messaging", `group-${groupId}`, {
+          name: `Group ${groupId}`,
+          members: groupMembers,
+        });
 
-      const channel = client.channel("messaging", `group-${groupId}`, {
-        name: `Group ${groupId}`,
-        members: groupMembers,
-      });
+        await channel.watch();
 
-      await channel.watch();
+        setChatClient(client);
+        setChannel(channel);
+        setMembers(groupMembers);
+      } catch (error) {
+        console.error("Stream Chat setup failed:", error);
+      }
+    };
 
-      setChatClient(client);
-      setChannel(channel);
-    } catch (error) {
-      console.error("Stream Chat setup failed:", error);
-    }
-  };
+    initChat();
 
-  initChat();
-
-  return () => {
-    if (chatClient) {
-      chatClient.disconnectUser();
-      setChatClient(null);
-    }
-  };
-}, [groupId]);
+    return () => {
+      if (chatClient) {
+        chatClient.disconnectUser();
+        setChatClient(null);
+      }
+    };
+  }, [groupId]);
 
   if (!chatClient || !channel) return <LoadingIndicator />;
 
@@ -68,10 +76,20 @@ useEffect(() => {
     <div className="custom-chat-container">
       <Chat client={chatClient} theme="messaging dark">
         <Channel channel={channel}>
-          <Window>
-            <MessageList className="custom-message-list" />
-            <MessageInput className="custom-message-input" />
-          </Window>
+          <div className="chat-layout">
+            <GroupChatSidbar
+              members={members}
+              onSelectMember={(user) => console.log("Start DM with:", user)}
+            />
+            <Window>
+              <div className="custom-chat-header">
+                <img src="/group-avatar.png" alt="Group" />
+                <span>Movie Circle</span>
+              </div>
+              <MessageList className="custom-message-list" />
+              <MessageInput className="custom-message-input" />
+            </Window>
+          </div>
         </Channel>
       </Chat>
     </div>

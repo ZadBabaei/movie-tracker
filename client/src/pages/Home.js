@@ -10,6 +10,11 @@ function Home() {
   const [loading, setLoading] = useState(true);
   const [quote, setQuote] = useState("");
 
+useEffect(() => {
+  console.log("Component mounted!");
+}, []);
+
+
   useEffect(() => {
     const fetchUserData = async () => {
       try {
