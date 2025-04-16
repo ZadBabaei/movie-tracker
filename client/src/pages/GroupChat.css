@@ -17,9 +17,8 @@ background: #283048; /* fallback for old browsers */
 .GroupChatPage-section {
   margin-bottom: 40px;
   margin-inline-start: 6vw;
-  background-color: #f4f4f4;
-  padding: 16px;
-  border-radius: 8px;
+
+
 }
 
 .GroupChatPage-section-title {
