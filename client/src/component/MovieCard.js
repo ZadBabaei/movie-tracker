@@ -8,6 +8,14 @@ const MovieCard = ({ movie, onDelete, onInfoClick }) => {
   const toggleFavorite = () => {
     setFavorited((prev) => !prev);
   };
+
+  const getPosterUrl = (path) => {
+    if (!path) return "/default-avatar.png";
+    return path.startsWith("http")
+      ? path
+      : `https://image.tmdb.org/t/p/w500${path}`;
+  };
+
   return (
     <div className="Group-movie-card">
       <div className="movie-title">
@@ -15,12 +23,12 @@ const MovieCard = ({ movie, onDelete, onInfoClick }) => {
       </div>
       <div className="Group-poster-container">
         <img
-          src={
-            movie.poster_path
-              ? `https://image.tmdb.org/t/p/w300${movie.poster_path}`
-              : "https://via.placeholder.com/300x450?text=No+Image"
-          }
+          src={getPosterUrl(movie.poster_path)}
           alt={movie.title}
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = "/default-avatar.png";
+          }}
           className="Group-movie-poster"
         />
         <div className="overlay">

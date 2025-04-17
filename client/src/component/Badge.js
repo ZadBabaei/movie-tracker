@@ -1,11 +1,12 @@
-import * as React from 'react';
-import Badge from '@mui/material/Badge';
-import MailIcon from '@mui/icons-material/Mail';
+import React from "react";
+import "./Badge.css";
 
-export default function SimpleBadge() {
+const Badge = ({ type, text }) => {
   return (
-    <Badge badgeContent={0} color="primary">
-      <MailIcon color="action" />
-    </Badge>
+    <div className={`badge ${type}`}>
+      {text || (type === "winner" ? "🏆 Winner" : "")}
+    </div>
   );
-}
+};
+
+export default Badge;

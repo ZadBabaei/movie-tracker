@@ -1,12 +1,12 @@
 .GroupChatPage-content-container {
   display: flex;
   flex-direction: column;
-    background: #283048; 
+  /* background: #283048;  */
   background: -webkit-linear-gradient(to top, #17421d, #040a1c);
   background: linear-gradient(to top, #17421d, #040a1c);
 }
-#root{
-background: #283048; /* fallback for old browsers */
+#root {
+  background: #283048;
   background: -webkit-linear-gradient(to top, #17421d, #040a1c);
   background: linear-gradient(to top, #17421d, #040a1c);
 }
@@ -17,15 +17,24 @@ background: #283048; /* fallback for old browsers */
 .GroupChatPage-section {
   margin-bottom: 40px;
   margin-inline-start: 6vw;
-
-
 }
 
+/* Add this to your GroupChat.css file */
+.GroupChatPage-section-title:hover {
+  transform: scale(1.05);
+  background: linear-gradient(to right, #ff1a1a, #cc0000);
+}
 .GroupChatPage-section-title {
-  margin-bottom: 10px;
+  margin-bottom: 20px;
+  margin-top: 20px;
   font-size: 1.2rem;
   font-weight: bold;
   text-align: center;
+}
+
+.GroupChatPage-section-title:hover {
+  transform: scale(1.05);
+  background: linear-gradient(to right, #ff1a1a, #cc0000);
 }
 
 .GroupChatPage-placeholder {
@@ -43,20 +52,21 @@ background: #283048; /* fallback for old browsers */
   flex: 1;
   padding-inline: 20px;
 }
-.search-bar-glass{
-margin-left: 20px;
+.search-bar-glass {
+  margin-left: 20px;
 }
 .GroupChatPage-search-section {
   width: 50vh;
   margin-inline-end: 20px;
- 
-  background-color: #011405b9;
-  /* padding: 16px; */
-  padding-block-start:15px ;
+
+  background-color: #044612c4;
+  padding: 16px;
+  padding-block-start: 15px;
   border-left: 2px solid #05012c;
   position: relative;
   color: white;
   text-align: center;
+  border-radius: 20px;
 }
 .GroupChatPage-selected-movie {
   position: sticky;
@@ -67,21 +77,21 @@ margin-left: 20px;
   border-radius: 8px;
   padding: 10px;
 }
-.search-bar-glass-wrapper{
-  padding:0px;
-  margin-top:20px;
+.search-bar-glass-wrapper {
+  padding: 0px;
+  margin-top: 20px;
 }
 .GroupChatPage-selected-movie {
-  max-height: 600px; /* or whatever fits your design */
+  max-height: 600px;
   overflow-y: auto;
   padding-right: 4px;
 }
 
-
 .GroupChatPage-movie-list {
   /* max-height: 50px; */
   overflow-y: auto;
-  padding-left:75px;
+  padding-left: 125px;
+  margin-top: 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -95,16 +105,15 @@ margin-left: 20px;
   }
 }
 
-
 .GroupChatPage-scroll-wrapper {
   display: flex;
   flex-direction: column;
   animation: scrollUp 150s linear infinite;
 }
 
-.GroupChatPage-movie-list >div{
-width:150px;
- /* height: 1200px; */
+.GroupChatPage-movie-list > div {
+  width: 150px;
+  /* height: 1200px; */
 }
 .GroupChatPage-suggested-container {
   display: flex;
@@ -117,7 +126,6 @@ width:150px;
   align-items: center;
   padding-right: 40px;
 }
-
 
 .GroupChatPage-suggested-wrapper {
   position: relative;
@@ -156,7 +164,7 @@ width:150px;
   padding: 14px 28px;
   font-size: 1.1rem;
   font-weight: 600;
-  background: linear-gradient(135deg, #ff4747, #ff7373);  
+  background: linear-gradient(135deg, #ff4747, #ff7373);
   color: white;
   border: none;
   border-radius: 12px;
@@ -165,12 +173,11 @@ width:150px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-
 .GroupChatPage-vote-btn:hover {
   background-color: #ff2e2e;
 }
 .GroupChatPage-banner-section {
-    background-color: #011405b9;
+  background-color: #011405b9;
   /* background: rgba(0, 0, 0, 0.5); */
   backdrop-filter: blur(6px);
   border: 1px solid rgba(255, 255, 255, 0.1);

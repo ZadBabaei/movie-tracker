@@ -1,5 +1,3 @@
-
-
 .custom-chat-container {
   position: relative;
   background-color: #0f1a2c;
@@ -10,10 +8,9 @@
   display: flex;
   flex-direction: column;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
-  font-family: 'Segoe UI', sans-serif;
+  font-family: "Segoe UI", sans-serif;
   z-index: 1;
 }
-
 
 .custom-chat-container::before {
   content: "";
@@ -46,7 +43,6 @@
   z-index: 1;
 }
 
-
 .str-chat__main-panel {
   flex-grow: 1;
   background-color: #101e32;
@@ -75,7 +71,6 @@
   border: 2px solid #5588aa;
 }
 
-
 .str-chat__list {
   background-color: #101e32;
   padding: 1rem;
@@ -96,7 +91,6 @@
   color: white;
 }
 
-
 .str-chat__message--me {
   background-color: #2a4d69;
   color: white;
@@ -111,7 +105,6 @@
   padding: 10px 14px;
 }
 
-
 .str-chat__input-flat {
   background-color: #1b2b45;
   padding: 12px;
@@ -122,7 +115,6 @@
   background-color: #1b2b45;
   color: white;
 }
-
 
 .str-chat__avatar {
   border: 2px solid #5588aa;
@@ -160,10 +152,15 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-
 
 @media (max-width: 768px) {
   .custom-chat-container {
@@ -198,12 +195,11 @@
 .message-row {
   display: flex;
   align-items: center;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .message-row.mine {
   justify-content: flex-end;
-
 }
 
 .message-row.theirs {
@@ -211,13 +207,26 @@
 }
 
 .message-bubble {
-  background-color: #2f4f66;
   color: white;
-  padding: 8px 12px;
+  padding: 12px 16px;
   border-radius: 16px;
   max-width: 60%;
   margin-left: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
+.message-row.mine .message-bubble {
+  background: linear-gradient(135deg, #2a6f97 0%, #1e4d6d 100%);
+  border-bottom-right-radius: 4px;
+  margin-right: 0.5rem;
+  margin-left: 0;
+}
+
+.message-row.theirs .message-bubble {
+  background: #394867;
+  border-bottom-left-radius: 4px;
+}
+
 .chat-avatar {
   width: 32px;
   height: 32px;
