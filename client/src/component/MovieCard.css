@@ -1,12 +1,18 @@
 .Group-movie-card {
-  width: 200px;
-  margin: 5px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-
+  position: relative;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  margin-bottom: 16px;
 }
+
+.Group-movie-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
 .movie-title {
   width: 180px;
   font-family: Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif;
@@ -19,13 +25,111 @@
   border-radius: 10px;
   background-color: #2e2c2c;
   text-align: center;
-   padding: 5px;
-   margin:10px;
+  padding: 8px;
+  margin: 10px;
 }
+
+.movie-title h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .rating {
-    width: 180px;
-     border-radius: 10px;
-    background-color: #2e2c2c;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  color: white;
+  font-size: 0.9rem;
+}
+
+.imdb-icon svg {
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+}
+
+.Group-poster-container {
+  position: relative;
+  width: 100%;
+  padding-top: 150%; /* 2:3 aspect ratio */
+  overflow: hidden;
+}
+
+.Group-movie-poster {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.Group-movie-card:hover .Group-movie-poster {
+  transform: scale(1.05);
+}
+
+/* Overlay */
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.Group-movie-card:hover .overlay {
+  opacity: 1;
+}
+
+.icon {
+  cursor: pointer;
+  font-size: 24px;
+  color: white;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.icon:hover {
+  transform: scale(1.2);
+}
+
+.info-icon:hover {
+  color: #3498db;
+}
+
+.heart-icon:hover,
+.heart-icon.favorited {
+  color: #e74c3c;
+}
+
+.delete-icon:hover {
+  color: #e74c3c;
+}
+
+.Group-movie-details {
+  padding: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.rating {
+  width: 180px;
+  border-radius: 10px;
+  background-color: #2e2c2c;
   text-align: center;
   display: flex;
   align-items: center;
@@ -36,89 +140,11 @@
   padding: 5px;
 }
 
-.imdb-icon svg {
-  width: 20px;
-  height: 20px;
-  display: inline-block;
-}
-
-.Group-movie-card:hover {
-  transform: translateY(-5px);
-}
-
-.Group-poster-container {
-  position: relative;
-}
-
-.Group-movie-poster {
-  width: 100%;
-  display: block;
-  border-bottom: 1px solid #333;
-  border-radius: 10px;
-  height: 250px;
-}
-
-/* Overlay */
-.overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  opacity: 0;
+.imdb-icon {
   display: flex;
-  justify-content: space-around;
   align-items: center;
-  transition: opacity 0.3s ease;
 }
 
-.Group-poster-container:hover .overlay {
-  opacity: 1;
-}
-
-.icon  {
-  color: #fff;
-  font-size: 20px;
-  cursor: pointer;
-  transition: transform 0.2s ease;
-}
-
-.icon:hover  {
-  transform: scale(1.2);
-}
-
-.info-icon  {
-  color: #4db8ff;
-}
-
-.heart-icon  {
-  color: #ff5e5e;
-}
-
-.delete-icon {
-  color: #ff4747;
-}
-
-.Group-movie-details {
-
-  color: #fff;
-}
-
-.Group-movie-details h3 {
-  font-size: 18px;
-  margin-bottom: 5px;
-}
-
-.Group-movie-details p {
-  background-color: rgb(41, 43, 42);
-  color: #fff;
-  font-size: 14px;
-  margin: 2px 0;
-}
-.favorited {
-  color: #ffd700 !important; /* gold star color */
-}
 .Group-movie-card {
   width: 200px;
   margin: 10px;

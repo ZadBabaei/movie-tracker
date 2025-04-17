@@ -5,12 +5,13 @@ const mongoose = require("mongoose");
 const Group = require("../models/Groups");
 const User = require("../models/User");
 const Movie = require("../models/movie");
+const Poll = require("../models/Poll");
 const { authenticate } = require("../middleware/authMiddleware");
 require("dotenv").config();
 
 const router = express.Router();
 
-//  GET /api/groups/mine 
+//  GET /api/groups/mine
 router.get("/mine", authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -128,8 +129,6 @@ router.post("/invite", async (req, res) => {
   }
 });
 
-
-
 //  RESPOND TO INVITE
 router.post("/respond", async (req, res) => {
   try {
@@ -162,7 +161,6 @@ router.post("/respond", async (req, res) => {
       (inv) => inv.userId.toString() !== userId.toString()
     );
 
-
     await group.save();
     res.json({ msg: `You have ${response}ed the invitation.`, group });
   } catch (error) {
@@ -172,7 +170,7 @@ router.post("/respond", async (req, res) => {
 });
 
 //  GET GROUP DETAILS
-router.get("/:id", async (req, res) => {
+router.get("/:id", authenticate, async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -186,13 +184,26 @@ router.get("/:id", async (req, res) => {
     const group = await Group.findById(groupId)
       .populate("members", "_id name profilePic")
       .populate("creator", "_id name")
-      .populate("movies", "title imdbID poster vote_average");
+      .populate("movies", "title imdbID poster vote_average")
+      .populate({
+        path: "currentPoll",
+        populate: {
+          path: "votes.userId",
+          select: "name",
+        },
+      });
 
     if (!group) return res.status(404).json({ msg: "Group not found" });
 
-    res.json(group);
+    // Check if there's an active poll
+    const hasActivePoll = await group.hasActivePoll();
+
+    res.json({
+      ...group.toObject(),
+      hasActivePoll,
+    });
   } catch (error) {
-    console.error("❌ Error fetching group:", error);
+    console.error("Error fetching group:", error);
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 });
@@ -252,9 +263,7 @@ router.delete("/:groupId/remove-movie/:movieId", async (req, res) => {
     const group = await Group.findById(groupId);
     if (!group) return res.status(404).json({ msg: "Group not found" });
 
-    group.movies = group.movies.filter(
-      (id) => id.toString() !== movieId
-    );
+    group.movies = group.movies.filter((id) => id.toString() !== movieId);
     await group.save();
 
     res.json({ msg: "Movie removed from group" });
@@ -264,5 +273,70 @@ router.delete("/:groupId/remove-movie/:movieId", async (req, res) => {
   }
 });
 
+// When creating a poll, update the group's currentPoll field
+router.post("/:id/create-poll", authenticate, async (req, res) => {
+  try {
+    const group = await Group.findById(req.params.id);
+    if (!group) {
+      return res.status(404).json({ msg: "Group not found" });
+    }
+
+    const hasActivePoll = await group.hasActivePoll();
+    if (hasActivePoll) {
+      return res.status(400).json({ msg: "Group already has an active poll" });
+    }
+
+    const poll = new Poll({
+      groupId: group._id,
+      movies: req.body.movies,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
+
+    await poll.save();
+
+    // Update group with current poll
+    group.currentPoll = poll._id;
+    if (!group.pollHistory) group.pollHistory = [];
+    group.pollHistory.push(poll._id);
+    await group.save();
+
+    res.json(poll);
+  } catch (error) {
+    console.error("Error creating poll:", error);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
+
+// When completing a poll, update the group
+router.post("/:id/complete-poll", authenticate, async (req, res) => {
+  try {
+    const group = await Group.findById(req.params.id);
+    if (!group) {
+      return res.status(404).json({ msg: "Group not found" });
+    }
+
+    if (!group.currentPoll) {
+      return res.status(400).json({ msg: "No active poll found" });
+    }
+
+    const poll = await Poll.findById(group.currentPoll);
+    if (!poll) {
+      return res.status(404).json({ msg: "Poll not found" });
+    }
+
+    poll.status = "completed";
+    poll.winningMovieTmdbId = req.body.winningMovie;
+    await poll.save();
+
+    // Clear current poll from group
+    group.currentPoll = null;
+    await group.save();
+
+    res.json({ msg: "Poll completed successfully" });
+  } catch (error) {
+    console.error("Error completing poll:", error);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
 
 module.exports = router;
