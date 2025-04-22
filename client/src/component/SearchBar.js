@@ -3,61 +3,63 @@ import axios from "axios";
 import "./SearchBar.css";
 
 const SearchBar = ({ onMovieSelect }) => {
-	const [query, setQuery] = useState("");
-	const [results, setResults] = useState([]);
-	const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-	const apiKey = process.env.REACT_APP_TMDB_API_KEY; // classic v3 API key
-	const baseUrl = "https://api.themoviedb.org/3/search/movie";
-    
-	const fetchMovies = async (q) => {
-		if (!q) return;
-		try {
-            setLoading(true);
-            console.log("API KEY:", apiKey);
-            console.log("BASE URL:", baseUrl);
+  const apiKey = process.env.REACT_APP_TMDB_API_KEY; // classic v3 API key
+  const baseUrl = "https://api.themoviedb.org/3/search/movie";
 
-			const res = await axios.get(
-				`${baseUrl}?api_key=${apiKey}&language=en-US&include_adult=false&query=${encodeURIComponent(q)}`
-			);
-			console.log("TMDB response:", res.data); // debug line
-			setResults(res.data.results || []);
-		} catch (error) {
-			console.error("API Error:", error);
-		} finally {
-			setLoading(false);
-		}
-	};
+  const fetchMovies = async (q) => {
+    if (!q) return;
+    try {
+      setLoading(true);
+      console.log("API KEY:", apiKey);
+      console.log("BASE URL:", baseUrl);
 
-	const handleChange = (e) => {
-		const newQuery = e.target.value;
-		setQuery(newQuery);
-		if (newQuery.length > 1) {
-			fetchMovies(newQuery);
-		} else {
-			setResults([]);
-		}
-	};
-
-	const handleSearchClick = () => {
-		fetchMovies(query);
-	};
-
-const handleSelect = (movie) => {
-  const formattedMovie = {
-    imdbID: `tmdb-${movie.id}`, // fake ID since TMDB doesn’t return IMDb by default
-    title: movie.title,
-    poster_path: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
-    vote_average: movie.vote_average || 0,
+      const res = await axios.get(
+        `${baseUrl}?api_key=${apiKey}&language=en-US&include_adult=false&query=${encodeURIComponent(
+          q
+        )}`
+      );
+      console.log("TMDB response:", res.data); // debug line
+      setResults(res.data.results || []);
+    } catch (error) {
+      console.error("API Error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  onMovieSelect(formattedMovie);
-  setQuery("");
-  setResults([]);
-};
+  const handleChange = (e) => {
+    const newQuery = e.target.value;
+    setQuery(newQuery);
+    if (newQuery.length > 1) {
+      fetchMovies(newQuery);
+    } else {
+      setResults([]);
+    }
+  };
 
+  const handleSearchClick = () => {
+    fetchMovies(query);
+  };
 
-	return (
+  const handleSelect = (movie) => {
+    const formattedMovie = {
+      id: movie.id, // Add the original TMDB id
+      imdbID: `tmdb-${movie.id}`,
+      title: movie.title,
+      poster_path: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+      vote_average: movie.vote_average || 0,
+    };
+
+    onMovieSelect(formattedMovie);
+    setQuery("");
+    setResults([]);
+  };
+
+  return (
     <div className="search-bar-glass-wrapper">
       <div className="search-bar-glass">
         <input
@@ -82,7 +84,6 @@ const handleSelect = (movie) => {
       )}
     </div>
   );
-
 };
 
 export default SearchBar;

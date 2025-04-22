@@ -39,18 +39,18 @@ export const ModalProvider = ({ children }) => {
   const openVoteModal = () => setIsVoteModalOpen(true);
   const closeVoteModal = () => setIsVoteModalOpen(false);
 
-  // Movie selection handling
-  const handleMovieSelectForVote = (movie) => {
+  // Movie selection logic (for poll creation)
+  const handleMovieSelectForVote = useCallback((movie) => {
     setSelectedMoviesForVote((prev) => {
-      const currentIndex = prev.findIndex((m) => m.id === movie.id);
-      if (currentIndex !== -1) {
+      const exists = prev.find((m) => m.id === movie.id);
+      if (exists) {
         return prev.filter((m) => m.id !== movie.id);
       } else if (prev.length < 6) {
         return [...prev, movie];
       }
       return prev;
     });
-  };
+  }, []);
 
   const clearVoteSelections = () => {
     setSelectedMoviesForVote([]);
@@ -88,9 +88,6 @@ export const ModalProvider = ({ children }) => {
         headers: { Authorization: `Bearer ${token}` },
       });
       setCurrentPoll(response.data);
-      if (response.data) {
-        setSelectedMoviesForVote(response.data.movies);
-      }
       return response.data;
     } catch (error) {
       console.error("Failed to fetch current poll:", error);
