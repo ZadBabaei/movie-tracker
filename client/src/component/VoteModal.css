@@ -202,13 +202,14 @@
 }
 
 .VoteModal-rank-btn:hover {
-  background: rgba(229, 9, 20, 0.8);
+  background: rgba(229, 9, 20, 0.4);
   transform: scale(1.1);
 }
 
 .VoteModal-rank-btn.active {
   background: #e50914;
-  box-shadow: 0 0 12px rgba(229, 9, 20, 0.5);
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(229, 9, 20, 0.5);
 }
 
 .VoteModal-voters {
@@ -352,4 +353,74 @@
   align-items: center;
   justify-content: center;
   z-index: 1100;
+}
+
+.VoteModal-button-group {
+  display: flex;
+  gap: 16px;
+  margin-top: 20px;
+  justify-content: center;
+}
+
+.VoteModal-submit-btn,
+.VoteModal-reset-btn {
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 140px;
+  position: relative;
+  overflow: hidden;
+}
+
+.VoteModal-submit-btn {
+  background: linear-gradient(135deg, #e50914, #b31217);
+  color: white;
+  box-shadow: 0 4px 12px rgba(229, 9, 20, 0.3);
+}
+
+.VoteModal-submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 16px rgba(229, 9, 20, 0.4);
+  background: linear-gradient(135deg, #ff0a17, #d41418);
+}
+
+.VoteModal-submit-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 2px 8px rgba(229, 9, 20, 0.3);
+}
+
+.VoteModal-reset-btn {
+  background: linear-gradient(135deg, #666, #444);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.VoteModal-reset-btn:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #777, #555);
+}
+
+.VoteModal-reset-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.VoteModal-submit-btn:disabled,
+.VoteModal-reset-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  background: linear-gradient(135deg, #999, #666);
+}
+
+.VoteModal-poll-reset {
+  margin: 24px auto 0;
+  display: block;
+  opacity: 0.8;
 }

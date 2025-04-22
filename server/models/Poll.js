@@ -17,6 +17,7 @@ const PollSchema = new mongoose.Schema({
       title: { type: String, required: true },
       poster_path: String,
       vote_average: Number,
+      selected: { type: Number, default: null } // Add selected field to track the number selected for each movie
     },
   ],
   votes: [
