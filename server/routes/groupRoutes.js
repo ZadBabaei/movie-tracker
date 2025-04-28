@@ -1,4 +1,4 @@
-// ✅ FULL groupRoutes.js with /:id/add-movie route
+
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
@@ -11,7 +11,7 @@ require("dotenv").config();
 
 const router = express.Router();
 
-//  GET /api/groups/mine
+
 router.get("/mine", authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -27,7 +27,7 @@ router.get("/mine", authenticate, async (req, res) => {
   }
 });
 
-//  POST /api/groups/:id/leave
+
 router.post("/:id/leave", authenticate, async (req, res) => {
   try {
     const groupId = req.params.id;
@@ -57,7 +57,7 @@ router.post("/:id/leave", authenticate, async (req, res) => {
   }
 });
 
-// CREATE GROUP
+
 router.post("/create", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -91,7 +91,7 @@ router.post("/create", async (req, res) => {
   }
 });
 
-// ✅ FIXED INVITE MEMBERS ROUTE
+
 router.post("/invite", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -124,12 +124,12 @@ router.post("/invite", async (req, res) => {
       .status(200)
       .json({ msg: "Invitations sent successfully!", group });
   } catch (error) {
-    console.error("❌ Error sending invitations:", error);
+    console.error(" Error sending invitations:", error);
     return res.status(500).json({ msg: "Server error", error: error.message });
   }
 });
 
-//  RESPOND TO INVITE
+
 router.post("/respond", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -169,7 +169,7 @@ router.post("/respond", async (req, res) => {
   }
 });
 
-//  GET GROUP DETAILS
+
 router.get("/:id", authenticate, async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -195,7 +195,7 @@ router.get("/:id", authenticate, async (req, res) => {
 
     if (!group) return res.status(404).json({ msg: "Group not found" });
 
-    // Check if there's an active poll
+ 
     const hasActivePoll = await group.hasActivePoll();
 
     res.json({
@@ -208,7 +208,7 @@ router.get("/:id", authenticate, async (req, res) => {
   }
 });
 
-//  ADD MOVIE TO GROUP
+
 router.post("/:id/add-movie", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -251,11 +251,11 @@ router.post("/:id/add-movie", async (req, res) => {
 
     res.json({ msg: "Movie added", movie: existingMovie });
   } catch (error) {
-    console.error("❌ Error adding movie:", error);
+    console.error(" Error adding movie:", error);
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 });
-// ❌ DELETE /api/groups/:groupId/remove-movie/:movieId
+
 router.delete("/:groupId/remove-movie/:movieId", async (req, res) => {
   try {
     const { groupId, movieId } = req.params;
@@ -268,12 +268,12 @@ router.delete("/:groupId/remove-movie/:movieId", async (req, res) => {
 
     res.json({ msg: "Movie removed from group" });
   } catch (error) {
-    console.error("❌ Error removing movie:", error);
+    console.error(" Error removing movie:", error);
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 });
 
-// When creating a poll, update the group's currentPoll field
+
 router.post("/:id/create-poll", authenticate, async (req, res) => {
   try {
     const group = await Group.findById(req.params.id);
@@ -294,7 +294,7 @@ router.post("/:id/create-poll", authenticate, async (req, res) => {
 
     await poll.save();
 
-    // Update group with current poll
+
     group.currentPoll = poll._id;
     if (!group.pollHistory) group.pollHistory = [];
     group.pollHistory.push(poll._id);
@@ -307,7 +307,7 @@ router.post("/:id/create-poll", authenticate, async (req, res) => {
   }
 });
 
-// When completing a poll, update the group
+
 router.post("/:id/complete-poll", authenticate, async (req, res) => {
   try {
     const group = await Group.findById(req.params.id);
@@ -328,7 +328,7 @@ router.post("/:id/complete-poll", authenticate, async (req, res) => {
     poll.winningMovieTmdbId = req.body.winningMovie;
     await poll.save();
 
-    // Clear current poll from group
+
     group.currentPoll = null;
     await group.save();
 

@@ -17,7 +17,7 @@ const PollSchema = new mongoose.Schema({
       title: { type: String, required: true },
       poster_path: String,
       vote_average: Number,
-      selected: { type: Number, default: null } // Add selected field to track the number selected for each movie
+      selected: { type: Number, min: 1, max: 4, default: null },
     },
   ],
   votes: [
@@ -37,8 +37,8 @@ const PollSchema = new mongoose.Schema({
   expiresAt: { type: Date },
 });
 
-// Create index for faster lookups
+
 PollSchema.index({ groupId: 1, status: 1 });
-PollSchema.index({ createdAt: 1 }, { expireAfterSeconds: 7 * 24 * 60 * 60 }); // Auto-expire after 7 days
+PollSchema.index({ createdAt: 1 }, { expireAfterSeconds: 7 * 24 * 60 * 60 }); 
 
 module.exports = mongoose.model("Poll", PollSchema);

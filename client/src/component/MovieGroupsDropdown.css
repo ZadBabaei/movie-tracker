@@ -9,7 +9,7 @@
   align-items: center;
 }
 
-/* Dropdown Menu (consistent with profile dropdown) */
+
 .dropdown-menu {
   background: rgba(0, 0, 0, 0.9);
   border-radius: 8px;
@@ -24,7 +24,7 @@
   margin-top: 5px;
 }
 
-/* bridge hover like profile dropdown */
+
 .dropdown-container::after {
   content: '';
   position: absolute;
@@ -43,7 +43,7 @@
   align-items: flex-start;
 }
 
-/* List Styling (consistent spacing) */
+
 .groups-list {
   width: 100%;
   max-height: 150px;
@@ -68,7 +68,7 @@
   border-radius: 5px;
 }
 
-/* Create Group button consistent with profile-dropdown hover */
+
 .create-group-button {
   width: 80%;
   margin-top: 5px;

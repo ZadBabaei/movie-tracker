@@ -39,18 +39,25 @@ export const ModalProvider = ({ children }) => {
   const openVoteModal = () => setIsVoteModalOpen(true);
   const closeVoteModal = () => setIsVoteModalOpen(false);
 
-  // Movie selection logic (for poll creation)
-  const handleMovieSelectForVote = useCallback((movie) => {
+
+const handleMovieSelectForVote = useCallback(
+  (movie) => {
     setSelectedMoviesForVote((prev) => {
       const exists = prev.find((m) => m.id === movie.id);
       if (exists) {
         return prev.filter((m) => m.id !== movie.id);
       } else if (prev.length < 6) {
+        if (currentPoll) {
+          addMovieToCurrentPoll(movie); 
+        }
         return [...prev, movie];
       }
       return prev;
     });
-  }, []);
+  },
+  [currentPoll]
+);
+
 
   const clearVoteSelections = () => {
     setSelectedMoviesForVote([]);
@@ -95,6 +102,23 @@ export const ModalProvider = ({ children }) => {
       return null;
     }
   }, []);
+const addMovieToCurrentPoll = async (movie) => {
+  if (!currentPoll) return;
+
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.post(
+      `/api/polls/${currentPoll._id}/add-movie`,
+      { movie },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    setCurrentPoll(response.data); 
+  } catch (err) {
+    console.error("Failed to add movie to poll:", err);
+  }
+};
 
   const completePoll = useCallback(async (pollId, winningMovie) => {
     try {
@@ -197,6 +221,7 @@ export const ModalProvider = ({ children }) => {
         closeInviteFriendsModal,
         openVoteModal,
         closeVoteModal,
+        addMovieToCurrentPoll,
 
         // Data actions
         createGroup,

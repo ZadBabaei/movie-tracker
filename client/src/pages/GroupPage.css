@@ -1,11 +1,6 @@
 .group-page {
-  /* background: rgb(15, 32, 39);
-  background: linear-gradient(
-    180deg,
-    rgba(15, 32, 39, 1) 23%,
-    rgba(32, 58, 67, 1) 47%,
-    rgba(44, 83, 100, 1) 100% */
-  background: #283048; /* fallback for old browsers */
+
+  background: #283048; 
   background: -webkit-linear-gradient(to top, #17421d, #040a1c);
   background: linear-gradient(to top, #17421d, #040a1c);
 }
@@ -54,23 +49,23 @@
   margin-left: 180px;
   color: rgb(251, 247, 247);
 }
-/* Inner scrolling container */
+
 .group-member-card-container {
   display: flex;
-  flex-wrap: nowrap; /* Prevent wrapping */
+  flex-wrap: nowrap; 
   gap: 20px;
   padding-bottom: 10px;
   margin-inline-start: 10px;
   padding-inline-start: 150px;
-  width: 97vw; /* Force it to be viewport width */
-  overflow-x: auto; /* Enable horizontal scrolling */
-  overflow-y: hidden; /* Optional: hide vertical scroll */
+  width: 97vw; 
+  overflow-x: auto;
+  overflow-y: hidden; 
 
   box-sizing: border-box;
 }
 
 .group-member-card-container::-webkit-scrollbar {
-  display: none; /* Optional: hide scrollbar */
+  display: none; 
 }
 
 .group-member-cards-wrapper {
@@ -78,10 +73,10 @@
   flex-wrap: nowrap;
   gap: 20px;
 
-  /* This will now follow vertical page scroll */
+
   animation: slide-left linear;
-  animation-timeline: scroll(root); /* link to root vertical page scroll */
-  animation-range: 0px 600px; /* adjust as needed */
+  animation-timeline: scroll(root); 
+  animation-range: 0px 600px; 
 }
 
 .group-members-card {
@@ -96,13 +91,13 @@
   align-items: center;
 }
 
-/* Keyframes stay the same */
+
 @keyframes slide-left {
   from {
     transform: translateX(0%);
   }
   to {
-    transform: translateX(-50%); /* Adjust as needed */
+    transform: translateX(-50%); 
   }
 }
 .group-members-card img {
@@ -166,7 +161,7 @@
   justify-content: center;
   margin: 0 180px 0 180px;
   min-height: 700px;
-  /* overflow-x: hidden; */
+
 }
 .movie-grid {
   display: grid;

@@ -3,8 +3,8 @@
   justify-content: center;
   align-items: flex-start;
   padding: 60px 20px;
-  /* min-height: 100vh; */
-  background: #283048; /* fallback for old browsers */
+
+  background: #283048; 
   background: -webkit-linear-gradient(to top, #17421d, #040a1c);
   background: linear-gradient(to top, #17421d, #040a1c);
 }

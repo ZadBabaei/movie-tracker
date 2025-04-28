@@ -7,11 +7,11 @@ body,
   padding: 0;
 }
 
-/* Hero Banner */
+
 .hero-banner {
   width: 100%;
   position: relative;
-  z-index: 2; /* ✅ add this */
+  z-index: 2; 
   overflow: hidden;
   display: flex;
   justify-content: center;
@@ -31,7 +31,7 @@ body,
   z-index: 1;
 }
 
-/* Fade-in Animation */
+
 .fade-in {
   animation: fadeInSlideUp 1s ease-out forwards;
   opacity: 0;
@@ -48,7 +48,7 @@ body,
   }
 }
 
-/* Group Variant Layout */
+
 .group-title-container {
   display: flex;
   justify-content: center;
@@ -85,7 +85,7 @@ line-height: 50px;
   font-family: "Poppins", sans-serif;
 }
 
-/* Home Variant Layout */
+
 .home-title-container {
   position: relative;
   top: 40%;

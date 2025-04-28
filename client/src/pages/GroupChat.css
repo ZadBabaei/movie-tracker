@@ -1,7 +1,7 @@
 .GroupChatPage-content-container {
   display: flex;
   flex-direction: column;
-  /* background: #283048;  */
+
   background: -webkit-linear-gradient(to top, #17421d, #040a1c);
   background: linear-gradient(to top, #17421d, #040a1c);
 }
@@ -19,7 +19,7 @@
   margin-inline-start: 6vw;
 }
 
-/* Add this to your GroupChat.css file */
+
 .GroupChatPage-section-title:hover {
   transform: scale(1.05);
   background: linear-gradient(to right, #ff1a1a, #cc0000);
@@ -88,7 +88,7 @@
 }
 
 .GroupChatPage-movie-list {
-  /* max-height: 50px; */
+
   overflow-y: auto;
   padding-left: 125px;
   margin-top: 20px;
@@ -113,7 +113,7 @@
 
 .GroupChatPage-movie-list > div {
   width: 150px;
-  /* height: 1200px; */
+
 }
 .GroupChatPage-suggested-container {
   display: flex;
@@ -178,7 +178,6 @@
 }
 .GroupChatPage-banner-section {
   background-color: #011405b9;
-  /* background: rgba(0, 0, 0, 0.5); */
   backdrop-filter: blur(6px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;

@@ -1,4 +1,4 @@
-// VerticalNavbar.js
+
 import React from "react";
 import { useLocation } from "react-router-dom";
 import {
@@ -7,7 +7,6 @@ import {
   FaEnvelope,
   FaUser,
   FaInfoCircle,
-  FaFilm,
   FaThList,
 } from "react-icons/fa";
 import { useModal } from "../context/ModalContext";

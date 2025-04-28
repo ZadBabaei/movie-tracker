@@ -44,7 +44,6 @@ const Inbox = () => {
        }
      );
 
-      // Remove the message after responding
       setMessages((prev) => prev.filter((msg) => msg._id !== messageId));
     } catch (err) {
       console.error("Error responding to message:", err);

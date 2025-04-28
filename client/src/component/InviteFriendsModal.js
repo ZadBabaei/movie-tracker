@@ -28,7 +28,7 @@ const InviteFriendsModal = ({ isOpen, onClose }) => {
         setAllUsers(users);
         setFilteredUsers(users);
       } catch (error) {
-        console.error("❌ Error fetching users:", error);
+        console.error(" Error fetching users:", error);
         toast.error("Failed to load users.");
       }
     };
@@ -42,8 +42,8 @@ const InviteFriendsModal = ({ isOpen, onClose }) => {
   const handleInvite = async (userId) => {
     const token = localStorage.getItem("token");
 
-    console.log("📨 Attempting to invite:", userId);
-    console.log("📨 Group ID:", createdGroupId);
+    console.log(" Attempting to invite:", userId);
+    console.log(" Group ID:", createdGroupId);
 
     if (!token) {
       toast.error("No token found.");
@@ -77,13 +77,13 @@ const InviteFriendsModal = ({ isOpen, onClose }) => {
 
       setInvitedUserIds((prev) => {
         const updated = [...prev, userId];
-        console.log("✅ Invited so far:", updated);
+        console.log("Invited so far:", updated);
         return updated;
       });
 
       toast.success("User invited!");
     } catch (error) {
-      console.error("❌ Error inviting user:", error);
+      console.error(" Error inviting user:", error);
       toast.error("Failed to send invitation.");
     }
   };

@@ -34,7 +34,7 @@ const MovieCard = ({ movie, onDelete, onInfoClick }) => {
         <div className="overlay">
           <FaInfoCircle
             className="icon info-icon"
-            onClick={() => onInfoClick(movie)} // ⬅️ NEW PROP
+            onClick={() => onInfoClick(movie)} 
           />
 
           <FaHeart
