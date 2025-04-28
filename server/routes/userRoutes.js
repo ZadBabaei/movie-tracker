@@ -4,7 +4,7 @@ const User = require("../models/User");
 const router = express.Router();
 require("dotenv").config();
 
-// ✅ Get all users (for invite modal)
+
 router.get("/all", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -13,7 +13,7 @@ router.get("/all", async (req, res) => {
     }
 
     const token = authHeader.split(" ")[1];
-    jwt.verify(token, process.env.JWT_SECRET); // Validate token, no need for decoded info here
+    jwt.verify(token, process.env.JWT_SECRET); 
 
     const users = await User.find().select("_id name email");
     res.json(users);

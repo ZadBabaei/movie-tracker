@@ -27,7 +27,7 @@ function Signup() {
 		e.preventDefault();
 		setError(null);
 		if (password !== repeatPassword) {
-			setError("❌ Passwords do not match.");
+			setError(" Passwords do not match.");
 			return;
 		}
 		try {
@@ -36,10 +36,10 @@ function Signup() {
 				email,
 				password,
 			});
-			alert("✅ Signup successful! You can now log in.");
+			alert(" Signup successful! You can now log in.");
 			navigate("/");
 		} catch (error) {
-			setError(error.response?.data?.message || "❌ Signup failed. Maybe the user already exists.");
+			setError(error.response?.data?.message || " Signup failed. Maybe the user already exists.");
 		}
 	};
 

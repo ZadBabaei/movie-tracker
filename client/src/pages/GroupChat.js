@@ -14,7 +14,7 @@ const GroupChat = () => {
   const { id } = useParams();
   const [groupName, setGroupName] = useState("Loading...");
   const [movieList, setMovieList] = useState([]);
-  const [pollStatus, setPollStatus] = useState("none"); // 'none', 'active', 'completed'
+  const [pollStatus, setPollStatus] = useState("none"); 
 
   useEffect(() => {
     const fetchGroupDetails = async () => {
@@ -50,14 +50,14 @@ const GroupChat = () => {
     fetchGroupDetails();
     fetchMovieList();
 
-    // Poll for updates
+
     const pollInterval = setInterval(fetchGroupDetails, 5000);
     return () => clearInterval(pollInterval);
   }, [id]);
 
   const handleVoteButtonClick = () => {
     if (pollStatus === "completed") {
-      clearVoteSelections(); // Clear any previous selections when creating new poll
+      clearVoteSelections(); 
       setPollStatus("none");
     }
     openVoteModal();

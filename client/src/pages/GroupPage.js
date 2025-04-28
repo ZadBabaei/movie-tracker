@@ -34,7 +34,7 @@ const GroupPage = () => {
       headers: { Authorization: `Bearer ${token}` },
     });
     setGroup(res.data);
-    // Populate movies from DB
+
     const fetchedMovies = res.data.movies.map((m) => ({
       id: m.imdbID,
       _id: m._id,
@@ -49,14 +49,14 @@ const GroupPage = () => {
       console.log("💡 Movie being added:", movie); 
     const token = localStorage.getItem("token");
 
-    // Save movie to DB
+
     await axios.post(
       `http://localhost:5000/api/groups/${id}/add-movie`,
       { movie },
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    // Optimistically add to local state
+ 
     setAddedMovies((prev) => [...prev, movie]);
   };
 
@@ -118,7 +118,7 @@ const { openInviteFriendsModal } = useModal();
                     ></span>
                   </div>
                   <div className="member-name">{member.name}</div>
-                  {/* Optional badge */}
+
                   {member._id.endsWith("2") && (
                     <div className="badge">Top Contributor</div>
                   )}
@@ -176,7 +176,7 @@ const { openInviteFriendsModal } = useModal();
         </div>
       </div>
 
-      {/* ✅ Place modal inside return */}
+
       {showInviteModal && (
         <InviteModal
           groupId={group._id}

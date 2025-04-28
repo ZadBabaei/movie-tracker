@@ -7,7 +7,7 @@ require("dotenv").config();
 
 const router = express.Router();
 
-// ✅ Fetch Inbox Messages (Group Invitations, Notifications, etc.)
+
 router.get("/", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -19,14 +19,14 @@ router.get("/", async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = new mongoose.Types.ObjectId(decoded.id);
 
-    // Fetch groups where the user has pending invitations
+ 
     const groups = await Group.find({
       pendingInvitations: { $elemMatch: { userId: userId } },
     })
       .select("name _id pendingInvitations")
       .lean();
 
-    // Format invitations as messages with inviterName
+   
     const formattedInvites = groups.map((group) => {
    const invitation = group.pendingInvitations.find(
      (inv) => inv.userId.toString() === userId.toString()

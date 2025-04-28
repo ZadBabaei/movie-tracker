@@ -8,7 +8,7 @@ require("dotenv").config();
 
 const router = express.Router();
 
-//Secure token route
+
 router.post("/token", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -27,7 +27,7 @@ router.post("/token", async (req, res) => {
       return res.status(400).json({ msg: "Group ID is required." });
     }
 
-    //  Fetch group and its members
+
     const group = await Group.findById(groupId);
     if (!group) {
       return res.status(404).json({ msg: "Group not found." });
@@ -43,7 +43,7 @@ router.post("/token", async (req, res) => {
       process.env.STREAM_API_SECRET
     );
 
-    //  Create Stream token & ensure user is registered
+ 
     const chatToken = chatClient.createToken(userId);
     await chatClient.upsertUser({
       id: userId,

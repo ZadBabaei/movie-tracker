@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { PlayIcon } from "@heroicons/react/24/solid";
-import "./MovieGroupsDropdown.css"; // ✅ New CSS file
+import "./MovieGroupsDropdown.css"; 
 import CreateGroupModal from "./GroupsModal";
 
 const MovieGroupsDropdown = ({ groups, refreshGroups }) => {
@@ -12,7 +11,7 @@ const MovieGroupsDropdown = ({ groups, refreshGroups }) => {
 
   const handleGroupClick = (groupId) => {
     navigate(`/group/${groupId}`);
-    setIsOpen(false); // Close dropdown after clicking a group
+    setIsOpen(false); 
   };
 
   return (
@@ -52,7 +51,7 @@ const MovieGroupsDropdown = ({ groups, refreshGroups }) => {
         </motion.div>
       )}
 
-      {/* Create Group Modal */}
+
       <CreateGroupModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

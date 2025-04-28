@@ -1,4 +1,4 @@
-// src/data/quotes.js
+
 const movieQuotes = [
 "Frankly, my dear, I don't give a damn. – Gone with the Wind (1939)",
 "I'm gonna make him an offer he can't refuse. – The Godfather (1972)",

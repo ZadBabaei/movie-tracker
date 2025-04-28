@@ -1,14 +1,14 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-const User = require("../models/User");
+const User = require("../models/user");
 require("dotenv").config();
 const Group = require("../models/Groups");
 const mongoose = require("mongoose");
 const router = express.Router();
 
 
-// ✅ Signup Route (Now Hashing Passwords)
+
 router.post("/register", async (req, res) => {
   try {
     console.log("🔹 Signup API hit with data:", req.body);
@@ -18,7 +18,6 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ msg: "Please fill in all fields" });
     }
 
-    // ✅ Check if email already exists
     let user = await User.findOne({ email });
     if (user) {
       return res.status(400).json({ msg: "Email already in use" });
@@ -26,22 +25,21 @@ router.post("/register", async (req, res) => {
 
     console.log("🔹 Creating new user...");
     
-    // ✅ Hash password before saving
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new User({ name, email, password: hashedPassword });
 
-    // ✅ Save user to MongoDB
     const savedUser = await newUser.save();
-    console.log("✅ User saved successfully:", savedUser);
+    console.log(" User saved successfully:", savedUser);
 
     res.json({ msg: "Signup successful", user: savedUser });
   } catch (error) {
-    console.error("❌ Error in register route:", error);
+    console.error(" Error in register route:", error);
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 });
 
-// ✅ Login Route (Now Verifies Hashed Password)
+
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -52,25 +50,23 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ msg: "Invalid credentials" });
     }
 
-    // ✅ Compare hashed passwords
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ msg: "Invalid credentials" });
     }
 
-    // ✅ Generate JWT Token
     const token = jwt.sign({ id: user._id, name: user.name }, process.env.JWT_SECRET, { expiresIn: "24h" });
 
-    console.log("✅ Token Generated:", token);
+    console.log(" Token Generated:", token);
     res.json({ token, user: { name: user.name, email: user.email } });
   } catch (error) {
-    console.error("❌ Error in login route:", error);
+    console.error(" Error in login route:", error);
     res.status(500).json({ msg: "Server error" });
   }
 });
 
 
-// ✅ Secure Route: Fetch User Data
 router.get("/me", async (req, res) => {
   try {
     console.log("🔹 User Info API hit.");
@@ -82,46 +78,46 @@ router.get("/me", async (req, res) => {
 
     const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("✅ Token Decoded:", decoded);
+    console.log("Token Decoded:", decoded);
 
     const user = await User.findById(decoded.id).select("-password");
     if (!user) {
       return res.status(404).json({ msg: "User not found" });
     }
 
-    console.log("✅ User Data Retrieved:", user);
-    res.json({ name: user.name, email: user.email }); // ✅ Return correct user data
+    console.log(" User Data Retrieved:", user);
+    res.json({ name: user.name, email: user.email }); 
   } catch (error) {
-    console.error("❌ Error in /me route:", error);
+    console.error(" Error in /me route:", error);
     res.status(500).json({ msg: "Server error" });
   }
 });
 
-// ✅ Secure Route: Fetch User Groups
+
 router.get("/groups", async (req, res) => {
   try {
     console.log("🔹 Fetching groups for the user...");
 
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      console.log("❌ No token provided.");
+      console.log(" No token provided.");
       return res.status(401).json({ msg: "Unauthorized: No token provided" });
     }
 
     const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    console.log("✅ Token Decoded, User ID (Before Conversion):", decoded.id);
+    console.log(" Token Decoded, User ID (Before Conversion):", decoded.id);
 
     const userId = new mongoose.Types.ObjectId(decoded.id);
-    console.log("🔍 Querying MongoDB for groups where members include:", userId);
+    console.log(" Querying MongoDB for groups where members include:", userId);
 
     const userGroups = await Group.find({ members: userId });
 
-    console.log("✅ Found Groups:", userGroups);
+    console.log(" Found Groups:", userGroups);
     res.json(userGroups);
   } catch (error) {
-    console.error("❌ Error fetching groups:", error);
+    console.error(" Error fetching groups:", error);
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 });
@@ -129,7 +125,7 @@ router.get("/groups", async (req, res) => {
 
 router.post("/groups/create", async (req, res) => {
   try {
-    console.log("🔹 Incoming Create Group Request:", req.body);
+    console.log(" Incoming Create Group Request:", req.body);
 
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -149,10 +145,10 @@ router.post("/groups/create", async (req, res) => {
     const newGroup = new Group({ name, members: memberIds });
     await newGroup.save();
 
-    console.log("✅ Group Created Successfully:", newGroup);
+    console.log(" Group Created Successfully:", newGroup);
     res.json(newGroup);
   } catch (error) {
-    console.error("❌ Error creating group:", error);
+    console.error(" Error creating group:", error);
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 });
@@ -163,21 +159,21 @@ router.get("/search", async (req, res) => {
 
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      console.log("❌ Authentication failed: No token or invalid token format");
+      console.log(" Authentication failed: No token or invalid token format");
       return res.status(401).json({ msg: "Unauthorized: No token provided" });
     }
 
     const token = authHeader.split(" ")[1];
-    console.log("🔹 Token received:", token);
+    console.log(" Token received:", token);
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("✅ Token decoded:", decoded);
+    console.log(" Token decoded:", decoded);
     
     const { query } = req.query;
-    console.log("🔍 Search query:", query);
+    console.log(" Search query:", query);
 
     if (!query) {
-      console.log("ℹ️ No search query provided, returning empty array");
+      console.log(" No search query provided, returning empty array");
       return res.json([]);
     }
 
@@ -188,16 +184,16 @@ router.get("/search", async (req, res) => {
         { email: { $regex: query, $options: "i" } }
       ]
     };
-    console.log("🔍 MongoDB query:", JSON.stringify(searchQuery));
+    console.log(" MongoDB query:", JSON.stringify(searchQuery));
 
     const users = await User.find(searchQuery)
       .select("_id name email")
-      .limit(10); // Add limit for better performance
+      .limit(10); 
 
-    console.log("✅ Search results:", users);
+    console.log(" Search results:", users);
     res.json(users);
   } catch (error) {
-    console.error("❌ Error searching users:", error);
+    console.error(" Error searching users:", error);
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 });

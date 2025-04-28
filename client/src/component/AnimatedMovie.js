@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
-// import movies from "../data/movies";
+
 
 const randomPositions = [
   { top: "30%", left: "5%" },

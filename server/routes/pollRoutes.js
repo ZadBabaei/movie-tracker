@@ -4,13 +4,13 @@ const Poll = require("../models/Poll");
 const { authenticate } = require("../middleware/authMiddleware");
 const mongoose = require("mongoose");
 
-// Create a new poll
+
 router.post("/create", authenticate, async (req, res) => {
   try {
     const { groupId, movies } = req.body;
     const userId = req.user.id;
 
-    // Check if there's already an active poll
+   
     const existingPoll = await Poll.findOne({
       groupId,
       status: "active",
@@ -42,7 +42,7 @@ router.post("/create", authenticate, async (req, res) => {
   }
 });
 
-// Get active poll for a group
+
 router.get("/group/:groupId/active", authenticate, async (req, res) => {
   try {
     const poll = await Poll.findOne({
@@ -54,7 +54,7 @@ router.get("/group/:groupId/active", authenticate, async (req, res) => {
       .lean();
 
     if (poll) {
-      // Convert movies array to match the expected format
+    
       poll.movies = poll.movies.map((movie) => ({
         id: movie.tmdbId,
         movieId: movie.tmdbId,
@@ -71,11 +71,12 @@ router.get("/group/:groupId/active", authenticate, async (req, res) => {
   }
 });
 
-// Submit a vote
+
 router.post("/vote", authenticate, async (req, res) => {
   try {
     const { pollId, movieId, rank } = req.body;
     const userId = req.user.id;
+console.log("Incoming vote:", { pollId, movieId, rank, userId });
 
     const poll = await Poll.findById(pollId);
     if (!poll) {
@@ -86,12 +87,15 @@ router.post("/vote", authenticate, async (req, res) => {
       return res.status(400).json({ msg: "Poll is not active" });
     }
 
-    // Remove any existing vote by this user
-    poll.votes = poll.votes.filter(
-      (vote) => vote.userId.toString() !== userId.toString()
-    );
+ poll.votes = poll.votes.filter(
+   (vote) =>
+     !(
+       vote.userId.toString() === userId.toString() &&
+       vote.movieTmdbId === movieId.toString()
+     )
+ );
 
-    // Add new vote using TMDb ID
+    
     poll.votes.push({
       userId,
       movieTmdbId: movieId.toString(),
@@ -100,7 +104,6 @@ router.post("/vote", authenticate, async (req, res) => {
 
     await poll.save();
 
-    // Return formatted response
     const populatedPoll = await Poll.findById(pollId)
       .populate("votes.userId", "name")
       .populate("creator", "name")
@@ -123,7 +126,7 @@ router.post("/vote", authenticate, async (req, res) => {
   }
 });
 
-// Cancel a poll (creator only)
+
 router.post("/:pollId/cancel", authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -133,7 +136,7 @@ router.post("/:pollId/cancel", authenticate, async (req, res) => {
       return res.status(404).json({ msg: "Poll not found" });
     }
 
-    // Only creator can cancel the poll
+    
     if (poll.creator.toString() !== userId) {
       return res
         .status(403)
@@ -154,7 +157,7 @@ router.post("/:pollId/cancel", authenticate, async (req, res) => {
   }
 });
 
-// Complete a poll (creator only)
+
 router.post("/:pollId/complete", authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -165,7 +168,7 @@ router.post("/:pollId/complete", authenticate, async (req, res) => {
       return res.status(404).json({ msg: "Poll not found" });
     }
 
-    // Only creator can complete the poll
+
     if (poll.creator.toString() !== userId) {
       return res
         .status(403)
@@ -183,6 +186,32 @@ router.post("/:pollId/complete", authenticate, async (req, res) => {
     res.json(poll);
   } catch (error) {
     console.error("Error completing poll:", error);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
+router.post("/:pollId/add-movie", authenticate, async (req, res) => {
+  try {
+    const { movie } = req.body;
+    const poll = await Poll.findById(req.params.pollId);
+    if (!poll) return res.status(404).json({ msg: "Poll not found" });
+
+    
+    const alreadyExists = poll.movies.some(
+      (m) => m.tmdbId === movie.id.toString()
+    );
+    if (alreadyExists) return res.json(poll); 
+
+    poll.movies.push({
+      tmdbId: movie.id.toString(),
+      title: movie.title,
+      poster_path: movie.poster_path,
+      vote_average: movie.vote_average,
+    });
+
+    await poll.save();
+    res.json(poll);
+  } catch (err) {
+    console.error("Error adding movie to poll:", err);
     res.status(500).json({ msg: "Server error" });
   }
 });

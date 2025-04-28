@@ -4,6 +4,7 @@ import { useModal } from "../context/ModalContext";
 import SearchBar from "./SearchBar";
 import MovieCard from "./MovieCard";
 import Badge from "./Badge";
+import axios from "axios";
 
 const VoteModal = ({ groupId }) => {
   const {
@@ -20,28 +21,48 @@ const VoteModal = ({ groupId }) => {
   const [isCreator, setIsCreator] = useState(true);
   const [votes, setVotes] = useState({});
   const [winnerId, setWinnerId] = useState(null);
-  const [activeVotes, setActiveVotes] = useState({}); // Track active votes for UI only
+  const [activeVotes, setActiveVotes] = useState({}); 
 
   useEffect(() => {
     const id = localStorage.getItem("userId");
     if (id) setUserId(id);
   }, []);
 
-  const handleVote = (movieId, rank) => {
-    setActiveVotes((prev) => {
-      const newVotes = { ...prev };
+  const handleVote = async (movieId, number) => {
 
-      // If clicking the same number again, just remove it
-      if (newVotes[movieId] === rank) {
-        delete newVotes[movieId];
-      } else {
-        // Set the new rank for this movie
-        newVotes[movieId] = rank;
-      }
+    console.log("Button clicked:", number);
+    console.log("For movie:", movieId);
 
-      return newVotes;
-    });
+    if (!currentPoll) {
+      console.log("No current poll available");
+      return;
+    }
+
+    try {
+      await axios.post(
+        "/api/polls/vote",
+        {
+          pollId: currentPoll._id,
+          movieId,
+          rank: number,
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+
+
+      await fetchCurrentPoll(groupId);
+    } catch (err) {
+      console.error("Selection error:", err);
+    }
   };
+const getUserVoteRank = (movieId) => {
+  const vote = currentPoll?.votes?.find(
+    (v) => v.userId._id === userId && v.movieTmdbId === movieId
+  );
+  return vote?.rank || null;
+};
 
   const handleSubmitPoll = async () => {
     if (selectedMoviesForVote.length === 0) return;
@@ -103,7 +124,8 @@ const VoteModal = ({ groupId }) => {
         <div className="VoteModal-movie-grid">
           {movies.map((movie) => {
             const movieId = movie.movieId || movie.id;
-            const rank = activeVotes[movieId];
+            const selected = getUserVoteRank(movieId);
+
             const isWinner = movieId === winnerId;
 
             return (
@@ -114,17 +136,38 @@ const VoteModal = ({ groupId }) => {
                 />
                 {isWinner && <Badge type="winner" />}
                 <div className="VoteModal-rank-buttons">
-                  {[1, 2, 3, 4].map((r) => (
-                    <button
-                      key={r}
-                      className={`VoteModal-rank-btn ${
-                        rank === r ? "active" : ""
-                      }`}
-                      onClick={() => handleVote(movieId, r)}
-                    >
-                      {r}
-                    </button>
-                  ))}
+                  <button
+                    className={`VoteModal-rank-btn first-rank ${
+                      selected === 1 ? "active" : ""
+                    }`}
+                    onClick={() => handleVote(movieId, 1)}
+                  >
+                    1
+                  </button>
+                  <button
+                    className={`VoteModal-rank-btn second-rank ${
+                      selected === 2 ? "active" : ""
+                    }`}
+                    onClick={() => handleVote(movieId, 2)}
+                  >
+                    2
+                  </button>
+                  <button
+                    className={`VoteModal-rank-btn third-rank ${
+                      selected === 3 ? "active" : ""
+                    }`}
+                    onClick={() => handleVote(movieId, 3)}
+                  >
+                    3
+                  </button>
+                  <button
+                    className={`VoteModal-rank-btn fourth-rank ${
+                      selected === 4 ? "active" : ""
+                    }`}
+                    onClick={() => handleVote(movieId, 4)}
+                  >
+                    4
+                  </button>
                 </div>
               </div>
             );

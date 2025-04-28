@@ -7,7 +7,7 @@ const SearchBar = ({ onMovieSelect }) => {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const apiKey = process.env.REACT_APP_TMDB_API_KEY; // classic v3 API key
+  const apiKey = process.env.REACT_APP_TMDB_API_KEY; 
   const baseUrl = "https://api.themoviedb.org/3/search/movie";
 
   const fetchMovies = async (q) => {
@@ -22,7 +22,7 @@ const SearchBar = ({ onMovieSelect }) => {
           q
         )}`
       );
-      console.log("TMDB response:", res.data); // debug line
+      console.log("TMDB response:", res.data); 
       setResults(res.data.results || []);
     } catch (error) {
       console.error("API Error:", error);
@@ -47,7 +47,7 @@ const SearchBar = ({ onMovieSelect }) => {
 
   const handleSelect = (movie) => {
     const formattedMovie = {
-      id: movie.id, // Add the original TMDB id
+      id: movie.id, 
       imdbID: `tmdb-${movie.id}`,
       title: movie.title,
       poster_path: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
