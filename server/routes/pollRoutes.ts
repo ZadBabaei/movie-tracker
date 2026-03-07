@@ -1,31 +1,24 @@
-const express = require("express");
+import express, { Request, Response } from "express";
+import { authenticate } from "../middleware/authMiddleware";
+import Poll from "../models/Poll";
+
 const router = express.Router();
-const Poll = require("../models/Poll");
-const { authenticate } = require("../middleware/authMiddleware");
-const mongoose = require("mongoose");
 
-
-router.post("/create", authenticate, async (req, res) => {
+router.post("/create", authenticate, async (req: Request, res: Response) => {
   try {
     const { groupId, movies } = req.body;
-    const userId = req.user.id;
+    const userId = req.user!.id;
 
-   
-    const existingPoll = await Poll.findOne({
-      groupId,
-      status: "active",
-    });
-
+    const existingPoll = await Poll.findOne({ groupId, status: "active" });
     if (existingPoll) {
-      return res.status(400).json({
-        msg: "An active poll already exists for this group",
-      });
+      res.status(400).json({ msg: "An active poll already exists for this group" });
+      return;
     }
 
     const poll = new Poll({
       groupId,
       creator: userId,
-      movies: movies.map((movie) => ({
+      movies: movies.map((movie: any) => ({
         tmdbId: movie.id.toString(),
         title: movie.title,
         poster_path: movie.poster_path,
@@ -42,8 +35,7 @@ router.post("/create", authenticate, async (req, res) => {
   }
 });
 
-
-router.get("/group/:groupId/active", authenticate, async (req, res) => {
+router.get("/group/:groupId/active", authenticate, async (req: Request, res: Response) => {
   try {
     const poll = await Poll.findOne({
       groupId: req.params.groupId,
@@ -54,8 +46,7 @@ router.get("/group/:groupId/active", authenticate, async (req, res) => {
       .lean();
 
     if (poll) {
-    
-      poll.movies = poll.movies.map((movie) => ({
+      (poll as any).movies = poll.movies.map((movie) => ({
         id: movie.tmdbId,
         movieId: movie.tmdbId,
         title: movie.title,
@@ -71,37 +62,30 @@ router.get("/group/:groupId/active", authenticate, async (req, res) => {
   }
 });
 
-
-router.post("/vote", authenticate, async (req, res) => {
+router.post("/vote", authenticate, async (req: Request, res: Response) => {
   try {
     const { pollId, movieId, rank } = req.body;
-    const userId = req.user.id;
-console.log("Incoming vote:", { pollId, movieId, rank, userId });
+    const userId = req.user!.id;
 
     const poll = await Poll.findById(pollId);
     if (!poll) {
-      return res.status(404).json({ msg: "Poll not found" });
+      res.status(404).json({ msg: "Poll not found" });
+      return;
     }
-
     if (poll.status !== "active") {
-      return res.status(400).json({ msg: "Poll is not active" });
+      res.status(400).json({ msg: "Poll is not active" });
+      return;
     }
 
- poll.votes = poll.votes.filter(
-   (vote) =>
-     !(
-       vote.userId.toString() === userId.toString() &&
-       vote.movieTmdbId === movieId.toString()
-     )
- );
+    poll.votes = poll.votes.filter(
+      (vote) =>
+        !(
+          vote.userId.toString() === userId.toString() &&
+          vote.movieTmdbId === movieId.toString()
+        )
+    );
 
-    
-    poll.votes.push({
-      userId,
-      movieTmdbId: movieId.toString(),
-      rank,
-    });
-
+    poll.votes.push({ userId: userId as any, movieTmdbId: movieId.toString(), rank });
     await poll.save();
 
     const populatedPoll = await Poll.findById(pollId)
@@ -110,7 +94,7 @@ console.log("Incoming vote:", { pollId, movieId, rank, userId });
       .lean();
 
     if (populatedPoll) {
-      populatedPoll.movies = populatedPoll.movies.map((movie) => ({
+      (populatedPoll as any).movies = populatedPoll.movies.map((movie) => ({
         id: movie.tmdbId,
         movieId: movie.tmdbId,
         title: movie.title,
@@ -126,30 +110,25 @@ console.log("Incoming vote:", { pollId, movieId, rank, userId });
   }
 });
 
-
-router.post("/:pollId/cancel", authenticate, async (req, res) => {
+router.post("/:pollId/cancel", authenticate, async (req: Request, res: Response) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user!.id;
     const poll = await Poll.findById(req.params.pollId);
-
     if (!poll) {
-      return res.status(404).json({ msg: "Poll not found" });
+      res.status(404).json({ msg: "Poll not found" });
+      return;
     }
-
-    
     if (poll.creator.toString() !== userId) {
-      return res
-        .status(403)
-        .json({ msg: "Only poll creator can cancel the poll" });
+      res.status(403).json({ msg: "Only poll creator can cancel the poll" });
+      return;
     }
-
     if (poll.status !== "active") {
-      return res.status(400).json({ msg: "Poll is not active" });
+      res.status(400).json({ msg: "Poll is not active" });
+      return;
     }
 
     poll.status = "cancelled";
     await poll.save();
-
     res.json({ msg: "Poll cancelled successfully", poll });
   } catch (error) {
     console.error("Error cancelling poll:", error);
@@ -157,49 +136,48 @@ router.post("/:pollId/cancel", authenticate, async (req, res) => {
   }
 });
 
-
-router.post("/:pollId/complete", authenticate, async (req, res) => {
+router.post("/:pollId/complete", authenticate, async (req: Request, res: Response) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user!.id;
     const { winningMovie } = req.body;
     const poll = await Poll.findById(req.params.pollId);
-
     if (!poll) {
-      return res.status(404).json({ msg: "Poll not found" });
+      res.status(404).json({ msg: "Poll not found" });
+      return;
     }
-
-
     if (poll.creator.toString() !== userId) {
-      return res
-        .status(403)
-        .json({ msg: "Only poll creator can complete the poll" });
+      res.status(403).json({ msg: "Only poll creator can complete the poll" });
+      return;
     }
-
     if (poll.status !== "active") {
-      return res.status(400).json({ msg: "Poll is not active" });
+      res.status(400).json({ msg: "Poll is not active" });
+      return;
     }
 
     poll.status = "completed";
     poll.winningMovieTmdbId = winningMovie.toString();
     await poll.save();
-
     res.json(poll);
   } catch (error) {
     console.error("Error completing poll:", error);
     res.status(500).json({ msg: "Server error" });
   }
 });
-router.post("/:pollId/add-movie", authenticate, async (req, res) => {
+
+router.post("/:pollId/add-movie", authenticate, async (req: Request, res: Response) => {
   try {
     const { movie } = req.body;
     const poll = await Poll.findById(req.params.pollId);
-    if (!poll) return res.status(404).json({ msg: "Poll not found" });
+    if (!poll) {
+      res.status(404).json({ msg: "Poll not found" });
+      return;
+    }
 
-    
-    const alreadyExists = poll.movies.some(
-      (m) => m.tmdbId === movie.id.toString()
-    );
-    if (alreadyExists) return res.json(poll); 
+    const alreadyExists = poll.movies.some((m) => m.tmdbId === movie.id.toString());
+    if (alreadyExists) {
+      res.json(poll);
+      return;
+    }
 
     poll.movies.push({
       tmdbId: movie.id.toString(),
@@ -210,10 +188,10 @@ router.post("/:pollId/add-movie", authenticate, async (req, res) => {
 
     await poll.save();
     res.json(poll);
-  } catch (err) {
-    console.error("Error adding movie to poll:", err);
+  } catch (error) {
+    console.error("Error adding movie to poll:", error);
     res.status(500).json({ msg: "Server error" });
   }
 });
 
-module.exports = router;
+export default router;

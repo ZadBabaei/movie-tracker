@@ -1,9 +1,8 @@
-
 import React from "react";
 import { useLocation } from "react-router-dom";
 import App from "./App";
 
-const AppRouter = () => {
+const AppRouter: React.FC = () => {
   const location = useLocation();
   const isAuthPage =
     location.pathname === "/" || location.pathname === "/signup";

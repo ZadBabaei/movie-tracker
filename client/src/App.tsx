@@ -14,36 +14,45 @@ import GroupsModal from "./component/GroupsModal";
 import GroupNameModal from "./component/GroupNameModal";
 import InviteFriendsModal from "./component/InviteFriendsModal";
 import ToastWrapper from "./component/ToastWrapper";
-import { useModal } from "./context/ModalContext";
 import GroupChat from "./pages/GroupChat";
 import ProtectedRoute from "./utils/ProtectedRoute";
+import { useModalStore } from "./store/useModalStore";
+import { useGroupStore } from "./store/useGroupStore";
 
 import "./App.css";
 
-function App({ isAuthenticated, isAuthPage }) {
+interface AppProps {
+  isAuthenticated: boolean;
+  isAuthPage: boolean;
+}
+
+function App({ isAuthenticated, isAuthPage }: AppProps) {
   const {
     isGroupsModalOpen,
     isGroupNameModalOpen,
-    isInviteFriendsModalOpen,
     closeGroupsModal,
     closeGroupNameModal,
+  } = useModalStore();
+
+  const {
+    isInviteFriendsModalOpen,
     closeInviteFriendsModal,
     openInviteFriendsModal,
     createGroup,
     setPendingGroupName,
     groupList,
-  } = useModal();
+  } = useGroupStore();
 
   const showModals = isAuthenticated && !isAuthPage;
 
-  const handleInvite = async (groupName) => {
+  const handleInvite = async (groupName: string) => {
     setPendingGroupName(groupName);
     await createGroup(groupName);
     openInviteFriendsModal();
     closeGroupNameModal();
   };
 
-  const handleSkip = async (groupName) => {
+  const handleSkip = async (groupName: string) => {
     await createGroup(groupName);
     closeGroupNameModal();
   };

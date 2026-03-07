@@ -6,15 +6,17 @@ import MovieCard from "../component/MovieCard";
 import VoteModal from "../component/VoteModal";
 import axios from "axios";
 import ChatBox from "../component/ChatBox";
-import { useModal } from "../context/ModalContext";
+import { useModalStore } from "../store/useModalStore";
+import { usePollStore } from "../store/usePollStore";
 import { useParams } from "react-router-dom";
 
-const GroupChat = () => {
-  const { isVoteModalOpen, openVoteModal, clearVoteSelections } = useModal();
-  const { id } = useParams();
+const GroupChat: React.FC = () => {
+  const { isVoteModalOpen, openVoteModal } = useModalStore();
+  const { clearVoteSelections } = usePollStore();
+  const { id } = useParams<{ id: string }>();
   const [groupName, setGroupName] = useState("Loading...");
-  const [movieList, setMovieList] = useState([]);
-  const [pollStatus, setPollStatus] = useState("none"); 
+  const [movieList, setMovieList] = useState<any[]>([]);
+  const [pollStatus, setPollStatus] = useState("none");
 
   useEffect(() => {
     const fetchGroupDetails = async () => {
@@ -34,7 +36,7 @@ const GroupChat = () => {
     const fetchMovieList = async () => {
       try {
         const pagesToFetch = 2;
-        const allMovies = [];
+        const allMovies: any[] = [];
         for (let page = 1; page <= pagesToFetch; page++) {
           const res = await axios.get(
             `https://api.themoviedb.org/3/movie/popular?api_key=${process.env.REACT_APP_TMDB_API_KEY}&language=en-US&page=${page}`
@@ -50,31 +52,27 @@ const GroupChat = () => {
     fetchGroupDetails();
     fetchMovieList();
 
-
-    const pollInterval = setInterval(fetchGroupDetails, 5000);
+    const pollInterval = setInterval(fetchGroupDetails, 15000);
     return () => clearInterval(pollInterval);
   }, [id]);
 
   const handleVoteButtonClick = () => {
     if (pollStatus === "completed") {
-      clearVoteSelections(); 
+      clearVoteSelections();
       setPollStatus("none");
     }
     openVoteModal();
   };
 
-  const handlePollStatusChange = (newStatus) => {
+  const handlePollStatusChange = (newStatus: string) => {
     setPollStatus(newStatus);
   };
 
   const getButtonText = () => {
     switch (pollStatus) {
-      case "active":
-        return "Check Current Poll";
-      case "completed":
-        return "Create New Poll";
-      default:
-        return "Create a Poll";
+      case "active": return "Check Current Poll";
+      case "completed": return "Create New Poll";
+      default: return "Create a Poll";
     }
   };
 
@@ -92,14 +90,11 @@ const GroupChat = () => {
       <div className="GroupChatPage-layout">
         <div className="GroupChatPage-left">
           <section className="GroupChatPage-section GroupChatPage-chat-section">
-            <ChatBox groupId={id} />
+            <ChatBox groupId={id!} />
           </section>
         </div>
         <div className="GroupChatPage-search-section">
-          <button
-            className="GroupChatPage-vote-btn"
-            onClick={handleVoteButtonClick}
-          >
+          <button className="GroupChatPage-vote-btn" onClick={handleVoteButtonClick}>
             {getButtonText()}
           </button>
           <div className="GroupChatPage-movie-list">
@@ -117,7 +112,7 @@ const GroupChat = () => {
         </div>
       </div>
       {isVoteModalOpen && (
-        <VoteModal groupId={id} onPollStatusChange={handlePollStatusChange} />
+        <VoteModal groupId={id!} onPollStatusChange={handlePollStatusChange} />
       )}
     </div>
   );

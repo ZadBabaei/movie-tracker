@@ -49,10 +49,14 @@ function Login() {
     <div className="wrapper">
       <div className="left-side">
         <img className="left-side-img" src={SinginImg} alt="Sign In" />
-        <h4 onClick={() => navigate("/signup")}>Create an account</h4>
+        <button className="auth-link-btn" onClick={() => navigate("/signup")}>
+          Create an account
+        </button>
       </div>
       <div className="right-side">
-        <h1>Sign In</h1>
+        <div className="brand-header">
+          <h1 className="brand-title">Sign In</h1>
+        </div>
         <form onSubmit={handleSubmit}>
           <Box sx={{ "& > :not(style)": { m: 1 } }}>
             <Box sx={{ display: "flex", alignItems: "flex-end" }}>
@@ -86,10 +90,9 @@ function Login() {
           </button>
         </form>
         <div className="other-logging-type">
-          <h4>Or login with:</h4>
-          <GoogleIcon />
-          <FacebookIcon />
-          <XIcon />
+          <GoogleIcon className="social-icon" sx={{ fontSize: 30, cursor: "pointer", color: "#555" }} />
+          <FacebookIcon className="social-icon" sx={{ fontSize: 30, cursor: "pointer", color: "#555" }} />
+          <XIcon className="social-icon" sx={{ fontSize: 30, cursor: "pointer", color: "#555" }} />
         </div>
       </div>
     </div>
