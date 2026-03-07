@@ -5,24 +5,40 @@ import "./GroupPage.css";
 import Hero from "../component/Hero";
 import SearchBar from "../component/SearchBar";
 import MovieCard from "../component/MovieCard";
-import InviteModal from "../component/InviteFriendsModal"; 
+import InviteModal from "../component/InviteFriendsModal";
 import VerticalNavbar from "../component/VerticalNavbar";
 import MovieModal from "../component/MovieModal";
-import { useModal } from "../context/ModalContext";
+import { useGroupStore } from "../store/useGroupStore";
 
+interface Member {
+  _id: string;
+  name: string;
+  profilePic?: string;
+}
 
+interface Movie {
+  id: string;
+  _id: string;
+  title: string;
+  poster_path?: string;
+  vote_average: number;
+}
 
+interface GroupData {
+  _id: string;
+  name: string;
+  members: Member[];
+}
 
-
-
-const GroupPage = () => {
-  const { id } = useParams();
+const GroupPage: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [group, setGroup] = useState(null);
-  const [addedMovies, setAddedMovies] = useState([]);
+  const [group, setGroup] = useState<GroupData | null>(null);
+  const [addedMovies, setAddedMovies] = useState<Movie[]>([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [selectedMovie, setSelectedMovie] = useState(null);
+  const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
 
+  const { openInviteFriendsModal } = useGroupStore();
 
   useEffect(() => {
     fetchGroupDetails();
@@ -35,51 +51,50 @@ const GroupPage = () => {
     });
     setGroup(res.data);
 
-    const fetchedMovies = res.data.movies.map((m) => ({
+    const fetchedMovies: Movie[] = res.data.movies.map((m: any) => ({
       id: m.imdbID,
       _id: m._id,
       title: m.title,
       poster_path: m.poster,
-      vote_average: m.vote_average || 0, 
+      vote_average: m.vote_average || 0,
     }));
     setAddedMovies(fetchedMovies);
   };
 
-  const handleMovieAdd = async (movie) => {
-      console.log("💡 Movie being added:", movie); 
+  const handleMovieAdd = async (movie: any) => {
     const token = localStorage.getItem("token");
-
-
-    await axios.post(
+    const res = await axios.post(
       `http://localhost:5000/api/groups/${id}/add-movie`,
       { movie },
       { headers: { Authorization: `Bearer ${token}` } }
     );
-
- 
-    setAddedMovies((prev) => [...prev, movie]);
+    const saved = res.data.movie;
+    setAddedMovies((prev) => [
+      ...prev,
+      {
+        id: saved.imdbID,
+        _id: saved._id,
+        title: saved.title,
+        poster_path: saved.poster,
+        vote_average: saved.vote_average || 0,
+      },
+    ]);
   };
 
-  const handleDeleteMovie = async (movieId) => {
+  const handleDeleteMovie = async (movieId: string) => {
     const token = localStorage.getItem("token");
     await axios.delete(
       `http://localhost:5000/api/groups/${id}/remove-movie/${movieId}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
     setAddedMovies((prev) => prev.filter((m) => m._id !== movieId));
-
   };
-const { openInviteFriendsModal } = useModal();
-
-
-
-
 
   if (!group) return <p>Loading group...</p>;
 
   return (
     <div className="group-page">
-      <VerticalNavbar></VerticalNavbar>
+      <VerticalNavbar />
       <Hero
         height="60vh"
         backgroundImage="https://image.tmdb.org/t/p/original/vW7JMRiXuXGfxgUYovvR7iqRGtl.jpg"
@@ -95,7 +110,6 @@ const { openInviteFriendsModal } = useModal();
       </div>
 
       <div className="group-content">
-        {/* Members */}
         <h1 className="group-members-title">Group Members</h1>
         <div className="group-members">
           <div className="group-member-card-container">
@@ -104,24 +118,13 @@ const { openInviteFriendsModal } = useModal();
                 <div key={member._id} className="member-card-glow">
                   <div className="member-avatar-wrapper">
                     <img
-                      src={
-                        member.profilePic ||
-                        "https://i.pravatar.cc/100?u=" + member._id
-                      }
+                      src={member.profilePic || "https://i.pravatar.cc/100?u=" + member._id}
                       alt={member.name}
                       className="member-avatar"
                     />
-                    <span
-                      className={`status-dot ${
-                        member._id.endsWith("1") ? "online" : "offline"
-                      }`}
-                    ></span>
+                    <span className="status-dot offline"></span>
                   </div>
                   <div className="member-name">{member.name}</div>
-
-                  {member._id.endsWith("2") && (
-                    <div className="badge">Top Contributor</div>
-                  )}
                 </div>
               ))}
             </div>
@@ -148,13 +151,11 @@ const { openInviteFriendsModal } = useModal();
           <div className="movie-callout">
             <h2>🎬 Add a new movie or scroll down to relive the magic!</h2>
             <p>
-              Want to talk about the latest movie? Head to the group chat and
-              share your thoughts!
+              Want to talk about the latest movie? Head to the group chat and share your thoughts!
             </p>
           </div>
         </div>
 
-        {/* Movies Section */}
         <div className="added-movies-wrapper">
           {addedMovies.length === 0 ? (
             <div className="empty-state">
@@ -168,14 +169,13 @@ const { openInviteFriendsModal } = useModal();
                   key={movie._id}
                   movie={movie}
                   onDelete={() => handleDeleteMovie(movie._id)}
-                  onInfoClick={(m) => setSelectedMovie(m)}
+                  onInfoClick={(m: any) => setSelectedMovie(m)}
                 />
               ))}
             </div>
           )}
         </div>
       </div>
-
 
       {showInviteModal && (
         <InviteModal

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import signupImg from "../assets/signup-image.jpg";
+import LogoPM from "../assets/Logo PM.png";
 import Box from "@mui/material/Box";
 import TextField from "@mui/material/TextField";
 import EmailIcon from "@mui/icons-material/Email";
@@ -46,12 +47,15 @@ function Signup() {
 	return (
     <div className="wrapper">
       <div className="left-side">
-        <h1>Sign Up</h1>
+        <div className="brand-header">
+          <img src={LogoPM} alt="Logo" className="brand-logo" />
+          <h1 className="brand-title">Sign Up</h1>
+        </div>
         <form onSubmit={handleSubmit}>
           <Box sx={{ "& > :not(style)": { m: 1 } }}>
             <Box sx={{ display: "flex", alignItems: "flex-end" }}>
               <PersonIcon
-                sx={{ color: "action.active", mr: 1, my: 1, fontSize: 14 }}
+                sx={{ color: "action.active", mr: 1, my: 1, fontSize: 20 }}
               />
               <TextField
                 label="Name"
@@ -59,15 +63,15 @@ function Signup() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 sx={{ width: "250px" }}
-                InputProps={{ sx: { fontSize: "14px" } }}
-                InputLabelProps={{ sx: { fontSize: "12px" } }}
+                InputProps={{ sx: { fontSize: "15px" } }}
+                InputLabelProps={{ sx: { fontSize: "14px" } }}
               />
             </Box>
           </Box>
           <Box sx={{ "& > :not(style)": { m: 1 } }}>
             <Box sx={{ display: "flex", alignItems: "flex-end" }}>
               <EmailIcon
-                sx={{ color: "action.active", mr: 1, my: 1, fontSize: 14 }}
+                sx={{ color: "action.active", mr: 1, my: 1, fontSize: 20 }}
               />
               <TextField
                 label="E-mail"
@@ -75,15 +79,15 @@ function Signup() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 sx={{ width: "250px" }}
-                InputProps={{ sx: { fontSize: "14px" } }}
-                InputLabelProps={{ sx: { fontSize: "12px" } }}
+                InputProps={{ sx: { fontSize: "15px" } }}
+                InputLabelProps={{ sx: { fontSize: "14px" } }}
               />
             </Box>
           </Box>
           <Box sx={{ "& > :not(style)": { m: 1 } }}>
             <Box sx={{ display: "flex", alignItems: "flex-end" }}>
               <HttpsIcon
-                sx={{ color: "action.active", mr: 1, my: 1, fontSize: 14 }}
+                sx={{ color: "action.active", mr: 1, my: 1, fontSize: 20 }}
               />
               <TextField
                 label="Password"
@@ -92,15 +96,15 @@ function Signup() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 sx={{ width: "250px" }}
-                InputProps={{ sx: { fontSize: "14px" } }}
-                InputLabelProps={{ sx: { fontSize: "12px" } }}
+                InputProps={{ sx: { fontSize: "15px" } }}
+                InputLabelProps={{ sx: { fontSize: "14px" } }}
               />
             </Box>
           </Box>
           <Box sx={{ "& > :not(style)": { m: 1 } }}>
             <Box sx={{ display: "flex", alignItems: "flex-end" }}>
               <HttpsOutlinedIcon
-                sx={{ color: "action.active", mr: 1, my: 1, fontSize: 14 }}
+                sx={{ color: "action.active", mr: 1, my: 1, fontSize: 20 }}
               />
               <TextField
                 label="Repeat Password"
@@ -109,8 +113,8 @@ function Signup() {
                 value={repeatPassword}
                 onChange={(e) => setRepeatPassword(e.target.value)}
                 sx={{ width: "250px" }}
-                InputProps={{ sx: { fontSize: "14px" } }}
-                InputLabelProps={{ sx: { fontSize: "12px" } }}
+                InputProps={{ sx: { fontSize: "15px" } }}
+                InputLabelProps={{ sx: { fontSize: "14px" } }}
               />
             </Box>
           </Box>
@@ -129,7 +133,9 @@ function Signup() {
       </div>
       <div className="right-side">
         <img className="right-side-img" src={signupImg} alt="Sign Up" />
-        <h3 onClick={() => navigate("/")}>Already have an account?</h3>
+        <button className="auth-link-btn" onClick={() => navigate("/")}>
+          Already have an account?
+        </button>
       </div>
     </div>
   );

@@ -39,13 +39,55 @@ pre {
 	line-height: 18.5714px;
 }
 h1 {
-	font-size: 2rem;
+	font-size: 1.8rem;
 	margin-bottom: 1rem;
+	font-family: "Montserrat", "Poppins", "Inter", sans-serif;
+	font-weight: 700;
+	letter-spacing: 1px;
+	text-transform: uppercase;
 }
 
-.right-side h4 {
-	margin-top: 1rem;
+.brand-header {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: 4px;
+}
+
+.brand-logo {
+	width: 52px;
+	height: 52px;
+	object-fit: contain;
+}
+
+.brand-title {
+	font-size: 1.8rem !important;
+	background: linear-gradient(135deg, #007bff, #00c6ff);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+	letter-spacing: 3px;
+}
+
+.auth-link-btn {
+	background: transparent;
+	border: 2px solid #007bff;
+	color: #007bff;
+	border-radius: 8px;
+	padding: 10px 22px;
+	font-size: 13px;
+	font-weight: 600;
+	font-family: "Montserrat", "Poppins", "Inter", sans-serif;
+	letter-spacing: 0.5px;
 	cursor: pointer;
+	transition: background 0.2s, color 0.2s;
+	text-transform: uppercase;
+}
+
+.auth-link-btn:hover {
+	background: #007bff;
+	color: white;
 }
 label {
 	font-size: 1rem;
@@ -73,16 +115,18 @@ label {
 	border-radius: none;
 }
 .left-side-btn {
-	width: 40%;
-	height: 40px;
+	width: 75%;
+	height: 48px;
 	padding: 10px;
 	background-color: #007bff;
 	color: white;
 	border: none;
-	border-radius: 5px;
-	font-size: 14px;
+	border-radius: 8px;
+	font-size: 16px;
+	font-weight: 600;
+	letter-spacing: 0.5px;
 	cursor: pointer;
-
+	transition: background-color 0.2s;
 }
 
 .left-side-btn:hover {

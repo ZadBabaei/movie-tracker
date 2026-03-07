@@ -1,18 +1,24 @@
-// GroupsModal.js
 import React from "react";
 import "./GroupsModal.css";
-import { useModal } from "../context/ModalContext";
+import { useModalStore } from "../store/useModalStore";
 import { useNavigate } from "react-router-dom";
+import { Group } from "../store/useGroupStore";
 
-const GroupsModal = ({ isOpen, onClose, groups }) => {
+interface GroupsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  groups: Group[];
+}
+
+const GroupsModal: React.FC<GroupsModalProps> = ({ isOpen, onClose, groups }) => {
   const navigate = useNavigate();
-  const { openGroupNameModal } = useModal();
+  const { openGroupNameModal } = useModalStore();
 
   if (!isOpen) return null;
 
   const handleCreateGroupClick = () => {
-    onClose(); // Close GroupsModal
-    openGroupNameModal(); // Open GroupNameModal
+    onClose();
+    openGroupNameModal();
   };
 
   const handleShowAll = () => {
