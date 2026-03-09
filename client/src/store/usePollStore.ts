@@ -11,6 +11,8 @@ export interface PollMovie {
 
 export interface Poll {
   _id: string;
+  groupId?: string;
+  creator?: { _id: string; name: string } | string;
   movies: PollMovie[];
   votes: any[];
   status: "active" | "completed" | "cancelled";
@@ -26,7 +28,7 @@ interface PollState {
   clearVoteSelections: () => void;
   createPoll: (groupId: string) => Promise<Poll>;
   fetchCurrentPoll: (groupId: string) => Promise<Poll | null>;
-  completePoll: (pollId: string, winningMovie: string) => Promise<void>;
+  completePoll: (pollId: string) => Promise<Poll>;
   cancelPoll: (pollId: string) => Promise<void>;
   addMovieToCurrentPoll: (movie: PollMovie) => Promise<void>;
 }
@@ -76,14 +78,16 @@ export const usePollStore = create<PollState>((set, get) => ({
     }
   },
 
-  completePoll: async (pollId: string, winningMovie: string): Promise<void> => {
+  completePoll: async (pollId: string): Promise<Poll> => {
     const token = localStorage.getItem("token");
-    await axios.post(
+    const res = await axios.post(
       `/api/polls/${pollId}/complete`,
-      { winningMovie },
+      {},
       { headers: { Authorization: `Bearer ${token}` } }
     );
-    set({ currentPoll: null, selectedMoviesForVote: [] });
+    // Keep completed poll in state so VoteModal can show results
+    set({ currentPoll: res.data, selectedMoviesForVote: [] });
+    return res.data;
   },
 
   cancelPoll: async (pollId: string): Promise<void> => {

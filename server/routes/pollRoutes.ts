@@ -143,7 +143,6 @@ router.post("/:pollId/cancel", authenticate, async (req: Request, res: Response)
 router.post("/:pollId/complete", authenticate, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
-    const { winningMovie } = req.body;
     const poll = await Poll.findById(req.params.pollId);
     if (!poll) {
       res.status(404).json({ msg: "Poll not found" });
@@ -158,9 +157,32 @@ router.post("/:pollId/complete", authenticate, async (req: Request, res: Respons
       return;
     }
 
+    // Calculate winner server-side: rank 1 = 4pts, rank 2 = 3pts, rank 3 = 2pts, rank 4 = 1pt
+    const rankPoints: Record<number, number> = { 1: 4, 2: 3, 3: 2, 4: 1 };
+    const scoreMap: Record<string, number> = {};
+    poll.votes.forEach((vote) => {
+      const mid = vote.movieTmdbId;
+      scoreMap[mid] = (scoreMap[mid] || 0) + (rankPoints[vote.rank] || 0);
+    });
+
+    let winningMovieId = poll.movies[0]?.tmdbId || "";
+    let maxScore = -1;
+    for (const [movieId, score] of Object.entries(scoreMap)) {
+      if (score > maxScore) { maxScore = score; winningMovieId = movieId; }
+    }
+
     poll.status = "completed";
-    poll.winningMovieTmdbId = winningMovie.toString();
+    poll.winningMovieTmdbId = winningMovieId;
     await poll.save();
+
+    const winnerMovie = poll.movies.find((m) => m.tmdbId === winningMovieId);
+    getIO().to(poll.groupId.toString()).emit("poll:completed", {
+      pollId: poll._id.toString(),
+      winningMovieTmdbId: winningMovieId,
+      winnerTitle: winnerMovie?.title || "",
+      winnerPoster: winnerMovie?.poster_path || "",
+    });
+
     res.json(poll);
   } catch (error) {
     console.error("Error completing poll:", error);
@@ -194,6 +216,34 @@ router.post("/:pollId/add-movie", authenticate, async (req: Request, res: Respon
     res.json(poll);
   } catch (error) {
     console.error("Error adding movie to poll:", error);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
+
+router.get("/:pollId/results", authenticate, async (req: Request, res: Response) => {
+  try {
+    const poll = await Poll.findById(req.params.pollId)
+      .populate("votes.userId", "name")
+      .lean();
+    if (!poll) {
+      res.status(404).json({ msg: "Poll not found" });
+      return;
+    }
+
+    const rankPoints: Record<number, number> = { 1: 4, 2: 3, 3: 2, 4: 1 };
+    const scoreMap: Record<string, number> = {};
+    poll.votes.forEach((vote) => {
+      const mid = vote.movieTmdbId;
+      scoreMap[mid] = (scoreMap[mid] || 0) + (rankPoints[vote.rank] || 0);
+    });
+
+    const rankedMovies = poll.movies
+      .map((m) => ({ id: m.tmdbId, movieId: m.tmdbId, title: m.title, poster_path: m.poster_path, vote_average: m.vote_average, score: scoreMap[m.tmdbId] || 0 }))
+      .sort((a, b) => b.score - a.score);
+
+    res.json({ ...poll, movies: rankedMovies, winningMovieTmdbId: poll.winningMovieTmdbId });
+  } catch (error) {
+    console.error("Error fetching poll results:", error);
     res.status(500).json({ msg: "Server error" });
   }
 });
