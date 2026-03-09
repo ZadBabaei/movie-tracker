@@ -4,6 +4,7 @@ import Group from "../models/Groups";
 import Movie from "../models/movie";
 import Poll from "../models/Poll";
 import { authenticate } from "../middleware/authMiddleware";
+import { getIO } from "../socket";
 
 const router = express.Router();
 
@@ -196,6 +197,7 @@ router.post("/:id/add-movie", authenticate, async (req: Request, res: Response) 
       await group.save();
     }
 
+    getIO().to(groupId).emit("group:movie_added", { movie: existingMovie });
     res.json({ msg: "Movie added", movie: existingMovie });
   } catch (error) {
     console.error("Error adding movie:", error);
@@ -248,6 +250,7 @@ router.post("/:id/create-poll", authenticate, async (req: Request, res: Response
     group.pollHistory.push(poll._id as any);
     await group.save();
 
+    getIO().to(req.params.id).emit("poll:created", poll);
     res.json(poll);
   } catch (error) {
     console.error("Error creating poll:", error);
@@ -280,6 +283,7 @@ router.post("/:id/complete-poll", authenticate, async (req: Request, res: Respon
     group.currentPoll = undefined;
     await group.save();
 
+    getIO().to(req.params.id).emit("poll:completed", { winningMovie: req.body.winningMovie });
     res.json({ msg: "Poll completed successfully" });
   } catch (error) {
     console.error("Error completing poll:", error);

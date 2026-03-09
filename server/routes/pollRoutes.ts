@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import { authenticate } from "../middleware/authMiddleware";
 import Poll from "../models/Poll";
+import { getIO } from "../socket";
 
 const router = express.Router();
 
@@ -103,6 +104,9 @@ router.post("/vote", authenticate, async (req: Request, res: Response) => {
       }));
     }
 
+    if (populatedPoll) {
+      getIO().to(populatedPoll.groupId.toString()).emit("poll:updated", populatedPoll);
+    }
     res.json(populatedPoll);
   } catch (error) {
     console.error("Error submitting vote:", error);
