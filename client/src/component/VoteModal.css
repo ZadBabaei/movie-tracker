@@ -429,3 +429,105 @@
   display: block;
   opacity: 0.8;
 }
+
+/* ── Poll Results View ────────────────────────────────────────── */
+
+.VoteModal-results-banner {
+  text-align: center;
+  padding: 28px 20px 20px;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.12), rgba(255, 165, 0, 0.08));
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 16px;
+  margin-bottom: 28px;
+}
+
+.VoteModal-results-trophy {
+  font-size: 3.5rem;
+  line-height: 1;
+  margin-bottom: 10px;
+}
+
+.VoteModal-results-winner-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #ffd700;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+  margin-bottom: 4px;
+}
+
+.VoteModal-results-subtitle {
+  font-size: 1rem;
+  color: #bbb;
+  font-style: italic;
+}
+
+.VoteModal-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 700px;
+  margin: 0 auto 24px;
+}
+
+.VoteModal-result-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.VoteModal-result-row.winner-row {
+  background: rgba(255, 215, 0, 0.1);
+  border-color: rgba(255, 215, 0, 0.35);
+}
+
+.VoteModal-result-medal {
+  font-size: 1.6rem;
+  width: 36px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.VoteModal-result-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.VoteModal-result-name {
+  display: block;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #eee;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 6px;
+}
+
+.VoteModal-result-bar-wrap {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.VoteModal-result-bar {
+  height: 100%;
+  background: linear-gradient(to right, #e50914, #ff4d4d);
+  border-radius: 4px;
+}
+
+.VoteModal-result-bar.winner-bar {
+  background: linear-gradient(to right, #ffd700, #ffa500);
+}
+
+.VoteModal-result-score {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ccc;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
