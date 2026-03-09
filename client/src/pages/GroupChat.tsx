@@ -9,14 +9,16 @@ import ChatBox from "../component/ChatBox";
 import { useModalStore } from "../store/useModalStore";
 import { usePollStore } from "../store/usePollStore";
 import { useParams } from "react-router-dom";
+import { useSocket } from "../hooks/useSocket";
 
 const GroupChat: React.FC = () => {
   const { isVoteModalOpen, openVoteModal } = useModalStore();
   const { clearVoteSelections } = usePollStore();
   const { id } = useParams<{ id: string }>();
   const [groupName, setGroupName] = useState("Loading...");
-  const [movieList, setMovieList] = useState<any[]>([]);
+  const [groupMovies, setGroupMovies] = useState<any[]>([]);
   const [pollStatus, setPollStatus] = useState("none");
+  const socket = useSocket(id!);
 
   useEffect(() => {
     const fetchGroupDetails = async () => {
@@ -27,34 +29,37 @@ const GroupChat: React.FC = () => {
         });
         setGroupName(res.data.name);
         setPollStatus(res.data.hasActivePoll ? "active" : "none");
+        const movies = (res.data.movies || []).map((m: any) => ({
+          ...m,
+          poster_path: m.poster,
+        }));
+        setGroupMovies(movies);
       } catch (error) {
         console.error("Failed to fetch group info:", error);
         setGroupName("Unknown Group");
       }
     };
 
-    const fetchMovieList = async () => {
-      try {
-        const pagesToFetch = 2;
-        const allMovies: any[] = [];
-        for (let page = 1; page <= pagesToFetch; page++) {
-          const res = await axios.get(
-            `https://api.themoviedb.org/3/movie/popular?api_key=${process.env.REACT_APP_TMDB_API_KEY}&language=en-US&page=${page}`
-          );
-          allMovies.push(...res.data.results);
-        }
-        setMovieList(allMovies);
-      } catch (error) {
-        console.error("Failed to fetch movies from TMDB:", error);
-      }
-    };
-
     fetchGroupDetails();
-    fetchMovieList();
-
-    const pollInterval = setInterval(fetchGroupDetails, 15000);
-    return () => clearInterval(pollInterval);
   }, [id]);
+
+  useEffect(() => {
+    socket.on("poll:created", () => setPollStatus("active"));
+    socket.on("poll:completed", () => setPollStatus("completed"));
+    socket.on("group:movie_added", ({ movie }: any) => {
+      setGroupMovies((prev) => {
+        const exists = prev.some((m) => m.imdbID === movie.imdbID);
+        if (exists) return prev;
+        return [...prev, { ...movie, poster_path: movie.poster }];
+      });
+    });
+
+    return () => {
+      socket.off("poll:created");
+      socket.off("poll:completed");
+      socket.off("group:movie_added");
+    };
+  }, [socket]);
 
   const handleVoteButtonClick = () => {
     if (pollStatus === "completed") {
@@ -97,17 +102,20 @@ const GroupChat: React.FC = () => {
           <button className="GroupChatPage-vote-btn" onClick={handleVoteButtonClick}>
             {getButtonText()}
           </button>
+          <h3 className="GroupChatPage-watched-title">Watched Movies</h3>
           <div className="GroupChatPage-movie-list">
-            <div className="GroupChatPage-scroll-wrapper">
-              {movieList.map((movie, index) => (
+            {groupMovies.length === 0 ? (
+              <p className="GroupChatPage-empty-msg">No movies watched yet. Add movies from the group page!</p>
+            ) : (
+              groupMovies.map((movie: any, index: number) => (
                 <MovieCard
-                  key={`${movie.id}-${index}`}
+                  key={`${movie.imdbID || movie._id}-${index}`}
                   movie={movie}
                   onDelete={() => {}}
                   onInfoClick={() => {}}
                 />
-              ))}
-            </div>
+              ))
+            )}
           </div>
         </div>
       </div>

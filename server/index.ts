@@ -2,7 +2,8 @@ import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import { StreamChat } from "stream-chat";
+import http from "http";
+import { initIO } from "./socket";
 
 dotenv.config();
 
@@ -14,7 +15,10 @@ import chatRoutes from "./routes/chatRoutes";
 import inboxRoutes from "./routes/inboxRoutes";
 
 const app = express();
+const httpServer = http.createServer(app);
 const PORT = process.env.PORT || 5000;
+
+initIO(httpServer);
 
 app.use(cors());
 app.use(express.json());
@@ -47,6 +51,6 @@ mongoose
   })
   .catch((err) => console.error("MongoDB Connection Error:", err));
 
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

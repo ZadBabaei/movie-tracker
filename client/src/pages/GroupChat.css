@@ -87,33 +87,34 @@
   padding-right: 4px;
 }
 
+.GroupChatPage-watched-title {
+  color: #ccc;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+  margin-top: 16px;
+  margin-bottom: 4px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
 .GroupChatPage-movie-list {
-
   overflow-y: auto;
-  padding-left: 80px;
-  margin-top: 20px;
+  max-height: 65vh;
+  margin-top: 8px;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 16px;
-}
-@keyframes scrollUp {
-  0% {
-    transform: translateY(0%);
-  }
-  100% {
-    transform: translateY(-50%);
-  }
+  padding-bottom: 12px;
 }
 
-.GroupChatPage-scroll-wrapper {
-  display: flex;
-  flex-direction: column;
-  animation: scrollUp 150s linear infinite;
-}
-
-.GroupChatPage-movie-list > div {
-  width: 150px;
-
+.GroupChatPage-empty-msg {
+  color: #888;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 20px 12px;
+  font-style: italic;
 }
 .GroupChatPage-suggested-container {
   display: flex;
