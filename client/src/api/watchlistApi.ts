@@ -1,0 +1,35 @@
+import axios from "axios";
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return { headers: { Authorization: `Bearer ${token}` } };
+};
+
+export const fetchWatchlist = async () => {
+  const res = await axios.get("/api/watchlist", getAuthHeaders());
+  return res.data;
+};
+
+export const addToWatchlist = async (movie: {
+  imdbID: string;
+  title: string;
+  poster_path?: string;
+  vote_average?: number;
+}) => {
+  const res = await axios.post("/api/watchlist", { movie }, getAuthHeaders());
+  return res.data;
+};
+
+export const removeFromWatchlist = async (movieId: string) => {
+  const res = await axios.delete(`/api/watchlist/${movieId}`, getAuthHeaders());
+  return res.data;
+};
+
+export const markAsWatched = async (movieId: string, groupId: string) => {
+  const res = await axios.post(
+    `/api/watchlist/${movieId}/mark-watched`,
+    { groupId },
+    getAuthHeaders()
+  );
+  return res.data;
+};
