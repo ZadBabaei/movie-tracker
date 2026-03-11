@@ -53,7 +53,16 @@ router.post("/login", async (req: Request, res: Response) => {
       { expiresIn: "24h" }
     );
 
-    res.json({ token, user: { name: user.name, email: user.email } });
+    res.json({
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar || "",
+        firstLogin: user.firstLogin ?? true,
+      },
+    });
   } catch (error) {
     console.error("Error in login route:", error);
     res.status(500).json({ msg: "Server error" });
@@ -76,7 +85,13 @@ router.get("/me", async (req: Request, res: Response) => {
       return;
     }
 
-    res.json({ name: user.name, email: user.email });
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar || "",
+      firstLogin: user.firstLogin ?? true,
+    });
   } catch (error) {
     console.error("Error in /me route:", error);
     res.status(500).json({ msg: "Server error" });

@@ -13,7 +13,7 @@ import { useGroupStore } from "../store/useGroupStore";
 interface Member {
   _id: string;
   name: string;
-  profilePic?: string;
+  avatar?: string;
 }
 
 interface Movie {
@@ -118,7 +118,7 @@ const GroupPage: React.FC = () => {
                 <div key={member._id} className="member-card-glow">
                   <div className="member-avatar-wrapper">
                     <img
-                      src={member.profilePic || "https://i.pravatar.cc/100?u=" + member._id}
+                      src={member.avatar || "https://i.pravatar.cc/100?u=" + member._id}
                       alt={member.name}
                       className="member-avatar"
                     />
