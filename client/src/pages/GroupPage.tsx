@@ -179,6 +179,7 @@ const GroupPage: React.FC = () => {
 
       {showInviteModal && (
         <InviteModal
+          isOpen={showInviteModal}
           groupId={group._id}
           onClose={() => setShowInviteModal(false)}
         />

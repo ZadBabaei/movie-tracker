@@ -14,9 +14,10 @@ interface User {
 interface InviteFriendsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  groupId?: string;
 }
 
-const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({ isOpen, onClose }) => {
+const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({ isOpen, onClose, groupId }) => {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -51,7 +52,8 @@ const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({ isOpen, onClose
   const handleInvite = async (userId: string) => {
     const token = localStorage.getItem("token");
     if (!token) { toast.error("No token found."); return; }
-    if (!createdGroupId) { toast.error("Group was not created properly."); return; }
+    const targetGroupId = groupId || createdGroupId;
+    if (!targetGroupId) { toast.error("Group was not created properly."); return; }
     if (invitedUserIds.includes(userId)) { toast.warning("User already invited."); return; }
 
     try {
@@ -60,7 +62,7 @@ const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({ isOpen, onClose
 
       await axios.post(
         "http://localhost:5000/api/groups/invite",
-        { groupId: createdGroupId, members: [userId], inviterName },
+        { groupId: targetGroupId, members: [userId], inviterName },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
