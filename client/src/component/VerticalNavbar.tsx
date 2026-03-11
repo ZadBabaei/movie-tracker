@@ -1,20 +1,25 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import {
   FaHome,
   FaUsers,
   FaEnvelope,
-  FaUser,
   FaInfoCircle,
   FaThList,
 } from "react-icons/fa";
 import { useModalStore } from "../store/useModalStore";
+import { useUserStore } from "../store/useUserStore";
 import "./VerticalNavbar.css";
 import logo from "../assets/Logo PM.png";
 
 const VerticalNavbar: React.FC = () => {
   const location = useLocation();
   const { openGroupsModal } = useModalStore();
+  const { profile, fetchProfile } = useUserStore();
+
+  useEffect(() => {
+    if (!profile) fetchProfile();
+  }, [profile, fetchProfile]);
 
   const handleGroupsClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -22,6 +27,9 @@ const VerticalNavbar: React.FC = () => {
       openGroupsModal();
     }
   };
+
+  const getInitials = (name: string) =>
+    name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
   return (
     <nav className="vertical-navbar">
@@ -52,8 +60,14 @@ const VerticalNavbar: React.FC = () => {
           </a>
         </li>
         <li className="navbar-item">
-          <a href="/profile" className="navbar-link">
-            <span className="icon"><FaUser /></span>
+          <a href="/profile" className="navbar-link navbar-link--profile">
+            {profile?.avatar ? (
+              <img src={profile.avatar} alt="" className="navbar-avatar" />
+            ) : (
+              <span className="navbar-avatar-placeholder">
+                {profile ? getInitials(profile.name) : "?"}
+              </span>
+            )}
             <span className="label">Profile</span>
           </a>
         </li>

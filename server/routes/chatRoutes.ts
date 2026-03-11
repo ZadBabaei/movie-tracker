@@ -36,7 +36,7 @@ router.post("/token", async (req: Request, res: Response) => {
     }
 
     const groupMembers = await User.find({ _id: { $in: group.members } })
-      .select("_id name profilePic")
+      .select("_id name avatar")
       .lean();
 
     const chatClient = StreamChat.getInstance(

@@ -65,7 +65,7 @@ const ChatBox = ({ groupId }) => {
               id: m._id || m.id,
               name: m.name || "Unknown",
               image:
-                m.profilePic ||
+                m.avatar ||
                 `https://ui-avatars.com/api/?name=${m.name || "User"}`,
               online: false,
             }))

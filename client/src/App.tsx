@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -13,11 +13,14 @@ import About from "./pages/About";
 import GroupsModal from "./component/GroupsModal";
 import GroupNameModal from "./component/GroupNameModal";
 import InviteFriendsModal from "./component/InviteFriendsModal";
+import OnboardingModal from "./component/OnboardingModal";
+import ChatWidget from "./component/ChatWidget/ChatWidget";
 import ToastWrapper from "./component/ToastWrapper";
 import GroupChat from "./pages/GroupChat";
 import ProtectedRoute from "./utils/ProtectedRoute";
 import { useModalStore } from "./store/useModalStore";
 import { useGroupStore } from "./store/useGroupStore";
+import { useUserStore } from "./store/useUserStore";
 
 import "./App.css";
 
@@ -42,6 +45,20 @@ function App({ isAuthenticated, isAuthPage }: AppProps) {
     setPendingGroupName,
     groupList,
   } = useGroupStore();
+
+  const { profile, fetchProfile } = useUserStore();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Fetch profile on auth to check firstLogin
+  useEffect(() => {
+    if (isAuthenticated && !isAuthPage) {
+      fetchProfile().then((p) => {
+        if (p && p.firstLogin) {
+          setShowOnboarding(true);
+        }
+      });
+    }
+  }, [isAuthenticated, isAuthPage, fetchProfile]);
 
   const showModals = isAuthenticated && !isAuthPage;
 
@@ -97,6 +114,14 @@ function App({ isAuthenticated, isAuthPage }: AppProps) {
           />
         </>
       )}
+
+      {/* Onboarding for first-time users */}
+      {showOnboarding && (
+        <OnboardingModal onComplete={() => setShowOnboarding(false)} />
+      )}
+
+      {/* AI Movie Assistant — floating chat widget */}
+      {showModals && <ChatWidget />}
 
       <ToastWrapper />
     </>
