@@ -85,5 +85,34 @@ background: linear-gradient(to top, #17421d, #040a1c);
   width: 70px;
   height: auto;
   object-fit: contain;
-  filter: brightness(0) invert(1); 
+  filter: brightness(0) invert(1);
+}
+
+/* ── Profile Avatar in Navbar ───────────── */
+
+.navbar-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(46, 204, 113, 0.4);
+  transition: border-color 0.3s;
+}
+
+.navbar-link--profile:hover .navbar-avatar {
+  border-color: rgba(46, 204, 113, 0.8);
+}
+
+.navbar-avatar-placeholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  letter-spacing: 1px;
 }

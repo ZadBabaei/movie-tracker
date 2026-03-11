@@ -1,0 +1,131 @@
+.Onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.Onboarding-content {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 48px 40px;
+  width: 100%;
+  max-width: 460px;
+  color: white;
+  text-align: center;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Progress Dots ────────────────────────── */
+
+.Onboarding-progress {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 40px;
+}
+
+.Onboarding-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  transition: all 0.3s;
+}
+
+.Onboarding-dot.active {
+  width: 28px;
+  border-radius: 5px;
+}
+
+.Onboarding-dot.done {
+  opacity: 0.6;
+}
+
+/* ── Step Content ─────────────────────────── */
+
+.Onboarding-step {
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.Onboarding-icon {
+  margin-bottom: 8px;
+}
+
+.Onboarding-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+  color: #fff;
+}
+
+.Onboarding-desc {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #999;
+  margin: 0;
+  max-width: 360px;
+}
+
+/* ── Actions ──────────────────────────────── */
+
+.Onboarding-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.Onboarding-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 32px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.Onboarding-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.Onboarding-skip-btn {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 8px 16px;
+  transition: color 0.2s;
+}
+
+.Onboarding-skip-btn:hover {
+  color: #999;
+}
+
+/* ── Step Counter ─────────────────────────── */
+
+.Onboarding-step-counter {
+  margin-top: 24px;
+  font-size: 12px;
+  color: #555;
+  letter-spacing: 0.05em;
+}
