@@ -5,6 +5,8 @@ export interface IUser extends Document {
   email: string;
   password: string;
   watchlist: Types.ObjectId[];
+  avatar?: string;
+  firstLogin: boolean;
 }
 
 const userSchema = new Schema<IUser>({
@@ -12,6 +14,8 @@ const userSchema = new Schema<IUser>({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   watchlist: [{ type: Schema.Types.ObjectId, ref: "Movie", default: [] }],
+  avatar: { type: String, default: "" },
+  firstLogin: { type: Boolean, default: true },
 });
 
 const User: Model<IUser> =

@@ -102,8 +102,8 @@ const MyGroupsPage = () => {
                           )}`}
                           data-tooltip={member.name}
                         >
-                          {member.profilePic ? (
-                            <img src={member.profilePic} alt={member.name} />
+                          {member.avatar ? (
+                            <img src={member.avatar} alt={member.name} />
                           ) : (
                             <>
                               <span className="initial">

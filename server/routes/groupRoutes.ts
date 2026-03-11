@@ -142,7 +142,7 @@ router.get("/:id", authenticate, async (req: Request, res: Response) => {
   try {
     const groupId = req.params.id;
     const group = await Group.findById(groupId)
-      .populate("members", "_id name profilePic")
+      .populate("members", "_id name avatar")
       .populate("creator", "_id name")
       .populate("movies", "title imdbID poster vote_average")
       .populate({
