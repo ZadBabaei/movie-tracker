@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { FaTrashAlt, FaInfoCircle, FaHeart } from "react-icons/fa";
+import { FaTrashAlt, FaInfoCircle, FaHeart, FaCheck } from "react-icons/fa";
 import "./MovieCard.css";
 
-const MovieCard = ({ movie, onDelete, onInfoClick }) => {
+const MovieCard = ({ movie, onDelete, onInfoClick, onMarkWatched = null }) => {
   const [favorited, setFavorited] = useState(false);
 
   const toggleFavorite = () => {
@@ -18,6 +18,15 @@ const MovieCard = ({ movie, onDelete, onInfoClick }) => {
 
   return (
     <div className="Group-movie-card">
+      {onMarkWatched && (
+        <button
+          className="watched-tick"
+          onClick={() => onMarkWatched(movie)}
+          title="Mark as watched"
+        >
+          <FaCheck />
+        </button>
+      )}
       <div className="movie-title">
         <h3>{movie.title}</h3>
       </div>

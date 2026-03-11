@@ -172,3 +172,28 @@
 .Group-poster-container:hover .Group-movie-poster {
   transform: scale(1.03);
 }
+
+.watched-tick {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #ff4747;
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: transform 0.2s ease, background 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.watched-tick:hover {
+  transform: scale(1.15);
+  background: #ff7373;
+}

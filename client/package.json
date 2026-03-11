@@ -16,6 +16,8 @@
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.7.9",
     "caniuse-lite": "^1.0.30001712",
+    "embla-carousel-autoplay": "^8.6.0",
+    "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.4.7",
     "jwt-decode": "^4.0.0",
     "react": "^19.0.0",

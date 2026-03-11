@@ -1,0 +1,93 @@
+.watchlist-page {
+  background: linear-gradient(to top, #17421d, #040a1c);
+  min-height: 100vh;
+}
+
+.watchlist-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 16px;
+  margin-left: 80px;
+}
+
+.watchlist-content {
+  width: 100%;
+  max-width: 1200px;
+  margin-top: 32px;
+}
+
+.watchlist-stats-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  font-size: 1.1rem;
+  color: #e2e2e2;
+  font-weight: 700;
+}
+
+.watchlist-stats-bar p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+.watchlist-page .movie-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 24px;
+  justify-items: center;
+  padding: 0 16px;
+}
+
+.watchlist-page .empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #ccc;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.watchlist-page .empty-state h2 {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  color: #ffdddd;
+}
+
+.watchlist-page .fade-in-grid {
+  animation: fadeInGrid 0.8s ease-in;
+}
+
+@keyframes fadeInGrid {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .watchlist-main {
+    margin-left: 0;
+    padding: 16px;
+  }
+
+  .watchlist-page .movie-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+  }
+
+  .watchlist-stats-bar {
+    font-size: 1rem;
+  }
+}
