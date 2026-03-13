@@ -30,7 +30,13 @@ function Login() {
       );
 
       localStorage.setItem("token", res.data.token);
-      navigate("/home");
+      const redirect = sessionStorage.getItem("redirectAfterAuth");
+      if (redirect) {
+        sessionStorage.removeItem("redirectAfterAuth");
+        navigate(redirect);
+      } else {
+        navigate("/home");
+      }
     } catch (error) {
       setError(
         error.response?.data?.message ||

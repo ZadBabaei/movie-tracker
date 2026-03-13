@@ -37,6 +37,23 @@ function Signup() {
 				email,
 				password,
 			});
+
+			// Auto-login after signup
+			try {
+				const loginRes = await axios.post(`${API_URL}/api/auth/login`, { email, password });
+				localStorage.setItem("token", loginRes.data.token);
+				const redirect = sessionStorage.getItem("redirectAfterAuth");
+				if (redirect) {
+					sessionStorage.removeItem("redirectAfterAuth");
+					navigate(redirect);
+				} else {
+					navigate("/home");
+				}
+				return;
+			} catch {
+				// If auto-login fails, fall back to login page
+			}
+
 			alert(" Signup successful! You can now log in.");
 			navigate("/");
 		} catch (error) {

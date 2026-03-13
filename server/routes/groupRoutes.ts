@@ -1,10 +1,14 @@
 import express, { Request, Response } from "express";
 import mongoose from "mongoose";
+import jwt from "jsonwebtoken";
 import Group from "../models/Groups";
 import Movie from "../models/movie";
 import Poll from "../models/Poll";
+import User from "../models/user";
+import InvitationLink from "../models/InvitationLink";
 import { authenticate } from "../middleware/authMiddleware";
 import { getIO } from "../socket";
+import { sendGroupInviteEmail } from "../utils/emailService";
 
 const router = express.Router();
 
@@ -288,6 +292,165 @@ router.post("/:id/complete-poll", authenticate, async (req: Request, res: Respon
   } catch (error) {
     console.error("Error completing poll:", error);
     res.status(500).json({ msg: "Server error" });
+  }
+});
+
+// ─── Invitation link endpoints ───────────────────────────────────────────────
+
+router.post("/:id/invite-link", authenticate, async (req: Request, res: Response) => {
+  try {
+    const group = await Group.findById(req.params.id);
+    if (!group) {
+      res.status(404).json({ msg: "Group not found" });
+      return;
+    }
+
+    const userId = req.user!.id;
+    if (!group.members.some((m) => m.toString() === userId)) {
+      res.status(403).json({ msg: "You are not a member of this group" });
+      return;
+    }
+
+    const link = new InvitationLink({
+      groupId: group._id,
+      createdBy: userId,
+    });
+    await link.save();
+
+    const APP_URL = process.env.APP_URL || "http://localhost:3000";
+    res.json({
+      url: `${APP_URL}/invite/${link.token}`,
+      token: link.token,
+      expiresAt: link.expiresAt,
+    });
+  } catch (error) {
+    console.error("Error generating invite link:", error);
+    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+  }
+});
+
+router.get("/join-by-link/:token", async (req: Request, res: Response) => {
+  try {
+    const link = await InvitationLink.findOne({
+      token: req.params.token,
+      expiresAt: { $gt: new Date() },
+    }).populate("groupId", "name");
+
+    if (!link) {
+      res.status(410).json({ msg: "expired or invalid" });
+      return;
+    }
+
+    const group = link.groupId as any;
+    res.json({ groupId: group._id, groupName: group.name, valid: true });
+  } catch (error) {
+    console.error("Error validating invite link:", error);
+    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+  }
+});
+
+router.post("/join-by-link/:token", async (req: Request, res: Response) => {
+  try {
+    const link = await InvitationLink.findOne({
+      token: req.params.token,
+      expiresAt: { $gt: new Date() },
+    }).populate("groupId", "name");
+
+    if (!link) {
+      res.status(410).json({ msg: "expired or invalid" });
+      return;
+    }
+
+    const group = link.groupId as any;
+
+    // Check for auth header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      res.status(401).json({ msg: "auth required", groupId: group._id, groupName: group.name });
+      return;
+    }
+
+    const token = authHeader.split(" ")[1];
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET as string);
+    } catch {
+      res.status(401).json({ msg: "auth required", groupId: group._id, groupName: group.name });
+      return;
+    }
+
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      res.status(401).json({ msg: "auth required", groupId: group._id, groupName: group.name });
+      return;
+    }
+
+    const fullGroup = await Group.findById(group._id);
+    if (!fullGroup) {
+      res.status(404).json({ msg: "Group not found" });
+      return;
+    }
+
+    if (fullGroup.members.some((m) => m.toString() === user._id.toString())) {
+      res.json({ alreadyMember: true, groupId: fullGroup._id });
+      return;
+    }
+
+    fullGroup.members.push(user._id as any);
+    await fullGroup.save();
+
+    link.uses += 1;
+    await link.save();
+
+    res.json({ joined: true, groupId: fullGroup._id });
+  } catch (error) {
+    console.error("Error joining by link:", error);
+    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+  }
+});
+
+router.post("/invite-by-email", authenticate, async (req: Request, res: Response) => {
+  try {
+    const { groupId, email, inviterName } = req.body;
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      res.status(404).json({ msg: "Group not found" });
+      return;
+    }
+
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      if (!group.pendingInvitations) group.pendingInvitations = [];
+      group.pendingInvitations.push({
+        userId: existingUser._id as any,
+        inviterName,
+      });
+      await group.save();
+      res.json({ method: "in-app" });
+      return;
+    }
+
+    // User not found — generate invite link and try to email it
+    const link = new InvitationLink({
+      groupId: group._id,
+      createdBy: req.user!.id,
+    });
+    await link.save();
+
+    const APP_URL = process.env.APP_URL || "http://localhost:3000";
+    const inviteUrl = `${APP_URL}/invite/${link.token}`;
+
+    try {
+      await sendGroupInviteEmail(email, inviterName, group.name, inviteUrl);
+      res.json({ method: "email" });
+    } catch {
+      res.json({ method: "link-fallback", inviteUrl });
+    }
+  } catch (error) {
+    console.error("Error inviting by email:", error);
+    res.status(500).json({ msg: "Server error", error: (error as Error).message });
   }
 });
 
