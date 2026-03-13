@@ -11,8 +11,9 @@
 }
 
 .InviteFriendsModal-container {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(20, 20, 30, 0.95);
   backdrop-filter: blur(18px);
+  border: 1px solid rgba(234, 177, 20, 0.15);
   border-radius: 20px;
   width: 600px;
   max-height: 90vh;
@@ -38,32 +39,109 @@
   font-weight: bold;
   margin-bottom: 15px;
   text-align: center;
+  color: #eab114;
 }
 
+/* Tabs */
+.InviteFriendsModal-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 20px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.InviteFriendsModal-tab {
+  flex: 1;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+  margin-bottom: -2px;
+}
+
+.InviteFriendsModal-tab:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.InviteFriendsModal-tab.active {
+  color: #eab114;
+  border-bottom-color: #eab114;
+}
+
+.InviteFriendsModal-tab-content {
+  min-height: 200px;
+}
+
+/* Search input */
 .InviteFriendsModal-search-input {
   width: 100%;
   padding: 10px 14px;
-  margin-bottom: 20px;
-  border-radius: 6px;
-  border: none;
-  font-size: 16px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
 }
 
+.InviteFriendsModal-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.InviteFriendsModal-search-input:focus {
+  border-color: rgba(234, 177, 20, 0.5);
+}
+
+.InviteFriendsModal-searching {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+  padding: 12px 0;
+}
+
+/* User list */
 .InviteFriendsModal-user-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   margin-bottom: 20px;
+  list-style: none;
+  padding: 0;
+  max-height: 280px;
+  overflow-y: auto;
 }
 
 .InviteFriendsModal-user-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
   padding: 10px 14px;
   border-radius: 8px;
   color: white;
+}
+
+.InviteFriendsModal-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.InviteFriendsModal-user-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.InviteFriendsModal-user-email {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .InviteFriendsModal-user-item button {
@@ -73,17 +151,123 @@
   border-radius: 6px;
   cursor: pointer;
   font-weight: bold;
-  color: white;
+  color: #0d1117;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: background 0.2s;
 }
 
 .InviteFriendsModal-user-item button:hover {
   background: #f0c52c;
 }
 
+.InviteFriendsModal-user-item button.invited {
+  background: #e74c3c;
+  cursor: not-allowed;
+  color: white;
+}
+
+.InviteFriendsModal-no-results {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 12px 0;
+  font-size: 14px;
+}
+
+/* Link section */
+.InviteFriendsModal-link-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 0;
+}
+
+.InviteFriendsModal-link-desc {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.InviteFriendsModal-generate-btn {
+  padding: 12px 28px;
+  background: #eab114;
+  color: #0d1117;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.InviteFriendsModal-generate-btn:hover {
+  background: #f0c52c;
+}
+
+.InviteFriendsModal-generate-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.InviteFriendsModal-regenerate-btn {
+  background: transparent;
+  color: #eab114;
+  border: 1px solid rgba(234, 177, 20, 0.4);
+  font-size: 13px;
+  padding: 8px 20px;
+}
+
+.InviteFriendsModal-regenerate-btn:hover {
+  background: rgba(234, 177, 20, 0.1);
+}
+
+.InviteFriendsModal-link-display {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.InviteFriendsModal-link-input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  font-size: 13px;
+  outline: none;
+}
+
+.InviteFriendsModal-copy-btn {
+  padding: 10px 18px;
+  background: #eab114;
+  color: #0d1117;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.InviteFriendsModal-copy-btn:hover {
+  background: #f0c52c;
+}
+
+.InviteFriendsModal-link-expiry {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Bottom buttons */
 .InviteFriendsModal-btns-container {
   display: flex;
   justify-content: space-between;
   gap: 10px;
+  margin-top: 8px;
 }
 
 .InviteFriendsModal-btns-container button {
@@ -93,14 +277,23 @@
   border-radius: 6px;
   cursor: pointer;
   font-weight: bold;
+  font-size: 14px;
 }
 
 .InviteFriendsModal-btn-submit {
   background: #eab114;
-  color: white;
+  color: #0d1117;
+}
+
+.InviteFriendsModal-btn-submit:hover {
+  background: #f0c52c;
 }
 
 .InviteFriendsModal-btn-cancel {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
   color: white;
+}
+
+.InviteFriendsModal-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.15);
 }

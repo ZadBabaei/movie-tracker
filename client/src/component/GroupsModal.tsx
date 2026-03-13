@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useEffect } from "react";
 import "./GroupsModal.css";
 import { useModalStore } from "../store/useModalStore";
 import { useNavigate } from "react-router-dom";
-import { Group } from "../store/useGroupStore";
+import { Group, useGroupStore } from "../store/useGroupStore";
 
 interface GroupsModalProps {
   isOpen: boolean;
@@ -13,6 +13,13 @@ interface GroupsModalProps {
 const GroupsModal: React.FC<GroupsModalProps> = ({ isOpen, onClose, groups }) => {
   const navigate = useNavigate();
   const { openGroupNameModal } = useModalStore();
+  const { fetchGroups } = useGroupStore();
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchGroups();
+    }
+  }, [isOpen, fetchGroups]);
 
   if (!isOpen) return null;
 
