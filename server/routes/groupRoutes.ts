@@ -17,6 +17,7 @@ router.get("/mine", authenticate, async (req: Request, res: Response) => {
     const userId = req.user!.id;
     const groups = await Group.find({ members: userId })
       .populate("members", "name email avatar")
+      .populate("creator", "_id name")
       .sort({ createdAt: -1 });
     res.json(groups);
   } catch (err) {
@@ -93,7 +94,19 @@ router.post("/invite", authenticate, async (req: Request, res: Response) => {
 
     if (!group.pendingInvitations) group.pendingInvitations = [];
 
-    const invitations = members.map((memberId: string) => ({
+    const existingMemberIds = group.members.map((m) => m.toString());
+    const existingPendingIds = group.pendingInvitations.map((inv) => inv.userId.toString());
+
+    const newMembers = members.filter((memberId: string) =>
+      !existingMemberIds.includes(memberId) && !existingPendingIds.includes(memberId)
+    );
+
+    if (newMembers.length === 0) {
+      res.status(400).json({ msg: "All users are already members or have pending invitations." });
+      return;
+    }
+
+    const invitations = newMembers.map((memberId: string) => ({
       userId: new mongoose.Types.ObjectId(memberId),
       inviterName,
     }));
@@ -127,7 +140,10 @@ router.post("/respond", authenticate, async (req: Request, res: Response) => {
     if (!Array.isArray(group.pendingInvitations)) group.pendingInvitations = [];
 
     if (response === "accept") {
-      group.members.push(userId);
+      const alreadyMember = group.members.some((m) => m.toString() === userId.toString());
+      if (!alreadyMember) {
+        group.members.push(userId);
+      }
     }
 
     group.pendingInvitations = group.pendingInvitations.filter(
@@ -295,6 +311,44 @@ router.post("/:id/complete-poll", authenticate, async (req: Request, res: Respon
   }
 });
 
+// ─── Admin: remove member ─────────────────────────────────────────────────────
+
+router.delete("/:id/remove-member/:memberId", authenticate, async (req: Request, res: Response) => {
+  try {
+    const group = await Group.findById(req.params.id);
+    if (!group) {
+      res.status(404).json({ msg: "Group not found" });
+      return;
+    }
+
+    const requesterId = req.user!.id;
+    if (group.creator.toString() !== requesterId) {
+      res.status(403).json({ msg: "Only the group admin can remove members." });
+      return;
+    }
+
+    const memberId = req.params.memberId;
+    if (memberId === requesterId) {
+      res.status(400).json({ msg: "Admin cannot remove themselves. Use leave instead." });
+      return;
+    }
+
+    const memberExists = group.members.some((m) => m.toString() === memberId);
+    if (!memberExists) {
+      res.status(404).json({ msg: "User is not a member of this group." });
+      return;
+    }
+
+    group.members = group.members.filter((m) => m.toString() !== memberId);
+    await group.save();
+
+    res.json({ msg: "Member removed successfully." });
+  } catch (error) {
+    console.error("Error removing member:", error);
+    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+  }
+});
+
 // ─── Invitation link endpoints ───────────────────────────────────────────────
 
 router.post("/:id/invite-link", authenticate, async (req: Request, res: Response) => {
@@ -422,7 +476,17 @@ router.post("/invite-by-email", authenticate, async (req: Request, res: Response
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
+      const uid = existingUser._id!.toString();
+      if (group.members.some((m) => m.toString() === uid)) {
+        res.status(400).json({ msg: "User is already a member of this group." });
+        return;
+      }
       if (!group.pendingInvitations) group.pendingInvitations = [];
+      const alreadyPending = group.pendingInvitations.some((inv) => inv.userId.toString() === uid);
+      if (alreadyPending) {
+        res.status(400).json({ msg: "User already has a pending invitation." });
+        return;
+      }
       group.pendingInvitations.push({
         userId: existingUser._id as any,
         inviterName,

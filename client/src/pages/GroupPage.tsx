@@ -9,6 +9,8 @@ import InviteModal from "../component/InviteFriendsModal";
 import VerticalNavbar from "../component/VerticalNavbar";
 import MovieModal from "../component/MovieModal";
 import { useGroupStore } from "../store/useGroupStore";
+import { jwtDecode } from "jwt-decode";
+import { FaTimes } from "react-icons/fa";
 
 interface Member {
   _id: string;
@@ -28,6 +30,7 @@ interface GroupData {
   _id: string;
   name: string;
   members: Member[];
+  creator: { _id: string; name: string };
 }
 
 const GroupPage: React.FC = () => {
@@ -39,6 +42,9 @@ const GroupPage: React.FC = () => {
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
 
   const { openInviteFriendsModal } = useGroupStore();
+
+  const token = localStorage.getItem("token");
+  const currentUserId = token ? jwtDecode<{ id: string }>(token).id : null;
 
   useEffect(() => {
     fetchGroupDetails();
@@ -90,6 +96,24 @@ const GroupPage: React.FC = () => {
     setAddedMovies((prev) => prev.filter((m) => m._id !== movieId));
   };
 
+  const handleRemoveMember = async (memberId: string) => {
+    if (!window.confirm("Are you sure you want to remove this member?")) return;
+    const tk = localStorage.getItem("token");
+    try {
+      await axios.delete(
+        `http://localhost:5000/api/groups/${id}/remove-member/${memberId}`,
+        { headers: { Authorization: `Bearer ${tk}` } }
+      );
+      setGroup((prev) =>
+        prev ? { ...prev, members: prev.members.filter((m) => m._id !== memberId) } : prev
+      );
+    } catch (err: any) {
+      alert(err.response?.data?.msg || "Failed to remove member.");
+    }
+  };
+
+  const isAdmin = group?.creator?._id === currentUserId;
+
   if (!group) return <p>Loading group...</p>;
 
   return (
@@ -116,6 +140,15 @@ const GroupPage: React.FC = () => {
             <div className="group-member-cards-wrapper">
               {group.members.map((member) => (
                 <div key={member._id} className="member-card-glow">
+                  {isAdmin && member._id !== currentUserId && (
+                    <button
+                      className="member-remove-btn"
+                      title="Remove member"
+                      onClick={() => handleRemoveMember(member._id)}
+                    >
+                      <FaTimes />
+                    </button>
+                  )}
                   <div className="member-avatar-wrapper">
                     <img
                       src={member.avatar || "https://i.pravatar.cc/100?u=" + member._id}
@@ -125,6 +158,9 @@ const GroupPage: React.FC = () => {
                     <span className="status-dot offline"></span>
                   </div>
                   <div className="member-name">{member.name}</div>
+                  {member._id === group.creator._id && (
+                    <span className="badge">Admin</span>
+                  )}
                 </div>
               ))}
             </div>
