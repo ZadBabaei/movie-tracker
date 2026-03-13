@@ -1,11 +1,12 @@
 import React, { useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   FaHome,
   FaUsers,
   FaEnvelope,
   FaInfoCircle,
   FaThList,
+  FaSignOutAlt,
 } from "react-icons/fa";
 import { useModalStore } from "../store/useModalStore";
 import { useUserStore } from "../store/useUserStore";
@@ -14,6 +15,7 @@ import logo from "../assets/Logo PM.png";
 
 const VerticalNavbar: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { openGroupsModal } = useModalStore();
   const { profile, fetchProfile } = useUserStore();
 
@@ -78,6 +80,21 @@ const VerticalNavbar: React.FC = () => {
           </a>
         </li>
       </ul>
+      <div className="navbar-logout">
+        <a
+          href="#"
+          className="navbar-link navbar-link--logout"
+          onClick={(e) => {
+            e.preventDefault();
+            localStorage.removeItem("token");
+            useUserStore.getState().clear();
+            navigate("/");
+          }}
+        >
+          <span className="icon"><FaSignOutAlt /></span>
+          <span className="label">Log Out</span>
+        </a>
+      </div>
     </nav>
   );
 };

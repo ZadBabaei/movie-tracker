@@ -116,3 +116,16 @@ background: linear-gradient(to top, #17421d, #040a1c);
   color: white;
   letter-spacing: 1px;
 }
+
+/* ── Logout Button ───────────────────── */
+
+.navbar-logout {
+  margin-top: auto;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.navbar-link--logout:hover {
+  background-color: #7a1a1a;
+}
