@@ -17,6 +17,7 @@ import OnboardingModal from "./component/OnboardingModal";
 import ChatWidget from "./component/ChatWidget/ChatWidget";
 import ToastWrapper from "./component/ToastWrapper";
 import GroupChat from "./pages/GroupChat";
+import JoinByLink from "./pages/JoinByLink";
 import ProtectedRoute from "./utils/ProtectedRoute";
 import { useModalStore } from "./store/useModalStore";
 import { useGroupStore } from "./store/useGroupStore";
@@ -80,6 +81,7 @@ function App({ isAuthenticated, isAuthPage }: AppProps) {
         {/* Public Routes */}
         <Route path="/" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/invite/:token" element={<JoinByLink />} />
 
         {/* Protected Routes */}
         <Route element={<ProtectedRoute />}>
