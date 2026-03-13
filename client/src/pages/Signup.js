@@ -65,7 +65,6 @@ function Signup() {
     <div className="wrapper">
       <div className="left-side">
         <div className="brand-header">
-          <img src={LogoPM} alt="Logo" className="brand-logo" />
           <h1 className="brand-title">Sign Up</h1>
         </div>
         <form onSubmit={handleSubmit}>

@@ -95,18 +95,17 @@ label {
 .wrapper {
 	display: flex;
 	justify-content: center;
-	align-items: center;
+	align-items: flex-end;
 	height: 60vh;
 	width: 700px;
 }
 .right-side {
 	width: 50%;
-	flex-direction: column;
 	display: flex;
-	justify-content: space-around;
-	align-items: center;
 	flex-direction: column;
-
+	justify-content: flex-end;
+	align-items: center;
+	gap: 20px;
 }
 .right-side-img {
 	width: 250px;
@@ -115,14 +114,14 @@ label {
 	border-radius: none;
 }
 .left-side-btn {
-	width: 75%;
-	height: 48px;
-	padding: 10px;
+	width: 60%;
+	height: 38px;
+	padding: 8px;
 	background-color: #007bff;
 	color: white;
 	border: none;
-	border-radius: 8px;
-	font-size: 16px;
+	border-radius: 6px;
+	font-size: 13px;
 	font-weight: 600;
 	letter-spacing: 0.5px;
 	cursor: pointer;
