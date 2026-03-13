@@ -124,7 +124,7 @@ const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({ isOpen, onClose
     setIsGeneratingLink(true);
     try {
       const data = await generateInviteLink(targetGroupId);
-      setInviteLink({ link: data.link, expiresAt: data.expiresAt });
+      setInviteLink({ link: data.url, expiresAt: data.expiresAt });
       setCopied(false);
     } catch (error) {
       console.error("Error generating invite link:", error);
