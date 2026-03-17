@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import Group from "../models/Groups";
 import Movie from "../models/movie";
-import Poll from "../models/Poll";
+
 import User from "../models/user";
 import InvitationLink from "../models/InvitationLink";
 import { authenticate } from "../middleware/authMiddleware";
@@ -240,74 +240,6 @@ router.delete("/:groupId/remove-movie/:movieId", authenticate, async (req: Reque
   } catch (error) {
     console.error("Error removing movie:", error);
     res.status(500).json({ msg: "Server error", error: (error as Error).message });
-  }
-});
-
-router.post("/:id/create-poll", authenticate, async (req: Request, res: Response) => {
-  try {
-    const group = await Group.findById(req.params.id);
-    if (!group) {
-      res.status(404).json({ msg: "Group not found" });
-      return;
-    }
-
-    const hasActivePoll = await group.hasActivePoll();
-    if (hasActivePoll) {
-      res.status(400).json({ msg: "Group already has an active poll" });
-      return;
-    }
-
-    const poll = new Poll({
-      groupId: group._id,
-      creator: req.user!.id,
-      movies: req.body.movies,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    });
-
-    await poll.save();
-    group.currentPoll = poll._id as any;
-    if (!group.pollHistory) group.pollHistory = [];
-    group.pollHistory.push(poll._id as any);
-    await group.save();
-
-    getIO().to(req.params.id).emit("poll:created", poll);
-    res.json(poll);
-  } catch (error) {
-    console.error("Error creating poll:", error);
-    res.status(500).json({ msg: "Server error" });
-  }
-});
-
-router.post("/:id/complete-poll", authenticate, async (req: Request, res: Response) => {
-  try {
-    const group = await Group.findById(req.params.id);
-    if (!group) {
-      res.status(404).json({ msg: "Group not found" });
-      return;
-    }
-    if (!group.currentPoll) {
-      res.status(400).json({ msg: "No active poll found" });
-      return;
-    }
-
-    const poll = await Poll.findById(group.currentPoll);
-    if (!poll) {
-      res.status(404).json({ msg: "Poll not found" });
-      return;
-    }
-
-    poll.status = "completed";
-    poll.winningMovieTmdbId = req.body.winningMovie;
-    await poll.save();
-
-    group.currentPoll = undefined;
-    await group.save();
-
-    getIO().to(req.params.id).emit("poll:completed", { winningMovie: req.body.winningMovie });
-    res.json({ msg: "Poll completed successfully" });
-  } catch (error) {
-    console.error("Error completing poll:", error);
-    res.status(500).json({ msg: "Server error" });
   }
 });
 

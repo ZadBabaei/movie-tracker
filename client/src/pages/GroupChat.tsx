@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import VerticalNavbar from "../component/VerticalNavbar";
 import Hero from "../component/Hero";
 import "./GroupChat.css";
-import MovieCard from "../component/MovieCard";
 import VoteModal from "../component/VoteModal";
 import axios from "axios";
 import ChatBox from "../component/ChatBox";
@@ -13,12 +12,19 @@ import { useSocket } from "../hooks/useSocket";
 
 const GroupChat: React.FC = () => {
   const { isVoteModalOpen, openVoteModal } = useModalStore();
-  const { clearVoteSelections } = usePollStore();
+  const { clearVoteSelections, pollHistory, fetchPollHistory, fetchPollResults, deletePoll } = usePollStore();
   const { id } = useParams<{ id: string }>();
   const [groupName, setGroupName] = useState("Loading...");
-  const [groupMovies, setGroupMovies] = useState<any[]>([]);
   const [pollStatus, setPollStatus] = useState("none");
+  const [userId, setUserId] = useState("");
+  const [menuOpenPollId, setMenuOpenPollId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const socket = useSocket(id!);
+
+  useEffect(() => {
+    const uid = localStorage.getItem("userId");
+    if (uid) setUserId(uid);
+  }, []);
 
   useEffect(() => {
     const fetchGroupDetails = async () => {
@@ -29,11 +35,6 @@ const GroupChat: React.FC = () => {
         });
         setGroupName(res.data.name);
         setPollStatus(res.data.hasActivePoll ? "active" : "none");
-        const movies = (res.data.movies || []).map((m: any) => ({
-          ...m,
-          poster_path: m.poster,
-        }));
-        setGroupMovies(movies);
       } catch (error) {
         console.error("Failed to fetch group info:", error);
         setGroupName("Unknown Group");
@@ -41,25 +42,39 @@ const GroupChat: React.FC = () => {
     };
 
     fetchGroupDetails();
+    fetchPollHistory(id!);
   }, [id]);
 
   useEffect(() => {
-    socket.on("poll:created", () => setPollStatus("active"));
-    socket.on("poll:completed", () => setPollStatus("completed"));
-    socket.on("group:movie_added", ({ movie }: any) => {
-      setGroupMovies((prev) => {
-        const exists = prev.some((m) => m.imdbID === movie.imdbID);
-        if (exists) return prev;
-        return [...prev, { ...movie, poster_path: movie.poster }];
-      });
+    socket.on("poll:created", () => {
+      setPollStatus("active");
+      fetchPollHistory(id!);
+    });
+    socket.on("poll:completed", () => {
+      setPollStatus("completed");
+      fetchPollHistory(id!);
+    });
+    socket.on("poll:runoff", () => {
+      setPollStatus("active");
     });
 
     return () => {
       socket.off("poll:created");
       socket.off("poll:completed");
-      socket.off("group:movie_added");
+      socket.off("poll:runoff");
     };
-  }, [socket]);
+  }, [socket, id]);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpenPollId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleVoteButtonClick = () => {
     if (pollStatus === "completed") {
@@ -71,6 +86,19 @@ const GroupChat: React.FC = () => {
 
   const handlePollStatusChange = (newStatus: string) => {
     setPollStatus(newStatus);
+    if (newStatus === "completed" || newStatus === "none") {
+      fetchPollHistory(id!);
+    }
+  };
+
+  const handlePollCardClick = async (pollId: string) => {
+    await fetchPollResults(pollId);
+    openVoteModal();
+  };
+
+  const handleDeletePoll = async (pollId: string) => {
+    await deletePoll(pollId);
+    setMenuOpenPollId(null);
   };
 
   const getButtonText = () => {
@@ -79,6 +107,17 @@ const GroupChat: React.FC = () => {
       case "completed": return "Create New Poll";
       default: return "Create a Poll";
     }
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
+
+  const isCreatorOfPoll = (poll: any) => {
+    if (!poll.creator) return false;
+    const creatorId = typeof poll.creator === "object" ? poll.creator._id : poll.creator;
+    return creatorId === userId;
   };
 
   return (
@@ -102,18 +141,54 @@ const GroupChat: React.FC = () => {
           <button className="GroupChatPage-vote-btn" onClick={handleVoteButtonClick}>
             {getButtonText()}
           </button>
-          <h3 className="GroupChatPage-watched-title">Watched Movies</h3>
-          <div className="GroupChatPage-movie-list">
-            {groupMovies.length === 0 ? (
-              <p className="GroupChatPage-empty-msg">No movies watched yet. Add movies from the group page!</p>
+
+          <h3 className="GroupChatPage-polls-title">Polls</h3>
+
+          <div className="GroupChatPage-poll-list">
+            {pollHistory.length === 0 ? (
+              <p className="GroupChatPage-poll-empty">No polls yet. Create one!</p>
             ) : (
-              groupMovies.map((movie: any, index: number) => (
-                <MovieCard
-                  key={`${movie.imdbID || movie._id}-${index}`}
-                  movie={movie}
-                  onDelete={() => {}}
-                  onInfoClick={() => {}}
-                />
+              pollHistory.map((poll) => (
+                <div
+                  key={poll._id}
+                  className="GroupChatPage-poll-card"
+                  onClick={() => handlePollCardClick(poll._id)}
+                >
+                  <div className="GroupChatPage-poll-card-info">
+                    <span className="GroupChatPage-poll-card-title">{poll.name}</span>
+                    <span className="GroupChatPage-poll-card-date">{formatDate(poll.createdAt)}</span>
+                    <span className="GroupChatPage-poll-card-result">
+                      {poll.status === "cancelled"
+                        ? "Cancelled"
+                        : poll.winnerTitle
+                          ? `Winner: ${poll.winnerTitle}`
+                          : "No winner"
+                      }
+                    </span>
+                  </div>
+                  {isCreatorOfPoll(poll) && (
+                    <div
+                      className="GroupChatPage-poll-card-menu"
+                      ref={menuOpenPollId === poll._id ? menuRef : null}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        className="GroupChatPage-poll-card-menu-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMenuOpenPollId(menuOpenPollId === poll._id ? null : poll._id);
+                        }}
+                      >
+                        ⋮
+                      </button>
+                      {menuOpenPollId === poll._id && (
+                        <div className="GroupChatPage-poll-card-dropdown">
+                          <button onClick={() => handleDeletePoll(poll._id)}>Delete</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               ))
             )}
           </div>
