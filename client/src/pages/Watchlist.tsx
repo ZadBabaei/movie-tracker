@@ -1,12 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { FaFilm } from "react-icons/fa";
+import axios from "axios";
 import "./Watchlist.css";
 import Hero from "../component/Hero";
 import SearchBar from "../component/SearchBar";
 import MovieCard from "../component/MovieCard";
-import MovieModal from "../component/MovieModal";
+import MovieDetailModal from "../component/MovieDetailModal";
 import VerticalNavbar from "../component/VerticalNavbar";
 import SuggestionsCarousel from "../component/SuggestionsCarousel";
+import FavoritesCarousel from "../component/FavoritesCarousel";
+import WatchTimeline from "../component/WatchTimeline";
 import GroupSelectModal from "../component/GroupSelectModal";
 import { useWatchlistStore, WatchlistMovie } from "../store/useWatchlistStore";
 import { useGroupStore } from "../store/useGroupStore";
@@ -26,11 +29,46 @@ const Watchlist: React.FC = () => {
   const [selectedMovie, setSelectedMovie] = useState<any>(null);
   const [groupSelectOpen, setGroupSelectOpen] = useState(false);
   const [pendingMovie, setPendingMovie] = useState<WatchlistMovie | null>(null);
+  const [favorites, setFavorites] = useState<any[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
+  const fetchFavorites = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get("/api/watchlist/favorites", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setFavorites(res.data);
+      setFavoriteIds(new Set(res.data.map((m: any) => m._id)));
+    } catch (err) {
+      console.error("Failed to fetch favorites:", err);
+    }
+  }, []);
+
+  const handleFavoriteToggle = async (movie: any) => {
+    try {
+      const token = localStorage.getItem("token");
+      const movieId = movie._id;
+      const res = await axios.post(`/api/watchlist/favorites/${movieId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data.favorited) {
+        setFavorites((prev) => [...prev, movie]);
+        setFavoriteIds((prev) => new Set(Array.from(prev).concat(movieId)));
+      } else {
+        setFavorites((prev) => prev.filter((m) => m._id !== movieId));
+        setFavoriteIds((prev) => { const s = new Set(prev); s.delete(movieId); return s; });
+      }
+    } catch (err) {
+      console.error("Failed to toggle favorite:", err);
+    }
+  };
 
   useEffect(() => {
     fetchWatchlist();
     fetchGroups();
-  }, [fetchWatchlist, fetchGroups]);
+    fetchFavorites();
+  }, [fetchWatchlist, fetchGroups, fetchFavorites]);
 
   const handleAddMovie = (movie: {
     imdbID: string;
@@ -82,6 +120,11 @@ const Watchlist: React.FC = () => {
       />
 
       <div className="watchlist-main">
+        <FavoritesCarousel
+          favorites={favorites}
+          onRemoveFavorite={(movieId) => handleFavoriteToggle({ _id: movieId })}
+        />
+
         <SuggestionsCarousel onAddToWatchlist={handleAddMovie} />
 
         <SearchBar onMovieSelect={handleAddMovie} />
@@ -111,15 +154,19 @@ const Watchlist: React.FC = () => {
                   onDelete={() => removeMovie(movie._id)}
                   onInfoClick={(m: any) => setSelectedMovie(m)}
                   onMarkWatched={() => handleMarkWatched(movie)}
+                  isFavorited={favoriteIds.has(movie._id)}
+                  onFavoriteToggle={() => handleFavoriteToggle(formatMovieForCard(movie))}
                 />
               ))}
             </div>
           )}
         </div>
+
+        {movies.length > 0 && <WatchTimeline movies={movies.map((m) => ({ ...m, poster: m.poster }))} />}
       </div>
 
       {selectedMovie && (
-        <MovieModal
+        <MovieDetailModal
           movie={selectedMovie}
           onClose={() => setSelectedMovie(null)}
         />

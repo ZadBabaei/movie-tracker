@@ -16,13 +16,13 @@
   margin-left: 0;
 }
 
-.group-member-btns{
+.group-member-btns {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 200px;
+  gap: 24px;
   margin-top: 20px;
-  margin-inline-start: 30%;
+  width: 100%;
 }
 
 .members-section {

@@ -130,4 +130,45 @@ router.post("/:movieId/mark-watched", authenticate, async (req: Request, res: Re
   }
 });
 
+// GET /api/watchlist/favorites — fetch user's favorites
+router.get("/favorites", authenticate, async (req: Request, res: Response) => {
+  try {
+    const user = await User.findById(req.user!.id).populate("favorites");
+    if (!user) {
+      res.status(404).json({ msg: "User not found" });
+      return;
+    }
+    res.json(user.favorites);
+  } catch (err) {
+    console.error("Error fetching favorites:", err);
+    res.status(500).json({ msg: "Failed to fetch favorites" });
+  }
+});
+
+// POST /api/watchlist/favorites/:movieId — toggle favorite
+router.post("/favorites/:movieId", authenticate, async (req: Request, res: Response) => {
+  try {
+    const user = await User.findById(req.user!.id);
+    if (!user) {
+      res.status(404).json({ msg: "User not found" });
+      return;
+    }
+
+    const movieId = req.params.movieId;
+    const isFav = user.favorites.some((id) => id.toString() === movieId);
+
+    if (isFav) {
+      user.favorites = user.favorites.filter((id) => id.toString() !== movieId) as any;
+    } else {
+      user.favorites.push(movieId as any);
+    }
+
+    await user.save();
+    res.json({ favorited: !isFav });
+  } catch (err) {
+    console.error("Error toggling favorite:", err);
+    res.status(500).json({ msg: "Failed to toggle favorite" });
+  }
+});
+
 export default router;

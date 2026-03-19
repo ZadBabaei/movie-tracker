@@ -7,7 +7,7 @@ import SearchBar from "../component/SearchBar";
 import MovieCard from "../component/MovieCard";
 import InviteModal from "../component/InviteFriendsModal";
 import VerticalNavbar from "../component/VerticalNavbar";
-import MovieModal from "../component/MovieModal";
+import MovieDetailModal from "../component/MovieDetailModal";
 import { useGroupStore } from "../store/useGroupStore";
 import { jwtDecode } from "jwt-decode";
 import { FaTimes } from "react-icons/fa";
@@ -221,7 +221,7 @@ const GroupPage: React.FC = () => {
         />
       )}
       {selectedMovie && (
-        <MovieModal
+        <MovieDetailModal
           movie={selectedMovie}
           onClose={() => setSelectedMovie(null)}
         />

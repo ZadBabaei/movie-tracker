@@ -155,14 +155,16 @@ const GroupChat: React.FC = () => {
                   onClick={() => handlePollCardClick(poll._id)}
                 >
                   <div className="GroupChatPage-poll-card-info">
-                    <span className="GroupChatPage-poll-card-title">{poll.name}</span>
-                    <span className="GroupChatPage-poll-card-date">{formatDate(poll.createdAt)}</span>
+                    <div className="GroupChatPage-poll-name-wrapper">
+                      <span className="GroupChatPage-poll-card-title">{poll.name}</span>
+                      <span className="GroupChatPage-poll-card-date">{formatDate(poll.createdAt)}</span>
+                    </div>
                     <span className="GroupChatPage-poll-card-result">
                       {poll.status === "cancelled"
                         ? "Cancelled"
                         : poll.winnerTitle
-                          ? `Winner: ${poll.winnerTitle}`
-                          : "No winner"
+                          ? `🏆 ${poll.winnerTitle}`
+                          : "In progress"
                       }
                     </span>
                   </div>

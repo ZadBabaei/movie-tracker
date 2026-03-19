@@ -16,6 +16,7 @@ import inboxRoutes from "./routes/inboxRoutes";
 import watchlistRoutes from "./routes/watchlistRoutes";
 import profileRoutes from "./routes/profileRoutes";
 import assistantRoutes from "./routes/assistantRoutes";
+import commentRoutes from "./routes/commentRoutes";
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -35,6 +36,7 @@ app.use("/api/polls", pollRoutes);
 app.use("/api/watchlist", watchlistRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/assistant", assistantRoutes);
+app.use("/api/comments", commentRoutes);
 
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error("Global error handler:", err);

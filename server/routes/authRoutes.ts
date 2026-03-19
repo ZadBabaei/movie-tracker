@@ -34,7 +34,7 @@ router.post("/register", async (req: Request, res: Response) => {
 
 router.post("/login", async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, rememberMe } = req.body;
     const user = await User.findOne({ email });
     if (!user) {
       res.status(400).json({ msg: "Invalid credentials" });
@@ -50,7 +50,7 @@ router.post("/login", async (req: Request, res: Response) => {
     const token = jwt.sign(
       { id: user._id, name: user.name },
       process.env.JWT_SECRET as string,
-      { expiresIn: "24h" }
+      { expiresIn: rememberMe ? "7d" : "24h" }
     );
 
     res.json({

@@ -6,15 +6,19 @@ export interface IMovie extends Document {
   poster?: string;
   vote_average: number;
   addedBy?: Types.ObjectId;
+  createdAt?: Date;
 }
 
-const MovieSchema = new Schema<IMovie>({
-  title: { type: String, required: true },
-  imdbID: { type: String, unique: true, required: true },
-  poster: { type: String },
-  vote_average: { type: Number, default: 0 },
-  addedBy: { type: Schema.Types.ObjectId, ref: "User" },
-});
+const MovieSchema = new Schema<IMovie>(
+  {
+    title: { type: String, required: true },
+    imdbID: { type: String, unique: true, required: true },
+    poster: { type: String },
+    vote_average: { type: Number, default: 0 },
+    addedBy: { type: Schema.Types.ObjectId, ref: "User" },
+  },
+  { timestamps: true }
+);
 
 const Movie: Model<IMovie> = mongoose.model<IMovie>("Movie", MovieSchema);
 

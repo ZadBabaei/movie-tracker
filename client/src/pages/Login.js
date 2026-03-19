@@ -17,19 +17,27 @@ import XIcon from "@mui/icons-material/X";
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState(null);
+  const [toast, setToast] = useState(null);
   const navigate = useNavigate();
+
+  const showComingSoon = () => {
+    setToast("Social sign-in coming soon!");
+    setTimeout(() => setToast(null), 3000);
+  };
   const API_URL = process.env.REACT_APP_API_URL;
 
   const handleLogin = async () => {
     try {
       const res = await axios.post(
         `${API_URL}/api/auth/login`,
-        { email, password },
+        { email, password, rememberMe },
         { headers: { "Content-Type": "application/json" } }
       );
 
       localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
       const redirect = sessionStorage.getItem("redirectAfterAuth");
       if (redirect) {
         sessionStorage.removeItem("redirectAfterAuth");
@@ -39,7 +47,7 @@ function Login() {
       }
     } catch (error) {
       setError(
-        error.response?.data?.message ||
+        error.response?.data?.msg ||
           " Invalid credentials. Please try again."
       );
     }
@@ -53,17 +61,18 @@ function Login() {
 
   return (
     <div className="wrapper">
-      <div className="left-side">
-        <img className="left-side-img" src={SinginImg} alt="Sign In" />
-        <button className="auth-link-btn" onClick={() => navigate("/signup")}>
-          Create an account
-        </button>
-      </div>
-      <div className="right-side">
-        <div className="brand-header">
-          <h1 className="brand-title">Sign In</h1>
+      <div className="wrapper-columns">
+        <div className="left-side">
+          <img className="left-side-img" src={SinginImg} alt="Sign In" />
+          <button className="auth-link-btn" onClick={() => navigate("/signup")}>
+            Create an account
+          </button>
         </div>
-        <form onSubmit={handleSubmit}>
+        <div className="right-side">
+          <div className="brand-header">
+            <h1 className="brand-title">Sign In</h1>
+          </div>
+          <form onSubmit={handleSubmit}>
           <Box sx={{ "& > :not(style)": { m: 1 } }}>
             <Box sx={{ display: "flex", alignItems: "flex-end" }}>
               <EmailIcon sx={{ color: "action.active", mr: 1, my: 0.5 }} />
@@ -88,19 +97,24 @@ function Login() {
             </Box>
           </Box>
           <FormGroup>
-            <FormControlLabel control={<Checkbox />} label="Remember me" />
+            <FormControlLabel
+              control={<Checkbox checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />}
+              label="Remember me"
+            />
           </FormGroup>
           {error && <p className="error">{error}</p>}
           <button className="rights-side-btn" type="submit">
             Login
           </button>
         </form>
-        <div className="other-logging-type">
-          <GoogleIcon className="social-icon" sx={{ fontSize: 30, cursor: "pointer", color: "#555" }} />
-          <FacebookIcon className="social-icon" sx={{ fontSize: 30, cursor: "pointer", color: "#555" }} />
-          <XIcon className="social-icon" sx={{ fontSize: 30, cursor: "pointer", color: "#555" }} />
         </div>
       </div>
+      <div className="other-logging-type">
+        <GoogleIcon className="social-icon" onClick={showComingSoon} sx={{ fontSize: 30, cursor: "pointer", color: "#555" }} />
+        <FacebookIcon className="social-icon" onClick={showComingSoon} sx={{ fontSize: 30, cursor: "pointer", color: "#555" }} />
+        <XIcon className="social-icon" onClick={showComingSoon} sx={{ fontSize: 30, cursor: "pointer", color: "#555" }} />
+      </div>
+      {toast && <div className="auth-toast">{toast}</div>}
     </div>
   );
 }

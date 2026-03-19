@@ -2,11 +2,12 @@ import React, { useState } from "react";
 import { FaTrashAlt, FaInfoCircle, FaHeart, FaCheck } from "react-icons/fa";
 import "./MovieCard.css";
 
-const MovieCard = ({ movie, onDelete, onInfoClick, onMarkWatched = null }) => {
-  const [favorited, setFavorited] = useState(false);
+const MovieCard = ({ movie, onDelete, onInfoClick, onMarkWatched = null, isFavorited = false, onFavoriteToggle = null }) => {
+  const [favorited, setFavorited] = useState(isFavorited);
 
   const toggleFavorite = () => {
     setFavorited((prev) => !prev);
+    if (onFavoriteToggle) onFavoriteToggle(movie);
   };
 
   const getPosterUrl = (path) => {

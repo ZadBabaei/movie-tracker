@@ -6,6 +6,8 @@ import { usePollStore } from "../store/usePollStore";
 import { useSocket } from "../hooks/useSocket";
 import SearchBar from "./SearchBar";
 import MovieCard from "./MovieCard";
+import { FaTrophy, FaCrown, FaStar, FaMedal } from "react-icons/fa";
+import { HiSparkles } from "react-icons/hi2";
 
 interface VoteModalProps {
   groupId: string;
@@ -189,69 +191,258 @@ const VoteModal: React.FC<VoteModalProps> = ({ groupId, onPollStatusChange }) =>
       const bId = b.movieId || b.id || b.tmdbId || "";
       return (scores[bId] || 0) - (scores[aId] || 0);
     });
-    const medals = ["🥇", "🥈", "🥉"];
-    const winnerMovie = ranked[0];
+    const winnerMovie: any = ranked[0];
     const winnerPoster = winnerMovie?.poster_path;
+    const winnerId = winnerMovie?.movieId || winnerMovie?.id || winnerMovie?.tmdbId || "";
+    const totalVotes = (currentPoll.votes || []).length;
+
+    // Get voters per movie
+    const votersByMovie: Record<string, string[]> = {};
+    (currentPoll.votes || []).forEach((v: any) => {
+      const mid = v.movieTmdbId;
+      const name = typeof v.userId === "object" ? v.userId.name : "";
+      if (!votersByMovie[mid]) votersByMovie[mid] = [];
+      if (name) votersByMovie[mid].push(name);
+    });
+
+    const medalIcons = [
+      <FaTrophy className="results-medal-icon gold" />,
+      <FaMedal className="results-medal-icon silver" />,
+      <FaMedal className="results-medal-icon bronze" />,
+    ];
 
     return (
       <div className="VoteModal-overlay">
-        <div className="VoteModal-content">
+        <div className="VoteModal-content results-cinematic">
           <button className="VoteModal-close-btn" onClick={closeVoteModal}>×</button>
 
+          {/* Floating particles */}
+          <div className="results-particles">
+            {Array.from({ length: 20 }).map((_, i) => (
+              <div key={i} className="results-particle" style={{
+                left: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 5}s`,
+                animationDuration: `${3 + Math.random() * 4}s`,
+              }} />
+            ))}
+          </div>
+
+          {/* Header badge */}
           <motion.div
-            className="VoteModal-results-banner"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: "spring", stiffness: 200, damping: 18 }}
+            className="results-header-badge"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
           >
-            <div className="VoteModal-results-trophy">🏆</div>
-            <div className="VoteModal-results-poll-name">{currentPoll.name}</div>
-            {winnerPoster && (
-              <img
-                src={`https://image.tmdb.org/t/p/w300${winnerPoster}`}
-                alt={winnerMovie?.title}
-                className="VoteModal-winner-poster"
-              />
-            )}
-            <div className="VoteModal-results-winner-title">{winnerMovie?.title}</div>
-            <div className="VoteModal-results-subtitle">won the vote!</div>
+            <HiSparkles className="results-sparkle-icon" />
+            <span>Tonight's movie has been chosen</span>
+            <HiSparkles className="results-sparkle-icon" />
           </motion.div>
 
-          <div className="VoteModal-results-list">
+          {/* Poll name */}
+          <motion.div
+            className="results-poll-title"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            {currentPoll.name}
+          </motion.div>
+
+          {/* Winner Hero Card */}
+          <motion.div
+            className="results-winner-hero"
+            initial={{ opacity: 0, scale: 0.7, y: 30 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 150, damping: 18, delay: 0.4 }}
+          >
+            <div className="results-winner-glow" />
+
+            {/* Crown icon */}
+            <motion.div
+              className="results-crown"
+              initial={{ opacity: 0, y: -20, rotate: -15 }}
+              animate={{ opacity: 1, y: 0, rotate: 0 }}
+              transition={{ delay: 0.8, type: "spring", stiffness: 200 }}
+            >
+              <FaCrown />
+            </motion.div>
+
+            {/* Winner badge */}
+            <motion.div
+              className="results-winner-badge"
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.9, type: "spring" }}
+            >
+              <FaTrophy /> WINNER
+            </motion.div>
+
+            {/* Poster */}
+            {winnerPoster && (
+              <motion.div
+                className="results-poster-container"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.5, duration: 0.6 }}
+              >
+                <img
+                  src={`https://image.tmdb.org/t/p/w400${winnerPoster}`}
+                  alt={winnerMovie?.title}
+                  className="results-winner-poster"
+                />
+                <div className="results-poster-reflection" />
+              </motion.div>
+            )}
+
+            {/* Winner info */}
+            <motion.h2
+              className="results-winner-title"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 }}
+            >
+              {winnerMovie?.title}
+            </motion.h2>
+
+            <motion.div
+              className="results-winner-subtitle"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.8 }}
+            >
+              <FaStar className="results-star-icon" />
+              <span>Movie Night Winner</span>
+              <FaStar className="results-star-icon" />
+            </motion.div>
+
+            {/* Stats row */}
+            <motion.div
+              className="results-winner-stats"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.9 }}
+            >
+              <div className="results-stat">
+                <span className="results-stat-value">{scores[winnerId] || 0}</span>
+                <span className="results-stat-label">votes</span>
+              </div>
+              <div className="results-stat-divider" />
+              <div className="results-stat">
+                <span className="results-stat-value">
+                  {totalVotes > 0 ? Math.round(((scores[winnerId] || 0) / totalVotes) * 100) : 0}%
+                </span>
+                <span className="results-stat-label">of votes</span>
+              </div>
+            </motion.div>
+
+            {/* Voters who picked the winner */}
+            {votersByMovie[winnerId] && votersByMovie[winnerId].length > 0 && (
+              <motion.div
+                className="results-winner-voters"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.0 }}
+              >
+                {votersByMovie[winnerId].map((name, i) => (
+                  <span key={i} className="results-voter-chip">
+                    {name}
+                  </span>
+                ))}
+              </motion.div>
+            )}
+          </motion.div>
+
+          {/* Ranked Results */}
+          <motion.div
+            className="results-rankings-header"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.0 }}
+          >
+            Final Rankings
+          </motion.div>
+
+          <div className="results-rankings-list">
             {ranked.map((movie: any, index: number) => {
               const movieId = movie.movieId || movie.id || movie.tmdbId || "";
               const score = scores[movieId] || 0;
               const isWinner = movieId === currentPoll.winningMovieTmdbId;
-              const maxScore = Math.max(...Object.values(scores), 1);
+              const percentage = totalVotes > 0 ? Math.round((score / totalVotes) * 100) : 0;
+              const voters = votersByMovie[movieId] || [];
+
               return (
                 <motion.div
                   key={movieId}
-                  className={`VoteModal-result-row ${isWinner ? "winner-row" : ""}`}
-                  initial={{ opacity: 0, x: -30 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
+                  className={`results-rank-card ${isWinner ? "results-rank-winner" : ""}`}
+                  initial={{ opacity: 0, x: -40, y: 10 }}
+                  animate={{ opacity: 1, x: 0, y: 0 }}
+                  transition={{ delay: 1.1 + index * 0.12, type: "spring", stiffness: 120 }}
                 >
-                  <span className="VoteModal-result-medal">{medals[index] || `#${index + 1}`}</span>
-                  <div className="VoteModal-result-info">
-                    <span className="VoteModal-result-name">{movie.title}</span>
-                    <div className="VoteModal-result-bar-wrap">
+                  {/* Rank number */}
+                  <div className={`results-rank-position rank-${index + 1}`}>
+                    {index < 3 ? medalIcons[index] : <span>#{index + 1}</span>}
+                  </div>
+
+                  {/* Poster thumbnail */}
+                  {movie.poster_path && (
+                    <img
+                      src={`https://image.tmdb.org/t/p/w92${movie.poster_path}`}
+                      alt={movie.title}
+                      className="results-rank-poster"
+                    />
+                  )}
+
+                  {/* Info */}
+                  <div className="results-rank-info">
+                    <div className="results-rank-title-row">
+                      <span className="results-rank-name">{movie.title}</span>
+                      {isWinner && (
+                        <span className="results-rank-winner-tag">
+                          <FaTrophy /> Winner
+                        </span>
+                      )}
+                    </div>
+                    <div className="results-rank-bar-container">
                       <motion.div
-                        className={`VoteModal-result-bar ${isWinner ? "winner-bar" : ""}`}
+                        className={`results-rank-bar ${isWinner ? "bar-gold" : ""}`}
                         initial={{ width: 0 }}
-                        animate={{ width: `${(score / maxScore) * 100}%` }}
-                        transition={{ delay: index * 0.1 + 0.3, duration: 0.6 }}
+                        animate={{ width: `${percentage}%` }}
+                        transition={{ delay: 1.2 + index * 0.12, duration: 0.8, ease: "easeOut" }}
                       />
                     </div>
+                    {/* Voters */}
+                    {voters.length > 0 && (
+                      <div className="results-rank-voters">
+                        {voters.map((name, i) => (
+                          <span key={i} className="results-rank-voter">{name}</span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <span className="VoteModal-result-score">{score} votes</span>
+
+                  {/* Score */}
+                  <div className="results-rank-score">
+                    <span className="results-rank-score-num">{score}</span>
+                    <span className="results-rank-score-label">{score === 1 ? "vote" : "votes"}</span>
+                    <span className="results-rank-percentage">{percentage}%</span>
+                  </div>
                 </motion.div>
               );
             })}
           </div>
 
-          <div className="VoteModal-button-group">
-            <button className="VoteModal-submit-btn" onClick={closeVoteModal}>Close</button>
-          </div>
+          {/* Close button */}
+          <motion.div
+            className="results-close-section"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.5 }}
+          >
+            <button className="results-close-btn" onClick={closeVoteModal}>
+              Close
+            </button>
+          </motion.div>
         </div>
       </div>
     );

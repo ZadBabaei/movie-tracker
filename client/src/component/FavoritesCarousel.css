@@ -1,0 +1,27 @@
+.favorites-carousel-wrapper {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+}
+
+.favorites-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #ff4d6d !important;
+}
+
+.favorites-heart-icon {
+  color: #ff4d6d;
+  font-size: 1.2rem;
+}
+
+.favorites-remove-btn {
+  background: linear-gradient(135deg, #444, #333) !important;
+  color: #ffb3c1 !important;
+}
+
+.favorites-remove-btn:hover {
+  background: linear-gradient(135deg, #ff4d6d, #c9184a) !important;
+  box-shadow: 0 4px 12px rgba(255, 77, 109, 0.4) !important;
+}

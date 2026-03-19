@@ -57,7 +57,7 @@ function Signup() {
 			alert(" Signup successful! You can now log in.");
 			navigate("/");
 		} catch (error) {
-			setError(error.response?.data?.message || " Signup failed. Maybe the user already exists.");
+			setError(error.response?.data?.msg || " Signup failed. Maybe the user already exists.");
 		}
 	};
 

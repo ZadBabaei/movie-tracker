@@ -7,6 +7,7 @@ export interface WatchlistMovie {
   imdbID: string;
   poster?: string;
   vote_average: number;
+  createdAt?: string;
 }
 
 interface WatchlistState {

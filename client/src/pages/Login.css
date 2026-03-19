@@ -147,39 +147,43 @@ h1 {
 
 .wrapper {
   width: 600px;
-  padding: 20px;
+  padding: 20px 20px 16px;
   background: white;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   border-radius: 8px;
   display: flex;
-  flex: 1;
-  grid-gap: 20px;
+  flex-direction: column;
+  gap: 12px;
   text-align: center;
+  margin: auto;
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
 }
+
+.wrapper-columns {
+  display: flex;
+  flex: 1;
+  gap: 20px;
+}
 .left-side,
 .right-side {
   padding: 10px;
   width: 50%;
-}
-.left-side, .right-side {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
-  gap: 20px;
 }
 
 .left-side {
   justify-content: space-between;
+  gap: 20px;
 }
 
 .right-side {
-  gap: 10px;
   justify-content: space-between;
+  gap: 10px;
 }
 
 .brand-header {
@@ -281,13 +285,13 @@ p h4 a:hover {
 }
 
 
-body,
 html {
   height: 100%;
+}
+
+body {
+  min-height: 100vh;
   margin: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   background: #f4f4f4;
 }
 
@@ -300,4 +304,20 @@ html {
 
 .social-icon:hover {
   color: #007bff !important;
+}
+
+.auth-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e1e1e;
+  color: #f9f9f9;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  z-index: 9999;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
 }
