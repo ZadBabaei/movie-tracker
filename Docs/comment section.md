@@ -1,0 +1,1 @@
+this would be like card one after each other that shows the user, the profile picture and their comment, it should have the ability that can be replied so on click we can see conversation

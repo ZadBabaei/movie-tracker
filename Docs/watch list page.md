@@ -1,0 +1,1 @@
+we should add a favorite list to the top of the page after hero same thing as **Trending This Week**.
