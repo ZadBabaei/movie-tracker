@@ -73,6 +73,7 @@ This app was built to solve a common problem: _planning and organizing group mov
 
 Created by **Zad Babaei**  
 GitHub: [@mehrzad-dev](https://github.com/mehrzad-dev)
+- <!-- add-to-portfolio -->
 
 ---
 
