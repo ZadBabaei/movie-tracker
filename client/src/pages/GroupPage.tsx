@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import apiClient from "../api/apiClient";
+
 import "./GroupPage.css";
 import Hero from "../component/Hero";
 import SearchBar from "../component/SearchBar";
@@ -8,11 +9,18 @@ import MovieCard from "../component/MovieCard";
 import InviteModal from "../component/InviteFriendsModal";
 import VerticalNavbar from "../component/VerticalNavbar";
 import MovieDetailModal from "../component/MovieDetailModal";
+import WatchTimeline from "../component/WatchTimeline";
 import { useGroupStore } from "../store/useGroupStore";
 import { jwtDecode } from "jwt-decode";
 import { FaTimes } from "react-icons/fa";
 
 interface Member {
+  _id: string;
+  name: string;
+  avatar?: string;
+}
+
+interface WatchedWithMember {
   _id: string;
   name: string;
   avatar?: string;
@@ -24,6 +32,9 @@ interface Movie {
   title: string;
   poster_path?: string;
   vote_average: number;
+  watchedDate?: string;
+  watchedWhere?: string;
+  watchedWith?: WatchedWithMember[];
 }
 
 interface GroupData {
@@ -38,6 +49,7 @@ const GroupPage: React.FC = () => {
   const navigate = useNavigate();
   const [group, setGroup] = useState<GroupData | null>(null);
   const [addedMovies, setAddedMovies] = useState<Movie[]>([]);
+  const [timelineMovies, setTimelineMovies] = useState<any[]>([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
 
@@ -52,25 +64,47 @@ const GroupPage: React.FC = () => {
 
   const fetchGroupDetails = async () => {
     const token = localStorage.getItem("token");
-    const res = await axios.get(`http://localhost:5000/api/groups/${id}`, {
+    const res = await apiClient.get(`/api/groups/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     setGroup(res.data);
 
-    const fetchedMovies: Movie[] = res.data.movies.map((m: any) => ({
-      id: m.imdbID,
-      _id: m._id,
-      title: m.title,
-      poster_path: m.poster,
-      vote_average: m.vote_average || 0,
-    }));
+    const rawMovies = res.data.movies || [];
+    const fetchedMovies: Movie[] = rawMovies.map((m: any) => {
+      // Handle both subdocument (m.movieId) and legacy (direct) formats
+      const movie = m.movieId || m;
+      return {
+        id: movie.imdbID,
+        _id: movie._id,
+        title: movie.title,
+        poster_path: movie.poster,
+        vote_average: movie.vote_average || 0,
+        watchedDate: m.watchedDate || undefined,
+        watchedWhere: m.watchedWhere || undefined,
+        watchedWith: m.watchedWith || undefined,
+      };
+    });
     setAddedMovies(fetchedMovies);
+
+    // Build timeline data with watch metadata
+    const timeline = rawMovies
+      .filter((m: any) => m.movieId)
+      .map((m: any) => ({
+        _id: m.movieId._id,
+        title: m.movieId.title,
+        poster: m.movieId.poster,
+        vote_average: m.movieId.vote_average,
+        createdAt: m.watchedDate,
+        watchedWhere: m.watchedWhere,
+        watchedWith: m.watchedWith,
+      }));
+    setTimelineMovies(timeline);
   };
 
   const handleMovieAdd = async (movie: any) => {
     const token = localStorage.getItem("token");
-    const res = await axios.post(
-      `http://localhost:5000/api/groups/${id}/add-movie`,
+    const res = await apiClient.post(
+      `/api/groups/${id}/add-movie`,
       { movie },
       { headers: { Authorization: `Bearer ${token}` } }
     );
@@ -89,8 +123,8 @@ const GroupPage: React.FC = () => {
 
   const handleDeleteMovie = async (movieId: string) => {
     const token = localStorage.getItem("token");
-    await axios.delete(
-      `http://localhost:5000/api/groups/${id}/remove-movie/${movieId}`,
+    await apiClient.delete(
+      `/api/groups/${id}/remove-movie/${movieId}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
     setAddedMovies((prev) => prev.filter((m) => m._id !== movieId));
@@ -100,8 +134,8 @@ const GroupPage: React.FC = () => {
     if (!window.confirm("Are you sure you want to remove this member?")) return;
     const tk = localStorage.getItem("token");
     try {
-      await axios.delete(
-        `http://localhost:5000/api/groups/${id}/remove-member/${memberId}`,
+      await apiClient.delete(
+        `/api/groups/${id}/remove-member/${memberId}`,
         { headers: { Authorization: `Bearer ${tk}` } }
       );
       setGroup((prev) =>
@@ -212,6 +246,12 @@ const GroupPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {timelineMovies.length > 0 && (
+        <div className="group-timeline-section">
+          <WatchTimeline movies={timelineMovies} />
+        </div>
+      )}
 
       {showInviteModal && (
         <InviteModal

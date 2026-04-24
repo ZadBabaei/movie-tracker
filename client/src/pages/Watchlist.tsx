@@ -9,8 +9,8 @@ import MovieDetailModal from "../component/MovieDetailModal";
 import VerticalNavbar from "../component/VerticalNavbar";
 import SuggestionsCarousel from "../component/SuggestionsCarousel";
 import FavoritesCarousel from "../component/FavoritesCarousel";
-import WatchTimeline from "../component/WatchTimeline";
-import GroupSelectModal from "../component/GroupSelectModal";
+
+import GroupSelectModal, { WatchMetadata } from "../component/GroupSelectModal";
 import { useWatchlistStore, WatchlistMovie } from "../store/useWatchlistStore";
 import { useGroupStore } from "../store/useGroupStore";
 
@@ -95,9 +95,9 @@ const Watchlist: React.FC = () => {
     setGroupSelectOpen(true);
   };
 
-  const handleGroupSelect = (groupId: string) => {
+  const handleGroupSelect = (groupId: string, metadata?: WatchMetadata) => {
     if (pendingMovie) {
-      markAsWatched(pendingMovie._id, groupId);
+      markAsWatched(pendingMovie._id, groupId, metadata);
     }
     setGroupSelectOpen(false);
     setPendingMovie(null);
@@ -162,7 +162,7 @@ const Watchlist: React.FC = () => {
           )}
         </div>
 
-        {movies.length > 0 && <WatchTimeline movies={movies.map((m) => ({ ...m, poster: m.poster }))} />}
+
       </div>
 
       {selectedMovie && (

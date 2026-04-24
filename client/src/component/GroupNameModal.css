@@ -36,8 +36,20 @@
   font-size: 1rem;
   border-radius: 0.5rem;
   border: 1px solid #ccc;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
   outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.group-name-input-error {
+  border-color: #ff6b6b;
+}
+
+.group-name-error {
+  color: #ff6b6b;
+  font-size: 0.85rem;
+  margin: 0 0 1rem 0;
+  text-align: left;
 }
 
 .GroupName-modal-buttons {

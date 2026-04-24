@@ -4,7 +4,7 @@ import { useGroupStore } from "../store/useGroupStore";
 import { toast } from "react-toastify";
 import { jwtDecode } from "jwt-decode";
 import { searchUsers, inviteByEmail, generateInviteLink } from "../api/groupApi";
-import axios from "axios";
+import apiClient from "../api/apiClient";
 
 interface User {
   _id: string;
@@ -90,8 +90,8 @@ const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({ isOpen, onClose
       const decoded = jwtDecode<{ name: string }>(token);
       const inviterName = decoded.name;
 
-      await axios.post(
-        "http://localhost:5000/api/groups/invite",
+      await apiClient.post(
+        "/api/groups/invite",
         { groupId: targetGroupId, members: [userId], inviterName },
         { headers: { Authorization: `Bearer ${token}` } }
       );

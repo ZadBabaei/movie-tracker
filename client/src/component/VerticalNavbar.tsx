@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   FaHome,
@@ -7,9 +7,12 @@ import {
   FaInfoCircle,
   FaThList,
   FaSignOutAlt,
+  FaComments,
 } from "react-icons/fa";
 import { useModalStore } from "../store/useModalStore";
 import { useUserStore } from "../store/useUserStore";
+import { useGroupStore } from "../store/useGroupStore";
+import { useUnreadCounts } from "../hooks/useUnreadCounts";
 import "./VerticalNavbar.css";
 import logo from "../assets/Logo PM.png";
 
@@ -18,10 +21,20 @@ const VerticalNavbar: React.FC = () => {
   const navigate = useNavigate();
   const { openGroupsModal } = useModalStore();
   const { profile, fetchProfile } = useUserStore();
+  const { favoriteGroups, fetchFavoriteGroups, groupList, fetchGroups } = useGroupStore();
+  const [showGroupSubmenu, setShowGroupSubmenu] = useState(false);
+  const [showChatSubmenu, setShowChatSubmenu] = useState(false);
+  const { unreadMap, totalUnread } = useUnreadCounts();
 
   useEffect(() => {
     if (!profile) fetchProfile();
-  }, [profile, fetchProfile]);
+    fetchFavoriteGroups();
+    fetchGroups();
+  }, [profile, fetchProfile, fetchFavoriteGroups, fetchGroups]);
+
+  const submenuGroups = favoriteGroups.length > 0
+    ? favoriteGroups.slice(0, 2)
+    : groupList.slice(0, 2);
 
   const handleGroupsClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -43,11 +56,40 @@ const VerticalNavbar: React.FC = () => {
             <span className="label">Home</span>
           </a>
         </li>
-        <li className="navbar-item">
+        <li
+          className="navbar-item navbar-item--groups"
+          onMouseEnter={() => setShowGroupSubmenu(true)}
+          onMouseLeave={() => setShowGroupSubmenu(false)}
+        >
           <a href="#" className="navbar-link" onClick={handleGroupsClick}>
             <span className="icon"><FaUsers /></span>
             <span className="label">Groups</span>
           </a>
+          {showGroupSubmenu && submenuGroups.length > 0 && (
+            <div className="navbar-group-submenu">
+              {submenuGroups.map((g) => (
+                <div
+                  key={g._id}
+                  className="navbar-group-submenu-item"
+                  onClick={() => {
+                    setShowGroupSubmenu(false);
+                    navigate(`/group/${g._id}`);
+                  }}
+                >
+                  {g.name}
+                </div>
+              ))}
+              <div
+                className="navbar-group-submenu-item navbar-group-submenu-all"
+                onClick={() => {
+                  setShowGroupSubmenu(false);
+                  navigate("/my-groups");
+                }}
+              >
+                All Groups
+              </div>
+            </div>
+          )}
         </li>
         <li className="navbar-item">
           <a href="/watchlist" className="navbar-link">
@@ -60,6 +102,36 @@ const VerticalNavbar: React.FC = () => {
             <span className="icon"><FaEnvelope /></span>
             <span className="label">Messages</span>
           </a>
+        </li>
+        <li
+          className="navbar-item navbar-item--chat"
+          onMouseEnter={() => setShowChatSubmenu(true)}
+          onMouseLeave={() => setShowChatSubmenu(false)}
+        >
+          <a href="#" className="navbar-link" onClick={(e) => e.preventDefault()}>
+            <span className="icon"><FaComments /></span>
+            {totalUnread > 0 && <span className="unread-dot" />}
+            <span className="label">Group Chats</span>
+          </a>
+          {showChatSubmenu && groupList.length > 0 && (
+            <div className="navbar-chat-submenu">
+              {groupList.slice(0, 5).map((g) => (
+                <div
+                  key={g._id}
+                  className="navbar-chat-submenu-item"
+                  onClick={() => {
+                    setShowChatSubmenu(false);
+                    navigate(`/group/${g._id}/chat`);
+                  }}
+                >
+                  <span>{g.name}</span>
+                  {(unreadMap[g._id] || 0) > 0 && (
+                    <span className="unread-badge">{unreadMap[g._id]}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </li>
         <li className="navbar-item">
           <a href="/profile" className="navbar-link navbar-link--profile">

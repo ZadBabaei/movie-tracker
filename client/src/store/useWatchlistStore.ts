@@ -23,7 +23,11 @@ interface WatchlistState {
     vote_average?: number;
   }) => Promise<void>;
   removeMovie: (movieId: string) => Promise<void>;
-  markAsWatched: (movieId: string, groupId: string) => Promise<void>;
+  markAsWatched: (movieId: string, groupId: string, metadata?: {
+    watchedDate?: string;
+    watchedWhere?: string;
+    watchedWith?: string[];
+  }) => Promise<void>;
 }
 
 export const useWatchlistStore = create<WatchlistState>((set) => ({
@@ -66,9 +70,9 @@ export const useWatchlistStore = create<WatchlistState>((set) => ({
     }
   },
 
-  markAsWatched: async (movieId, groupId) => {
+  markAsWatched: async (movieId, groupId, metadata?) => {
     try {
-      await api.markAsWatched(movieId, groupId);
+      await api.markAsWatched(movieId, groupId, metadata);
       set((state) => ({
         movies: state.movies.filter((m) => m._id !== movieId),
       }));

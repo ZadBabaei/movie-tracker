@@ -161,22 +161,41 @@ router.post("/respond", authenticate, async (req: Request, res: Response) => {
 router.get("/:id", authenticate, async (req: Request, res: Response) => {
   try {
     const groupId = req.params.id;
+
+    // First fetch to migrate old plain-ObjectId movie entries
+    const rawGroup = await Group.findById(groupId);
+    if (!rawGroup) {
+      res.status(404).json({ msg: "Group not found" });
+      return;
+    }
+
+    let needsSave = false;
+    rawGroup.movies = rawGroup.movies.map((m: any) => {
+      if (m.movieId) return m;
+      needsSave = true;
+      return { movieId: m, watchedDate: new Date(), watchedWhere: "", watchedWith: [] };
+    }) as any;
+    if (needsSave) await rawGroup.save();
+
+    // Now fetch with populate
     const group = await Group.findById(groupId)
       .populate("members", "_id name avatar")
       .populate("creator", "_id name")
-      .populate("movies", "title imdbID poster vote_average")
+      .populate({
+        path: "movies.movieId",
+        select: "title imdbID poster vote_average",
+      })
+      .populate({
+        path: "movies.watchedWith",
+        select: "_id name avatar",
+      })
       .populate({
         path: "currentPoll",
         populate: { path: "votes.userId", select: "name" },
       });
 
-    if (!group) {
-      res.status(404).json({ msg: "Group not found" });
-      return;
-    }
-
-    const hasActivePoll = await group.hasActivePoll();
-    res.json({ ...group.toObject(), hasActivePoll });
+    const hasActivePoll = await group!.hasActivePoll();
+    res.json({ ...group!.toObject(), hasActivePoll });
   } catch (error) {
     console.error("Error fetching group:", error);
     res.status(500).json({ msg: "Server error", error: (error as Error).message });
@@ -212,10 +231,24 @@ router.post("/:id/add-movie", authenticate, async (req: Request, res: Response) 
       return;
     }
 
-    if (!group.movies.includes(existingMovie._id as any)) {
-      group.movies.push(existingMovie._id as any);
-      await group.save();
+    // Migrate old plain-ObjectId entries to subdocument format
+    group.movies = group.movies.map((m: any) => {
+      if (m.movieId) return m; // already new format
+      return { movieId: m, watchedDate: new Date(), watchedWhere: "", watchedWith: [] };
+    }) as any;
+
+    const alreadyInGroup = group.movies.some(
+      (m: any) => (m.movieId || m).toString() === existingMovie!._id.toString()
+    );
+    if (!alreadyInGroup) {
+      group.movies.push({
+        movieId: existingMovie._id,
+        watchedDate: new Date(),
+        watchedWhere: "",
+        watchedWith: [userId],
+      } as any);
     }
+    await group.save();
 
     getIO().to(groupId).emit("group:movie_added", { movie: existingMovie });
     res.json({ msg: "Movie added", movie: existingMovie });
@@ -234,7 +267,9 @@ router.delete("/:groupId/remove-movie/:movieId", authenticate, async (req: Reque
       return;
     }
 
-    group.movies = group.movies.filter((id) => id.toString() !== movieId);
+    group.movies = group.movies.filter(
+      (m: any) => (m.movieId || m).toString() !== movieId
+    ) as any;
     await group.save();
     res.json({ msg: "Movie removed from group" });
   } catch (error) {
@@ -446,6 +481,56 @@ router.post("/invite-by-email", authenticate, async (req: Request, res: Response
     }
   } catch (error) {
     console.error("Error inviting by email:", error);
+    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+  }
+});
+
+// ─── Favorite groups ─────────────────────────────────────────────────────────
+
+router.get("/favorites/list", authenticate, async (req: Request, res: Response) => {
+  try {
+    const user = await User.findById(req.user!.id).populate("favoriteGroups", "name");
+    if (!user) {
+      res.status(404).json({ msg: "User not found" });
+      return;
+    }
+    res.json(user.favoriteGroups || []);
+  } catch (error) {
+    console.error("Error fetching favorite groups:", error);
+    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+  }
+});
+
+router.post("/favorite/:groupId", authenticate, async (req: Request, res: Response) => {
+  try {
+    const user = await User.findById(req.user!.id);
+    if (!user) {
+      res.status(404).json({ msg: "User not found" });
+      return;
+    }
+
+    if (!user.favoriteGroups) user.favoriteGroups = [] as any;
+
+    const groupId = req.params.groupId;
+    const index = user.favoriteGroups.findIndex((id) => id.toString() === groupId);
+
+    if (index > -1) {
+      // Remove from favorites
+      user.favoriteGroups.splice(index, 1);
+      await user.save();
+      res.json({ favorited: false, favoriteGroups: user.favoriteGroups });
+    } else {
+      // Add to favorites (max 2)
+      if (user.favoriteGroups.length >= 2) {
+        res.status(400).json({ msg: "You can only have 2 favorite groups. Unfavorite one first." });
+        return;
+      }
+      user.favoriteGroups.push(new mongoose.Types.ObjectId(groupId as string) as any);
+      await user.save();
+      res.json({ favorited: true, favoriteGroups: user.favoriteGroups });
+    }
+  } catch (error) {
+    console.error("Error toggling favorite group:", error);
     res.status(500).json({ msg: "Server error", error: (error as Error).message });
   }
 });

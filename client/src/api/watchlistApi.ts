@@ -25,10 +25,18 @@ export const removeFromWatchlist = async (movieId: string) => {
   return res.data;
 };
 
-export const markAsWatched = async (movieId: string, groupId: string) => {
+export const markAsWatched = async (
+  movieId: string,
+  groupId: string,
+  metadata?: {
+    watchedDate?: string;
+    watchedWhere?: string;
+    watchedWith?: string[];
+  }
+) => {
   const res = await axios.post(
     `/api/watchlist/${movieId}/mark-watched`,
-    { groupId },
+    { groupId, ...metadata },
     getAuthHeaders()
   );
   return res.data;

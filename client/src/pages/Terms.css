@@ -1,0 +1,75 @@
+.terms-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 50%, #16213e 100%);
+  display: flex;
+  justify-content: center;
+  padding: 60px 20px;
+}
+
+.terms-container {
+  max-width: 720px;
+  width: 100%;
+  color: #e0e0e0;
+}
+
+.terms-title {
+  font-size: 2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #007bff, #00c6ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 4px;
+}
+
+.terms-updated {
+  color: #888;
+  font-size: 0.85rem;
+  margin-bottom: 40px;
+}
+
+.terms-section {
+  margin-bottom: 28px;
+}
+
+.terms-section h2 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.terms-section p {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: #c0c0c0;
+}
+
+.terms-section ul {
+  margin: 8px 0 0 20px;
+  padding: 0;
+}
+
+.terms-section ul li {
+  font-size: 0.95rem;
+  line-height: 1.8;
+  color: #c0c0c0;
+}
+
+.terms-back-btn {
+  margin-top: 30px;
+  padding: 10px 28px;
+  background: transparent;
+  border: 2px solid #007bff;
+  color: #007bff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.terms-back-btn:hover {
+  background: #007bff;
+  color: white;
+}

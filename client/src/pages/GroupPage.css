@@ -1,8 +1,13 @@
 .group-page {
-
-  background: #283048; 
+  background: #283048;
   background: -webkit-linear-gradient(to top, #17421d, #040a1c);
   background: linear-gradient(to top, #17421d, #040a1c);
+}
+
+.group-timeline-section {
+  display: flex;
+  justify-content: center;
+  padding: 40px 100px;
 }
 .group-content {
   display: flex;
@@ -20,7 +25,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 24px;
+  gap: 16px;
   margin-top: 20px;
   width: 100%;
 }
@@ -175,8 +180,7 @@
   font-size: 16px;
   padding: 12px 28px;
   border-radius: 30px;
-  margin: 20px auto;
-  display: block;
+  margin: 0;
   border: none;
   box-shadow: 0 4px 20px rgba(255, 71, 71, 0.6);
   transition: all 0.3s ease-in-out;

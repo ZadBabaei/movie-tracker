@@ -6,6 +6,7 @@ export interface IUser extends Document {
   password: string;
   watchlist: Types.ObjectId[];
   favorites: Types.ObjectId[];
+  favoriteGroups: Types.ObjectId[];
   avatar?: string;
   firstLogin: boolean;
 }
@@ -16,6 +17,7 @@ const userSchema = new Schema<IUser>({
   password: { type: String, required: true },
   watchlist: [{ type: Schema.Types.ObjectId, ref: "Movie", default: [] }],
   favorites: [{ type: Schema.Types.ObjectId, ref: "Movie", default: [] }],
+  favoriteGroups: [{ type: Schema.Types.ObjectId, ref: "Group", default: [] }],
   avatar: { type: String, default: "" },
   firstLogin: { type: Boolean, default: true },
 });

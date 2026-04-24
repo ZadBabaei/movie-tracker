@@ -5,12 +5,19 @@ export interface IGroupInvitation {
   inviterName?: string;
 }
 
+export interface IWatchedMovie {
+  movieId: Types.ObjectId;
+  watchedDate: Date;
+  watchedWhere: string;
+  watchedWith: Types.ObjectId[];
+}
+
 export interface IGroup extends Document {
   name: string;
   creator: Types.ObjectId;
   members: Types.ObjectId[];
   pendingInvitations: IGroupInvitation[];
-  movies: Types.ObjectId[];
+  movies: IWatchedMovie[];
   currentPoll?: Types.ObjectId;
   pollHistory: Types.ObjectId[];
   hasActivePoll(): Promise<boolean>;
@@ -27,7 +34,14 @@ const groupSchema = new Schema<IGroup>(
         inviterName: { type: String },
       },
     ],
-    movies: [{ type: Schema.Types.ObjectId, ref: "Movie" }],
+    movies: [
+      {
+        movieId: { type: Schema.Types.ObjectId, ref: "Movie", required: true },
+        watchedDate: { type: Date, default: Date.now },
+        watchedWhere: { type: String, default: "" },
+        watchedWith: [{ type: Schema.Types.ObjectId, ref: "User" }],
+      },
+    ],
     currentPoll: { type: Schema.Types.ObjectId, ref: "Poll" },
     pollHistory: [{ type: Schema.Types.ObjectId, ref: "Poll" }],
   },

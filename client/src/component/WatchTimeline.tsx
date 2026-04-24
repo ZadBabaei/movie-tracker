@@ -2,12 +2,20 @@ import React, { useEffect, useRef, useState } from "react";
 import { useScroll, useTransform, motion } from "framer-motion";
 import "./WatchTimeline.css";
 
+interface WatchedWithMember {
+  _id: string;
+  name: string;
+  avatar?: string;
+}
+
 interface TimelineMovie {
   _id: string;
   title: string;
   poster?: string;
   vote_average?: number;
   createdAt?: string;
+  watchedWhere?: string;
+  watchedWith?: WatchedWithMember[];
 }
 
 interface TimelineEntry {
@@ -26,9 +34,17 @@ const getPosterUrl = (poster?: string) => {
 
 const getMovieDate = (movie: TimelineMovie): Date => {
   if (movie.createdAt) return new Date(movie.createdAt);
-  // Fallback: extract timestamp from MongoDB ObjectID (first 4 bytes = Unix seconds)
   const timestamp = parseInt(movie._id.substring(0, 8), 16);
   return new Date(timestamp * 1000);
+};
+
+const formatDate = (movie: TimelineMovie): string => {
+  const date = getMovieDate(movie);
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 };
 
 const groupByMonth = (movies: TimelineMovie[]): TimelineEntry[] => {
@@ -39,7 +55,6 @@ const groupByMonth = (movies: TimelineMovie[]): TimelineEntry[] => {
     if (!map[key]) map[key] = [];
     map[key].push(movie);
   });
-  // Sort groups newest first
   const sorted = Object.entries(map).sort(([a], [b]) => {
     return new Date(b).getTime() - new Date(a).getTime();
   });
@@ -72,14 +87,13 @@ const WatchTimeline: React.FC<WatchTimelineProps> = ({ movies }) => {
   return (
     <div className="watch-timeline-container" ref={containerRef}>
       <div className="watch-timeline-header">
-        <h2 className="watch-timeline-heading">Your Watch History</h2>
-        <p className="watch-timeline-subheading">Movies you've added to your watchlist</p>
+        <h2 className="watch-timeline-heading">Group Watch History</h2>
+        <p className="watch-timeline-subheading">Movies your group has watched together</p>
       </div>
 
       <div className="watch-timeline-content" ref={ref}>
         {entries.map((entry, index) => (
           <div key={index} className="watch-timeline-row">
-            {/* Sticky label */}
             <div className="watch-timeline-label-col">
               <div className="watch-timeline-dot-wrapper">
                 <div className="watch-timeline-dot" />
@@ -87,7 +101,6 @@ const WatchTimeline: React.FC<WatchTimelineProps> = ({ movies }) => {
               <h3 className="watch-timeline-label">{entry.label}</h3>
             </div>
 
-            {/* Movie grid */}
             <div className="watch-timeline-movies-col">
               <h3 className="watch-timeline-label-mobile">{entry.label}</h3>
               <div className="watch-timeline-movies-grid">
@@ -102,6 +115,41 @@ const WatchTimeline: React.FC<WatchTimelineProps> = ({ movies }) => {
                       }}
                     />
                     <p className="watch-timeline-movie-title">{movie.title}</p>
+
+                    {/* Metadata bar */}
+                    <div className="watch-timeline-meta">
+                      <span className="watch-timeline-meta-date">
+                        {formatDate(movie)}
+                      </span>
+                      {movie.watchedWhere && (
+                        <span className="watch-timeline-meta-where">
+                          📍 {movie.watchedWhere}
+                        </span>
+                      )}
+                    </div>
+
+                    {movie.watchedWith && movie.watchedWith.length > 0 && (
+                      <div className="watch-timeline-meta-who">
+                        {movie.watchedWith.slice(0, 4).map((member) => (
+                          <div
+                            key={member._id}
+                            className="watch-timeline-avatar"
+                            title={member.name}
+                          >
+                            {member.avatar ? (
+                              <img src={member.avatar} alt={member.name} />
+                            ) : (
+                              <span>{member.name.charAt(0).toUpperCase()}</span>
+                            )}
+                          </div>
+                        ))}
+                        {movie.watchedWith.length > 4 && (
+                          <div className="watch-timeline-avatar watch-timeline-avatar--more">
+                            +{movie.watchedWith.length - 4}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -109,7 +157,6 @@ const WatchTimeline: React.FC<WatchTimelineProps> = ({ movies }) => {
           </div>
         ))}
 
-        {/* Animated vertical line */}
         <div
           className="watch-timeline-track"
           style={{ height: `${height}px` }}

@@ -117,6 +117,27 @@ const MovieDetailModal = ({ movie, onClose }) => {
           </div>
         </div>
 
+        {/* Watch metadata bar (shown on group pages) */}
+        {(movie.watchedDate || movie.watchedWhere || movie.watchedWith?.length > 0) && (
+          <div className="mdm-watch-meta">
+            {movie.watchedDate && (
+              <span className="mdm-watch-meta-item">
+                📅 {new Date(movie.watchedDate).toLocaleDateString("en-US", {
+                  month: "short", day: "numeric", year: "numeric"
+                })}
+              </span>
+            )}
+            {movie.watchedWhere && (
+              <span className="mdm-watch-meta-item">📍 {movie.watchedWhere}</span>
+            )}
+            {movie.watchedWith?.length > 0 && (
+              <span className="mdm-watch-meta-item">
+                👥 {movie.watchedWith.map((m) => m.name).join(", ")}
+              </span>
+            )}
+          </div>
+        )}
+
         {mongoId && (
           <div className="mdm-comments">
             <CommentSection movieId={mongoId} />

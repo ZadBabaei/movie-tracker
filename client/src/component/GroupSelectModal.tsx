@@ -1,5 +1,6 @@
-import React from "react";
-import { FaTimes } from "react-icons/fa";
+import React, { useState, useEffect } from "react";
+import { FaTimes, FaArrowLeft, FaArrowRight } from "react-icons/fa";
+import apiClient from "../api/apiClient";
 import "./GroupSelectModal.css";
 
 interface GroupOption {
@@ -7,13 +8,27 @@ interface GroupOption {
   name: string;
 }
 
+interface Member {
+  _id: string;
+  name: string;
+  avatar?: string;
+}
+
+export interface WatchMetadata {
+  watchedDate: string;
+  watchedWhere: string;
+  watchedWith: string[];
+}
+
 interface GroupSelectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (groupId: string) => void;
+  onSelect: (groupId: string, metadata?: WatchMetadata) => void;
   groups: GroupOption[];
   movieTitle: string;
 }
+
+const WHERE_SUGGESTIONS = ["Cinema", "Home", "Friend's Place", "Streaming"];
 
 const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
   isOpen,
@@ -22,6 +37,74 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
   groups,
   movieTitle,
 }) => {
+  // Step 1: group select, Step 2: when + where, Step 3: who
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [selectedGroupId, setSelectedGroupId] = useState("");
+  const [members, setMembers] = useState<Member[]>([]);
+  const [watchedDate, setWatchedDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+  const [watchedWhere, setWatchedWhere] = useState("");
+  const [watchedWith, setWatchedWith] = useState<string[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setStep(1);
+      setSelectedGroupId("");
+      setMembers([]);
+      setWatchedDate(new Date().toISOString().split("T")[0]);
+      setWatchedWhere("");
+      setWatchedWith([]);
+    }
+  }, [isOpen]);
+
+  const handleGroupClick = async (groupId: string) => {
+    setSelectedGroupId(groupId);
+    setStep(2);
+    setLoadingMembers(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await apiClient.get(`/api/groups/${groupId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const fetchedMembers: Member[] = res.data.members || [];
+      setMembers(fetchedMembers);
+      // Pre-select all members by default
+      setWatchedWith(fetchedMembers.map((m) => m._id));
+    } catch {
+      setMembers([]);
+      setWatchedWith([]);
+    } finally {
+      setLoadingMembers(false);
+    }
+  };
+
+  const toggleMember = (memberId: string) => {
+    setWatchedWith((prev) =>
+      prev.includes(memberId)
+        ? prev.filter((id) => id !== memberId)
+        : [...prev, memberId]
+    );
+  };
+
+  const handleDone = () => {
+    onSelect(selectedGroupId, {
+      watchedDate,
+      watchedWhere,
+      watchedWith,
+    });
+  };
+
+  const handleSkip = () => {
+    // Skip fills defaults: today, no location, all members
+    onSelect(selectedGroupId, {
+      watchedDate: new Date().toISOString().split("T")[0],
+      watchedWhere: "",
+      watchedWith: members.map((m) => m._id),
+    });
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -30,27 +113,156 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
         <button className="group-select-close" onClick={onClose}>
           <FaTimes />
         </button>
-        <h2 className="group-select-heading">Mark as Watched</h2>
-        <p className="group-select-sub">
-          Which group watched <strong>{movieTitle}</strong>?
-        </p>
 
-        {groups.length === 0 ? (
-          <div className="group-select-empty">
-            <p>Create or join a group first</p>
-          </div>
-        ) : (
-          <div className="group-select-list">
-            {groups.map((group) => (
-              <button
-                key={group._id}
-                className="group-select-item"
-                onClick={() => onSelect(group._id)}
-              >
-                {group.name}
-              </button>
-            ))}
-          </div>
+        {/* ── Step 1: Select Group ── */}
+        {step === 1 && (
+          <>
+            <h2 className="group-select-heading">Mark as Watched</h2>
+            <p className="group-select-sub">
+              Which group watched <strong>{movieTitle}</strong>?
+            </p>
+
+            {groups.length === 0 ? (
+              <div className="group-select-empty">
+                <p>Create or join a group first</p>
+              </div>
+            ) : (
+              <div className="group-select-list">
+                {groups.map((group) => (
+                  <button
+                    key={group._id}
+                    className="group-select-item"
+                    onClick={() => handleGroupClick(group._id)}
+                  >
+                    {group.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── Step 2: When + Where ── */}
+        {step === 2 && (
+          <>
+            <button className="group-select-back" onClick={() => setStep(1)}>
+              <FaArrowLeft /> Back
+            </button>
+            <h2 className="group-select-heading">When & Where</h2>
+            <p className="group-select-sub">
+              Details for <strong>{movieTitle}</strong>
+            </p>
+            <div className="group-select-step-indicator">Step 1 of 2</div>
+
+            <div className="group-select-form">
+              <div className="group-select-field">
+                <label>When did you watch?</label>
+                <input
+                  type="date"
+                  value={watchedDate}
+                  onChange={(e) => setWatchedDate(e.target.value)}
+                  className="group-select-input"
+                />
+              </div>
+
+              <div className="group-select-field">
+                <label>Where did you watch?</label>
+                <div className="group-select-chips">
+                  {WHERE_SUGGESTIONS.map((place) => (
+                    <button
+                      key={place}
+                      className={`group-select-chip ${
+                        watchedWhere === place ? "group-select-chip--active" : ""
+                      }`}
+                      onClick={() =>
+                        setWatchedWhere(watchedWhere === place ? "" : place)
+                      }
+                    >
+                      {place}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="group-select-actions">
+                <button
+                  className="group-select-btn group-select-btn--skip"
+                  onClick={handleSkip}
+                >
+                  Skip All
+                </button>
+                <button
+                  className="group-select-btn group-select-btn--done"
+                  onClick={() => setStep(3)}
+                >
+                  Next <FaArrowRight style={{ marginLeft: 6 }} />
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ── Step 3: Who ── */}
+        {step === 3 && (
+          <>
+            <button className="group-select-back" onClick={() => setStep(2)}>
+              <FaArrowLeft /> Back
+            </button>
+            <h2 className="group-select-heading">Who Watched?</h2>
+            <p className="group-select-sub">
+              Select members who watched <strong>{movieTitle}</strong>
+            </p>
+            <div className="group-select-step-indicator">Step 2 of 2</div>
+
+            <div className="group-select-form">
+              <div className="group-select-field">
+                {loadingMembers ? (
+                  <p className="group-select-loading">Loading members...</p>
+                ) : (
+                  <div className="group-select-member-list">
+                    {members.map((member) => (
+                      <button
+                        key={member._id}
+                        className={`group-select-member-chip ${
+                          watchedWith.includes(member._id)
+                            ? "group-select-member-chip--active"
+                            : ""
+                        }`}
+                        onClick={() => toggleMember(member._id)}
+                      >
+                        <div className="member-chip-avatar">
+                          {member.avatar ? (
+                            <img src={member.avatar} alt={member.name} />
+                          ) : (
+                            <span>{member.name.charAt(0).toUpperCase()}</span>
+                          )}
+                        </div>
+                        <span className="member-chip-name">{member.name}</span>
+                        {watchedWith.includes(member._id) && (
+                          <span className="member-chip-check">✓</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="group-select-actions">
+                <button
+                  className="group-select-btn group-select-btn--skip"
+                  onClick={handleSkip}
+                >
+                  Skip
+                </button>
+                <button
+                  className="group-select-btn group-select-btn--done"
+                  onClick={handleDone}
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>

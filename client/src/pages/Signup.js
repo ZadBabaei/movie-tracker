@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import signupImg from "../assets/signup-image.jpg";
 import LogoPM from "../assets/Logo PM.png";
 import Box from "@mui/material/Box";
@@ -13,6 +13,10 @@ import Checkbox from "@mui/material/Checkbox";
 import PersonIcon from "@mui/icons-material/Person";
 import HttpsIcon from "@mui/icons-material/Https";
 import HttpsOutlinedIcon from "@mui/icons-material/HttpsOutlined";
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
+import InputAdornment from "@mui/material/InputAdornment";
+import IconButton from "@mui/material/IconButton";
 import "./Signup.css";
 
 function Signup() {
@@ -21,6 +25,8 @@ function Signup() {
 	const [password, setPassword] = useState("");
 	const [repeatPassword, setRepeatPassword] = useState("");
 	const [error, setError] = useState(null);
+	const [showPassword, setShowPassword] = useState(false);
+	const [showRepeatPassword, setShowRepeatPassword] = useState(false);
 	const navigate = useNavigate();
 	const API_URL = process.env.REACT_APP_API_URL;
 
@@ -62,7 +68,7 @@ function Signup() {
 	};
 
 	return (
-    <div className="wrapper">
+    <div className="signup-wrapper">
       <div className="left-side">
         <div className="brand-header">
           <h1 className="brand-title">Sign Up</h1>
@@ -108,11 +114,24 @@ function Signup() {
               <TextField
                 label="Password"
                 variant="standard"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 sx={{ width: "250px" }}
-                InputProps={{ sx: { fontSize: "15px" } }}
+                InputProps={{
+                  sx: { fontSize: "15px" },
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                        size="small"
+                      >
+                        {showPassword ? <VisibilityOff sx={{ fontSize: 18 }} /> : <Visibility sx={{ fontSize: 18 }} />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
                 InputLabelProps={{ sx: { fontSize: "14px" } }}
               />
             </Box>
@@ -125,11 +144,24 @@ function Signup() {
               <TextField
                 label="Repeat Password"
                 variant="standard"
-                type="password"
+                type={showRepeatPassword ? "text" : "password"}
                 value={repeatPassword}
                 onChange={(e) => setRepeatPassword(e.target.value)}
                 sx={{ width: "250px" }}
-                InputProps={{ sx: { fontSize: "15px" } }}
+                InputProps={{
+                  sx: { fontSize: "15px" },
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowRepeatPassword(!showRepeatPassword)}
+                        edge="end"
+                        size="small"
+                      >
+                        {showRepeatPassword ? <VisibilityOff sx={{ fontSize: 18 }} /> : <Visibility sx={{ fontSize: 18 }} />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
                 InputLabelProps={{ sx: { fontSize: "14px" } }}
               />
             </Box>
@@ -137,7 +169,7 @@ function Signup() {
           <FormGroup>
             <FormControlLabel
               control={<Checkbox />}
-              label="I agree to all statements in Terms of Service"
+              label={<span>I agree to all statements in <Link to="/terms" target="_blank" style={{ color: "#007bff" }}>Terms of Service</Link></span>}
               sx={{ "& .MuiTypography-root": { fontSize: "12px" } }}
             />
           </FormGroup>

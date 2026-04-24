@@ -20,6 +20,7 @@ const ChatBox = ({ groupId }) => {
   const [members, setMembers] = useState([]);
   const [selectedMember, setSelectedMember] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [chatError, setChatError] = useState(null);
 
   useEffect(() => {
     const initChat = async () => {
@@ -50,7 +51,7 @@ const ChatBox = ({ groupId }) => {
 
         const groupChannel = client.channel("messaging", `group-${groupId}`, {
           name: `Group ${groupId}`,
-          members: groupMembers.map((m) => m.id || m._id),
+          members: groupMembers.map((m) => (m._id || m.id).toString()),
         });
 
         await groupChannel.watch();
@@ -72,6 +73,7 @@ const ChatBox = ({ groupId }) => {
         );
       } catch (error) {
         console.error("Stream Chat setup failed:", error);
+        setChatError("Failed to load chat. Please try again later.");
       }
     };
 
@@ -107,6 +109,12 @@ const ChatBox = ({ groupId }) => {
     setChannel(groupChannel);
     setSelectedMember(null);
   };
+
+  if (chatError) return (
+    <div className="empty-chat">
+      <p style={{ color: "#ff6b6b", textAlign: "center", padding: "20px" }}>{chatError}</p>
+    </div>
+  );
 
   if (!chatClient || !channel) return <LoadingIndicator />;
 

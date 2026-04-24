@@ -3,6 +3,10 @@ import { jwtDecode } from "jwt-decode";
 import { useNavigate } from "react-router-dom";
 import { fetchMyGroups, leaveGroup } from "../api/groupApi";
 import { toast } from "react-toastify";
+import IconButton from "@mui/material/IconButton";
+import Star from "@mui/icons-material/Star";
+import StarBorder from "@mui/icons-material/StarBorder";
+import { useGroupStore } from "../store/useGroupStore";
 import VerticalNavbar from "../component/VerticalNavbar";
 import Hero from "../component/Hero";
 import "./MyGroupsPage.css";
@@ -14,6 +18,7 @@ const MyGroupsPage = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const decoded = token ? jwtDecode(token) : null;
+  const { favoriteGroups, fetchFavoriteGroups, toggleFavoriteGroup } = useGroupStore();
 
   useEffect(() => {
     const fetchGroups = async () => {
@@ -29,7 +34,8 @@ const MyGroupsPage = () => {
     };
 
     fetchGroups();
-  }, []);
+    fetchFavoriteGroups();
+  }, [fetchFavoriteGroups]);
 
   const handleLeaveGroup = async (groupId) => {
     if (!window.confirm("Are you sure you want to leave this group?")) return;
@@ -126,6 +132,26 @@ const MyGroupsPage = () => {
                     })}
                   </td>
                   <td>
+                    <IconButton
+                      size="small"
+                      onClick={async () => {
+                        const result = await toggleFavoriteGroup(group._id);
+                        if (result === true) {
+                          toast.success("Added to favorites!");
+                        } else if (result === false) {
+                          toast.info("Removed from favorites.");
+                        } else {
+                          toast.warn("You can only have 2 favorite groups. Unfavorite one first.");
+                        }
+                      }}
+                      sx={{ color: "#ffc107", mr: 1 }}
+                    >
+                      {favoriteGroups.some((fg) => fg._id === group._id) ? (
+                        <Star />
+                      ) : (
+                        <StarBorder />
+                      )}
+                    </IconButton>
                     <button
                       className="group-table-chat-btn"
                       onClick={() => navigate(`/group/${group._id}/chat`)}
