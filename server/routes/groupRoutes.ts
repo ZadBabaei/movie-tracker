@@ -173,13 +173,21 @@ router.get("/:id", authenticate, async (req: Request, res: Response) => {
     rawGroup.movies = rawGroup.movies.map((m: any) => {
       if (m.movieId) return m;
       needsSave = true;
-      return { movieId: m, watchedDate: new Date(), watchedWhere: "", watchedWith: [] };
+      return {
+        movieId: m,
+        watchedDate: new Date(),
+        watchedAt: new Date(),
+        watchedWhere: "",
+        watchedLocation: "",
+        watchedWith: [],
+        watchedNotes: "",
+      };
     }) as any;
     if (needsSave) await rawGroup.save();
 
     // Now fetch with populate
     const group = await Group.findById(groupId)
-      .populate("members", "_id name avatar")
+      .populate("members", "_id name email avatar")
       .populate("creator", "_id name")
       .populate({
         path: "movies.movieId",
@@ -206,7 +214,15 @@ router.post("/:id/add-movie", authenticate, async (req: Request, res: Response) 
   try {
     const userId = new mongoose.Types.ObjectId(req.user!.id);
     const groupId = req.params.id;
-    const { movie } = req.body;
+    const {
+      movie,
+      watchedAt,
+      watchedDate,
+      watchedLocation,
+      watchedWhere,
+      watchedWith,
+      watchedNotes,
+    } = req.body;
 
     if (!movie || !movie.imdbID || !movie.title) {
       res.status(400).json({ msg: "Invalid movie data" });
@@ -231,10 +247,38 @@ router.post("/:id/add-movie", authenticate, async (req: Request, res: Response) 
       return;
     }
 
+    if (!group.members.some((memberId) => memberId.toString() === userId.toString())) {
+      res.status(403).json({ msg: "Only group members can add watched movies." });
+      return;
+    }
+
+    const parsedWatchedAt = watchedAt || watchedDate ? new Date(watchedAt || watchedDate) : new Date();
+    if (Number.isNaN(parsedWatchedAt.getTime())) {
+      res.status(400).json({ msg: "Invalid watched date." });
+      return;
+    }
+
+    const watchedWithIds = Array.isArray(watchedWith)
+      ? watchedWith.filter((memberId: string) => mongoose.Types.ObjectId.isValid(memberId))
+      : [];
+    const groupMemberIds = new Set(group.members.map((memberId) => memberId.toString()));
+    const validWatchedWith = watchedWithIds.filter((memberId: string) => groupMemberIds.has(memberId));
+    const watchedWithPayload = validWatchedWith.length ? validWatchedWith : [userId.toString()];
+    const locationPayload = String(watchedLocation ?? watchedWhere ?? "").trim();
+    const notesPayload = String(watchedNotes ?? "").trim();
+
     // Migrate old plain-ObjectId entries to subdocument format
     group.movies = group.movies.map((m: any) => {
       if (m.movieId) return m; // already new format
-      return { movieId: m, watchedDate: new Date(), watchedWhere: "", watchedWith: [] };
+      return {
+        movieId: m,
+        watchedDate: new Date(),
+        watchedAt: new Date(),
+        watchedWhere: "",
+        watchedLocation: "",
+        watchedWith: [],
+        watchedNotes: "",
+      };
     }) as any;
 
     const alreadyInGroup = group.movies.some(
@@ -243,9 +287,12 @@ router.post("/:id/add-movie", authenticate, async (req: Request, res: Response) 
     if (!alreadyInGroup) {
       group.movies.push({
         movieId: existingMovie._id,
-        watchedDate: new Date(),
-        watchedWhere: "",
-        watchedWith: [userId],
+        watchedDate: parsedWatchedAt,
+        watchedAt: parsedWatchedAt,
+        watchedWhere: locationPayload,
+        watchedLocation: locationPayload,
+        watchedWith: watchedWithPayload,
+        watchedNotes: notesPayload,
       } as any);
     }
     await group.save();
@@ -254,6 +301,49 @@ router.post("/:id/add-movie", authenticate, async (req: Request, res: Response) 
     res.json({ msg: "Movie added", movie: existingMovie });
   } catch (error) {
     console.error("Error adding movie:", error);
+    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+  }
+});
+
+router.delete("/:groupId/history/:historyItemId", authenticate, async (req: Request, res: Response) => {
+  try {
+    const groupId = String(req.params.groupId);
+    const historyItemId = String(req.params.historyItemId);
+    const userId = req.user!.id;
+
+    if (!mongoose.Types.ObjectId.isValid(groupId) || !mongoose.Types.ObjectId.isValid(historyItemId)) {
+      res.status(400).json({ msg: "Invalid history item." });
+      return;
+    }
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      res.status(404).json({ msg: "Group not found" });
+      return;
+    }
+
+    const isMember = group.members.some((memberId) => memberId.toString() === userId);
+    if (!isMember) {
+      res.status(403).json({ msg: "Only group members can delete watch history items." });
+      return;
+    }
+
+    const beforeCount = group.movies.length;
+    group.movies = group.movies.filter((historyItem: any) => {
+      const itemId = historyItem._id?.toString();
+      return itemId !== historyItemId;
+    }) as any;
+
+    if (group.movies.length === beforeCount) {
+      res.status(404).json({ msg: "History item not found." });
+      return;
+    }
+
+    await group.save();
+    getIO().to(groupId).emit("group:history_deleted", { historyItemId });
+    res.json({ msg: "History item deleted", historyItemId, movies: group.movies });
+  } catch (error) {
+    console.error("Error deleting history item:", error);
     res.status(500).json({ msg: "Server error", error: (error as Error).message });
   }
 });

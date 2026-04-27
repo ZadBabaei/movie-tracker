@@ -9,7 +9,23 @@ export interface IPollMovie {
 
 export interface IPollVote {
   userId: Types.ObjectId;
+  rankings: {
+    movieTmdbId: string;
+    rank: number;
+  }[];
+}
+
+export interface IPollResultMovie {
   movieTmdbId: string;
+  title?: string;
+  score: number;
+}
+
+export interface IPollResult {
+  mode?: "ranked" | "runoff" | "randomTieBreak";
+  lowestScoreWins?: boolean;
+  randomTieBreak?: boolean;
+  movies?: IPollResultMovie[];
 }
 
 export interface IPoll extends Document {
@@ -21,6 +37,7 @@ export interface IPoll extends Document {
   status: "active" | "completed" | "cancelled";
   round: number;
   winningMovieTmdbId?: string;
+  result?: IPollResult;
   createdAt: Date;
   expiresAt?: Date;
 }
@@ -40,7 +57,12 @@ const PollSchema = new Schema<IPoll>({
   votes: [
     {
       userId: { type: Schema.Types.ObjectId, ref: "User" },
-      movieTmdbId: { type: String, required: true },
+      rankings: [
+        {
+          movieTmdbId: { type: String, required: true },
+          rank: { type: Number, required: true },
+        },
+      ],
     },
   ],
   status: {
@@ -50,6 +72,18 @@ const PollSchema = new Schema<IPoll>({
   },
   round: { type: Number, default: 1 },
   winningMovieTmdbId: String,
+  result: {
+    mode: { type: String, enum: ["ranked", "runoff", "randomTieBreak"] },
+    lowestScoreWins: Boolean,
+    randomTieBreak: Boolean,
+    movies: [
+      {
+        movieTmdbId: String,
+        title: String,
+        score: Number,
+      },
+    ],
+  },
   createdAt: { type: Date, default: Date.now },
   expiresAt: { type: Date },
 });

@@ -5,7 +5,6 @@ import apiClient from "../api/apiClient";
 import "./GroupPage.css";
 import Hero from "../component/Hero";
 import SearchBar from "../component/SearchBar";
-import MovieCard from "../component/MovieCard";
 import InviteModal from "../component/InviteFriendsModal";
 import VerticalNavbar from "../component/VerticalNavbar";
 import MovieDetailModal from "../component/MovieDetailModal";
@@ -13,6 +12,7 @@ import WatchTimeline from "../component/WatchTimeline";
 import { useGroupStore } from "../store/useGroupStore";
 import { jwtDecode } from "jwt-decode";
 import { FaTimes } from "react-icons/fa";
+import { toast } from "react-toastify";
 
 interface Member {
   _id: string;
@@ -29,12 +29,18 @@ interface WatchedWithMember {
 interface Movie {
   id: string;
   _id: string;
+  historyItemId?: string;
+  imdbID?: string;
+  tmdbId?: string;
   title: string;
   poster_path?: string;
   vote_average: number;
+  watchedAt?: string;
   watchedDate?: string;
+  watchedLocation?: string;
   watchedWhere?: string;
   watchedWith?: WatchedWithMember[];
+  watchedNotes?: string;
 }
 
 interface GroupData {
@@ -44,14 +50,67 @@ interface GroupData {
   creator: { _id: string; name: string };
 }
 
+interface WatchDetailsForm {
+  watchedAt: string;
+  watchedLocation: string;
+  watchedWith: string[];
+  watchedNotes: string;
+}
+
+const getTodayInputValue = () => new Date().toISOString().split("T")[0];
+
+const getTmdbIdFromImdbID = (imdbID?: string) =>
+  typeof imdbID === "string" && imdbID.startsWith("tmdb-")
+    ? imdbID.replace("tmdb-", "")
+    : undefined;
+
+const buildTimelineMovie = (entry: any): Movie | null => {
+  const movie = entry.movieId || entry;
+  if (!movie) return null;
+
+  const imdbID = movie.imdbID;
+  const tmdbId = getTmdbIdFromImdbID(imdbID);
+  const watchedAt = entry.watchedAt || entry.watchedDate || entry.createdAt || movie.createdAt;
+  const watchedLocation = entry.watchedLocation || entry.watchedWhere || "";
+
+  return {
+    id: tmdbId || imdbID || movie._id,
+    _id: movie._id,
+    historyItemId: entry._id,
+    imdbID,
+    tmdbId,
+    title: movie.title,
+    poster_path: movie.poster || movie.poster_path,
+    vote_average: movie.vote_average || 0,
+    watchedAt,
+    watchedDate: entry.watchedDate || watchedAt,
+    watchedLocation,
+    watchedWhere: entry.watchedWhere || watchedLocation,
+    watchedWith: entry.watchedWith || [],
+    watchedNotes: entry.watchedNotes || "",
+  };
+};
+
 const GroupPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [group, setGroup] = useState<GroupData | null>(null);
-  const [addedMovies, setAddedMovies] = useState<Movie[]>([]);
-  const [timelineMovies, setTimelineMovies] = useState<any[]>([]);
+  const [timelineMovies, setTimelineMovies] = useState<Movie[]>([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
+  const [pendingMovie, setPendingMovie] = useState<any | null>(null);
+  const [watchDetails, setWatchDetails] = useState<WatchDetailsForm>({
+    watchedAt: getTodayInputValue(),
+    watchedLocation: "",
+    watchedWith: [],
+    watchedNotes: "",
+  });
+  const [watchDetailsError, setWatchDetailsError] = useState("");
+  const [savingWatchedMovie, setSavingWatchedMovie] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Movie | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deletingHistoryItem, setDeletingHistoryItem] = useState(false);
 
   const { openInviteFriendsModal } = useGroupStore();
 
@@ -70,64 +129,122 @@ const GroupPage: React.FC = () => {
     setGroup(res.data);
 
     const rawMovies = res.data.movies || [];
-    const fetchedMovies: Movie[] = rawMovies.map((m: any) => {
-      // Handle both subdocument (m.movieId) and legacy (direct) formats
-      const movie = m.movieId || m;
-      return {
-        id: movie.imdbID,
-        _id: movie._id,
-        title: movie.title,
-        poster_path: movie.poster,
-        vote_average: movie.vote_average || 0,
-        watchedDate: m.watchedDate || undefined,
-        watchedWhere: m.watchedWhere || undefined,
-        watchedWith: m.watchedWith || undefined,
-      };
-    });
-    setAddedMovies(fetchedMovies);
-
-    // Build timeline data with watch metadata
     const timeline = rawMovies
-      .filter((m: any) => m.movieId)
-      .map((m: any) => ({
-        _id: m.movieId._id,
-        title: m.movieId.title,
-        poster: m.movieId.poster,
-        vote_average: m.movieId.vote_average,
-        createdAt: m.watchedDate,
-        watchedWhere: m.watchedWhere,
-        watchedWith: m.watchedWith,
-      }));
+      .map(buildTimelineMovie)
+      .filter((movie: Movie | null): movie is Movie => Boolean(movie));
     setTimelineMovies(timeline);
   };
 
-  const handleMovieAdd = async (movie: any) => {
-    const token = localStorage.getItem("token");
-    const res = await apiClient.post(
-      `/api/groups/${id}/add-movie`,
-      { movie },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    const saved = res.data.movie;
-    setAddedMovies((prev) => [
-      ...prev,
-      {
-        id: saved.imdbID,
-        _id: saved._id,
-        title: saved.title,
-        poster_path: saved.poster,
-        vote_average: saved.vote_average || 0,
-      },
-    ]);
+  const handleMovieAdd = (movie: any) => {
+    setPendingMovie(movie);
+    setWatchDetails({
+      watchedAt: getTodayInputValue(),
+      watchedLocation: "",
+      watchedWith: currentUserId ? [currentUserId] : [],
+      watchedNotes: "",
+    });
+    setWatchDetailsError("");
   };
 
-  const handleDeleteMovie = async (movieId: string) => {
+  const handleWatchDetailsChange = (
+    field: keyof WatchDetailsForm,
+    value: string | string[]
+  ) => {
+    setWatchDetails((prev) => ({ ...prev, [field]: value }));
+    setWatchDetailsError("");
+  };
+
+  const toggleWatchedWith = (memberId: string) => {
+    setWatchDetails((prev) => ({
+      ...prev,
+      watchedWith: prev.watchedWith.includes(memberId)
+        ? prev.watchedWith.filter((id) => id !== memberId)
+        : [...prev.watchedWith, memberId],
+    }));
+  };
+
+  const closeWatchDetailsModal = () => {
+    if (savingWatchedMovie) return;
+    setPendingMovie(null);
+    setWatchDetailsError("");
+  };
+
+  const handleSaveWatchedMovie = async () => {
+    if (!pendingMovie) return;
+    if (!watchDetails.watchedAt) {
+      setWatchDetailsError("Watched date is required.");
+      return;
+    }
+
+    setSavingWatchedMovie(true);
     const token = localStorage.getItem("token");
-    await apiClient.delete(
-      `/api/groups/${id}/remove-movie/${movieId}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    setAddedMovies((prev) => prev.filter((m) => m._id !== movieId));
+    try {
+      await apiClient.post(
+        `/api/groups/${id}/add-movie`,
+        {
+          movie: pendingMovie,
+          watchedAt: watchDetails.watchedAt,
+          watchedLocation: watchDetails.watchedLocation.trim(),
+          watchedWith: watchDetails.watchedWith,
+          watchedNotes: watchDetails.watchedNotes.trim(),
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setPendingMovie(null);
+      await fetchGroupDetails();
+    } catch (err: any) {
+      setWatchDetailsError(err.response?.data?.msg || "Failed to save watched movie.");
+    } finally {
+      setSavingWatchedMovie(false);
+    }
+  };
+
+  const closeDeleteModal = () => {
+    if (deletingHistoryItem) return;
+    setDeleteTarget(null);
+    setDeleteConfirmText("");
+    setDeleteError("");
+  };
+
+  const getDeleteConfirmationPhrase = (movie: Movie | null) =>
+    movie?.title?.trim() || "DELETE";
+
+  const isDeleteConfirmed =
+    deleteConfirmText.trim() === getDeleteConfirmationPhrase(deleteTarget);
+
+  const handleDeleteHistoryItem = async () => {
+    if (!deleteTarget) return;
+    if (!isDeleteConfirmed) {
+      setDeleteError("Type the required text exactly to confirm deletion.");
+      return;
+    }
+    if (!deleteTarget.historyItemId) {
+      setDeleteError("This history item cannot be deleted because it has no history id.");
+      return;
+    }
+
+    setDeletingHistoryItem(true);
+    const token = localStorage.getItem("token");
+    try {
+      await apiClient.delete(
+        `/api/groups/${id}/history/${deleteTarget.historyItemId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setTimelineMovies((prev) =>
+        prev.filter((movie) => movie.historyItemId !== deleteTarget.historyItemId)
+      );
+      setSelectedMovie((prev) =>
+        prev?.historyItemId === deleteTarget.historyItemId ? null : prev
+      );
+      setDeleteTarget(null);
+      setDeleteConfirmText("");
+      setDeleteError("");
+      toast.success("History item deleted.");
+    } catch (err: any) {
+      setDeleteError(err.response?.data?.msg || "Failed to delete history item.");
+    } finally {
+      setDeletingHistoryItem(false);
+    }
   };
 
   const handleRemoveMember = async (memberId: string) => {
@@ -163,7 +280,7 @@ const GroupPage: React.FC = () => {
       <div className="group-stats-bar">
         <p>
           👥 <strong>{group.members.length}</strong> Members &nbsp;&nbsp; 🎞️{" "}
-          <strong>{addedMovies.length}</strong> Movies Watched
+          <strong>{timelineMovies.length}</strong> Movies Watched
         </p>
       </div>
 
@@ -217,7 +334,7 @@ const GroupPage: React.FC = () => {
         </div>
 
         <SearchBar onMovieSelect={handleMovieAdd} />
-        <div style={{ marginTop: "30px", textAlign: "center" }}>
+        <div className="group-page-empty-message">
           <div className="movie-callout">
             <h2>🎬 Add a new movie or scroll down to relive the magic!</h2>
             <p>
@@ -226,30 +343,187 @@ const GroupPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="added-movies-wrapper">
-          {addedMovies.length === 0 ? (
-            <div className="empty-state">
-              <h2>🎬 No movies yet!</h2>
-              <p>Start adding your favorites using the search bar above.</p>
-            </div>
-          ) : (
-            <div className="movie-grid fade-in-grid">
-              {addedMovies.map((movie) => (
-                <MovieCard
-                  key={movie._id}
-                  movie={movie}
-                  onDelete={() => handleDeleteMovie(movie._id)}
-                  onInfoClick={(m: any) => setSelectedMovie(m)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
-      {timelineMovies.length > 0 && (
-        <div className="group-timeline-section">
-          <WatchTimeline movies={timelineMovies} />
+      <div className="group-timeline-section">
+        {timelineMovies.length > 0 ? (
+          <WatchTimeline
+            movies={timelineMovies}
+            onMovieClick={(movie) => setSelectedMovie(movie as Movie)}
+            onDeleteClick={(movie) => {
+              setDeleteTarget(movie as Movie);
+              setDeleteConfirmText("");
+              setDeleteError("");
+            }}
+          />
+        ) : (
+          <div className="empty-state">
+            <h2>🎬 No movies yet!</h2>
+            <p>Start adding your favorites using the search bar above.</p>
+          </div>
+        )}
+      </div>
+
+      {pendingMovie && (
+        <div className="watched-details-overlay" onClick={closeWatchDetailsModal}>
+          <div className="watched-details-modal" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="watched-details-close"
+              onClick={closeWatchDetailsModal}
+              aria-label="Close watched details"
+            >
+              <FaTimes />
+            </button>
+
+            <h2>Add to Watch History</h2>
+            <p className="watched-details-subtitle">
+              Add details for <strong>{pendingMovie.title}</strong>.
+            </p>
+
+            <label className="watched-details-field">
+              <span>Watched date</span>
+              <input
+                type="date"
+                value={watchDetails.watchedAt}
+                onChange={(e) => handleWatchDetailsChange("watchedAt", e.target.value)}
+                required
+              />
+            </label>
+
+            <label className="watched-details-field">
+              <span>Watched location</span>
+              <input
+                type="text"
+                value={watchDetails.watchedLocation}
+                onChange={(e) => handleWatchDetailsChange("watchedLocation", e.target.value)}
+                placeholder="Ahoora's place"
+              />
+            </label>
+
+            <div className="watched-details-field">
+              <span>Who watched it</span>
+              {group.members.length > 0 ? (
+                <div className="watched-details-members">
+                  {group.members.map((member) => (
+                    <button
+                      key={member._id}
+                      type="button"
+                      className={`watched-details-member ${
+                        watchDetails.watchedWith.includes(member._id)
+                          ? "watched-details-member--selected"
+                          : ""
+                      }`}
+                      onClick={() => toggleWatchedWith(member._id)}
+                    >
+                      <span className="watched-details-member-avatar">
+                        {member.avatar ? (
+                          <img src={member.avatar} alt={member.name} />
+                        ) : (
+                          member.name.charAt(0).toUpperCase()
+                        )}
+                      </span>
+                      {member.name}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="watched-details-empty">No members available.</p>
+              )}
+            </div>
+
+            <label className="watched-details-field">
+              <span>Notes</span>
+              <textarea
+                value={watchDetails.watchedNotes}
+                onChange={(e) => handleWatchDetailsChange("watchedNotes", e.target.value)}
+                placeholder="Watched together after dinner."
+                rows={3}
+              />
+            </label>
+
+            {watchDetailsError && (
+              <p className="watched-details-error">{watchDetailsError}</p>
+            )}
+
+            <div className="watched-details-actions">
+              <button
+                type="button"
+                className="watched-details-btn watched-details-btn--secondary"
+                onClick={closeWatchDetailsModal}
+                disabled={savingWatchedMovie}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="watched-details-btn watched-details-btn--primary"
+                onClick={handleSaveWatchedMovie}
+                disabled={savingWatchedMovie}
+              >
+                {savingWatchedMovie ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="history-delete-overlay" onClick={closeDeleteModal}>
+          <div className="history-delete-modal" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="history-delete-close"
+              onClick={closeDeleteModal}
+              aria-label="Close delete confirmation"
+            >
+              <FaTimes />
+            </button>
+
+            <div className="history-delete-kicker">Destructive action</div>
+            <h2>Delete watch history item?</h2>
+            <p>
+              You are about to delete this movie from the group watch history. This will
+              remove the watched date, location, watched-with info, and notes for this
+              history entry.
+            </p>
+            <p className="history-delete-warning">This action cannot be undone.</p>
+
+            <label className="history-delete-field">
+              <span>
+                To confirm, type{" "}
+                <strong>{getDeleteConfirmationPhrase(deleteTarget)}</strong>
+              </span>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => {
+                  setDeleteConfirmText(e.target.value);
+                  setDeleteError("");
+                }}
+                autoFocus
+              />
+            </label>
+
+            {deleteError && <p className="history-delete-error">{deleteError}</p>}
+
+            <div className="history-delete-actions">
+              <button
+                type="button"
+                className="history-delete-btn history-delete-btn--secondary"
+                onClick={closeDeleteModal}
+                disabled={deletingHistoryItem}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="history-delete-btn history-delete-btn--danger"
+                onClick={handleDeleteHistoryItem}
+                disabled={!isDeleteConfirmed || deletingHistoryItem}
+              >
+                {deletingHistoryItem ? "Deleting..." : "Delete history item"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

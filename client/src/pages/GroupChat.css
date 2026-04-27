@@ -311,3 +311,120 @@
   font-weight: bold;
   margin-bottom: 10px;
 }
+
+@media (max-width: 1200px) {
+  .GroupChatPage-layout {
+    gap: 16px;
+    padding-inline: 16px;
+    box-sizing: border-box;
+  }
+
+  .GroupChatPage-left {
+    min-width: 0;
+    padding-inline: 0;
+  }
+
+  .GroupChatPage-section {
+    margin-inline-start: 0;
+  }
+
+  .GroupChatPage-search-section {
+    width: 320px;
+    min-width: 280px;
+    margin-inline-end: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .GroupChatPage-content-container {
+    overflow-x: hidden;
+  }
+
+  .GroupChatPage-layout {
+    flex-direction: column;
+    margin-top: 12px;
+  }
+
+  .GroupChatPage-search-section {
+    width: 100%;
+    min-width: 0;
+    order: 2;
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    box-sizing: border-box;
+  }
+
+  .GroupChatPage-poll-list {
+    max-height: 280px;
+  }
+}
+
+@media (max-width: 768px) {
+  .GroupChatPage-content-container {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+
+  .GroupChatPage-layout {
+    padding-inline: 8px;
+  }
+
+  .GroupChatPage-section {
+    margin-bottom: 18px;
+  }
+
+  .GroupChatPage-vote-btn {
+    width: 100%;
+    min-height: 44px;
+    margin-top: 8px;
+    padding: 12px 18px;
+    font-size: 1rem;
+  }
+
+  .GroupChatPage-poll-card-info {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .GroupChatPage-poll-card-title,
+  .GroupChatPage-poll-card-result {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .GroupChatPage-content-container {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .GroupChatPage-layout,
+  .GroupChatPage-left,
+  .GroupChatPage-section,
+  .GroupChatPage-chat-section,
+  .GroupChatPage-search-section {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .GroupChatPage-layout {
+    padding-inline: 0;
+    gap: 10px;
+  }
+
+  .GroupChatPage-section {
+    margin: 0 0 14px;
+  }
+
+  .GroupChatPage-search-section {
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .GroupChatPage-selected-movie {
+    margin-left: 0;
+    max-width: 100%;
+  }
+}

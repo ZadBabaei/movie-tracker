@@ -148,12 +148,13 @@ const Watchlist: React.FC = () => {
           ) : (
             <div className="movie-grid fade-in-grid">
               {movies.map((movie) => (
-                <MovieCard
-                  key={movie._id}
-                  movie={formatMovieForCard(movie)}
-                  onDelete={() => removeMovie(movie._id)}
-                  onInfoClick={(m: any) => setSelectedMovie(m)}
-                  onMarkWatched={() => handleMarkWatched(movie)}
+                  <MovieCard
+                    key={movie._id}
+                    movie={formatMovieForCard(movie)}
+                    isInWatchlist
+                    onDelete={() => removeMovie(movie._id)}
+                    onInfoClick={(m: any) => setSelectedMovie(m)}
+                    onMarkWatched={() => handleMarkWatched(movie)}
                   isFavorited={favoriteIds.has(movie._id)}
                   onFavoriteToggle={() => handleFavoriteToggle(formatMovieForCard(movie))}
                 />

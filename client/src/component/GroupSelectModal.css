@@ -288,3 +288,47 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+@media (max-width: 768px) {
+  .group-select-overlay {
+    align-items: flex-end;
+    padding: 12px 12px calc(84px + env(safe-area-inset-bottom));
+    box-sizing: border-box;
+  }
+
+  .group-select-content {
+    width: min(100%, 420px);
+    max-height: calc(100vh - 112px);
+    overflow-y: auto;
+    padding: 28px 16px 16px;
+    border-radius: 16px;
+  }
+
+  .group-select-close {
+    top: 8px;
+    right: 8px;
+    width: 44px;
+    height: 44px;
+  }
+
+  .group-select-heading {
+    padding-right: 42px;
+    font-size: 1.2rem;
+  }
+
+  .group-select-input,
+  .group-select-item,
+  .group-select-btn {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .group-select-actions {
+    flex-direction: column-reverse;
+  }
+
+  .group-select-member-list {
+    max-height: 260px;
+    overflow-y: auto;
+  }
+}

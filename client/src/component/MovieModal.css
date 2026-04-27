@@ -44,3 +44,36 @@
   border-radius: 10px;
   cursor: pointer;
 }
+
+@media (max-width: 768px) {
+  .movie-modal-overlay {
+    align-items: flex-end;
+    padding: 12px 12px calc(84px + env(safe-area-inset-bottom));
+    box-sizing: border-box;
+  }
+
+  .movie-modal-content {
+    width: min(100%, 800px);
+    max-height: calc(100vh - 112px);
+    overflow-y: auto;
+    flex-direction: column;
+    gap: 16px;
+    padding: 18px;
+    border-radius: 16px;
+  }
+
+  .movie-modal-content img {
+    width: min(180px, 60vw);
+    height: auto;
+    align-self: center;
+  }
+
+  .movie-info h2 {
+    font-size: 1.35rem;
+  }
+
+  .movie-modal-content button {
+    width: 100%;
+    min-height: 44px;
+  }
+}

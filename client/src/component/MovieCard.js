@@ -1,87 +1,266 @@
-import React, { useState } from "react";
-import { FaTrashAlt, FaInfoCircle, FaHeart, FaCheck } from "react-icons/fa";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  FaBell,
+  FaCheck,
+  FaEye,
+  FaHeart,
+  FaInfoCircle,
+  FaPlus,
+  FaTrashAlt,
+} from "react-icons/fa";
 import "./MovieCard.css";
 
-const MovieCard = ({ movie, onDelete, onInfoClick, onMarkWatched = null, isFavorited = false, onFavoriteToggle = null }) => {
+const getMovieTitle = (movie = {}) => movie.title || movie.name || "Untitled movie";
+
+const getPosterUrl = (movie = {}) => {
+  const path = movie.poster_path || movie.poster;
+  if (!path) return "/default-avatar.png";
+  return path.startsWith("http") ? path : `https://image.tmdb.org/t/p/w500${path}`;
+};
+
+const getRating = (movie = {}) => {
+  const rating = movie.imdbRating ?? movie.vote_average;
+  if (rating === undefined || rating === null || rating === "") return "N/A";
+  const numericRating = Number(rating);
+  return Number.isFinite(numericRating) ? numericRating.toFixed(1).replace(/\.0$/, "") : rating;
+};
+
+const getTmdbMovieId = (movie = {}) => {
+  const explicitId = movie.tmdbId || movie.movieTmdbId || movie.tmdbMovieId;
+  if (explicitId) return explicitId.toString();
+
+  const imdbId = movie.imdbID || movie.imdb_id;
+  if (typeof imdbId === "string" && imdbId.startsWith("tt")) {
+    return "";
+  }
+  if (typeof imdbId === "string" && imdbId.startsWith("tmdb-")) {
+    return imdbId.replace("tmdb-", "");
+  }
+
+  const id = movie.movieId || movie.id;
+  if (typeof id === "string" && id.startsWith("tt")) {
+    return "";
+  }
+  return id ? id.toString() : "";
+};
+
+const getImdbUrlFromMovie = (movie = {}) => {
+  const imdbId = movie.imdb_id || movie.imdbID || movie.id;
+  return typeof imdbId === "string" && imdbId.startsWith("tt")
+    ? `https://www.imdb.com/title/${imdbId}/`
+    : "";
+};
+
+const MovieCard = ({
+  movie = {},
+  variant = "full",
+  isInWatchlist = false,
+  onAdd = null,
+  onWatched = null,
+  onNotify = null,
+  onFavorite = null,
+  onClick = null,
+  children = null,
+  footerContent = null,
+  onDelete = null,
+  onInfoClick = null,
+  onMarkWatched = null,
+  isFavorited = false,
+  onFavoriteToggle = null,
+}) => {
+  const [overlayOpen, setOverlayOpen] = useState(false);
   const [favorited, setFavorited] = useState(isFavorited);
+  const [imdbUrl, setImdbUrl] = useState("");
+  const cardRef = useRef(null);
 
-  const toggleFavorite = () => {
-    setFavorited((prev) => !prev);
-    if (onFavoriteToggle) onFavoriteToggle(movie);
+  useEffect(() => {
+    setFavorited(isFavorited);
+  }, [isFavorited]);
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (cardRef.current && !cardRef.current.contains(event.target)) {
+        setOverlayOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handleOutsideClick);
+    return () => document.removeEventListener("pointerdown", handleOutsideClick);
+  }, []);
+
+  useEffect(() => {
+    const existingImdbUrl = getImdbUrlFromMovie(movie);
+    const tmdbMovieId = getTmdbMovieId(movie);
+    const apiKey = process.env.REACT_APP_TMDB_API_KEY;
+
+    setImdbUrl("");
+    if (existingImdbUrl) {
+      setImdbUrl(existingImdbUrl);
+      return undefined;
+    }
+    if (!tmdbMovieId || !apiKey) return undefined;
+
+    const controller = new AbortController();
+
+    fetch(
+      `https://api.themoviedb.org/3/movie/${encodeURIComponent(tmdbMovieId)}/external_ids?api_key=${apiKey}`,
+      { signal: controller.signal }
+    )
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (data?.imdb_id) {
+          setImdbUrl(`https://www.imdb.com/title/${data.imdb_id}/`);
+        }
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError") setImdbUrl("");
+      });
+
+    return () => controller.abort();
+  }, [movie]);
+
+  const title = getMovieTitle(movie);
+  const overview = movie.overview || "No overview available.";
+  const rating = getRating(movie);
+  const posterUrl = getPosterUrl(movie);
+  const watchedHandler = onWatched || onMarkWatched;
+  const favoriteHandler = onFavorite || onFavoriteToggle;
+
+  const handleCardClick = () => {
+    setOverlayOpen((open) => !open);
+    if (onClick) onClick(movie);
   };
 
-  const getPosterUrl = (path) => {
-    if (!path) return "/default-avatar.png";
-    return path.startsWith("http")
-      ? path
-      : `https://image.tmdb.org/t/p/w500${path}`;
+  const handleAction = (event, action) => {
+    event.stopPropagation();
+    if (action) action(movie);
   };
+
+  const handleFavorite = (event) => {
+    event.stopPropagation();
+    setFavorited((current) => !current);
+    if (favoriteHandler) favoriteHandler(movie);
+  };
+
+  const imdbMeta = (
+    <>
+      <span className="MovieCard-imdb imdb-icon">IMDb</span>
+      <span className="MovieCard-rating rating">{rating}</span>
+    </>
+  );
+
+  const renderImdbMeta = (className = "MovieCard-meta Group-movie-details") => {
+    if (!imdbUrl) {
+      return <div className={className}>{imdbMeta}</div>;
+    }
+
+    return (
+      <a
+        className={`${className} MovieCard-metaLink`}
+        href={imdbUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(event) => event.stopPropagation()}
+        aria-label={`Open ${title} on IMDb`}
+      >
+        {imdbMeta}
+      </a>
+    );
+  };
+
+  if (variant === "posterOnly") {
+    return (
+      <div className="MovieCard MovieCard--posterOnly" onClick={handleCardClick}>
+        <img src={posterUrl} alt={title} className="MovieCard-poster" />
+      </div>
+    );
+  }
+
+  if (variant === "voting") {
+    return (
+      <div className="MovieCard MovieCard--voting">
+        <div className="MovieCard-posterWrap">
+          <img src={posterUrl} alt={title} className="MovieCard-poster" />
+        </div>
+        <div className="MovieCard-votingMeta">
+          {renderImdbMeta("MovieCard-votingMetaLink")}
+        </div>
+        {footerContent || children}
+      </div>
+    );
+  }
 
   return (
-    <div className="Group-movie-card">
-      {onMarkWatched && (
-        <button
-          className="watched-tick"
-          onClick={() => onMarkWatched(movie)}
-          title="Mark as watched"
-        >
-          <FaCheck />
-        </button>
-      )}
-      <div className="movie-title">
-        <h3>{movie.title}</h3>
-      </div>
-      <div className="Group-poster-container">
+    <article
+      ref={cardRef}
+      className={`MovieCard Group-movie-card ${overlayOpen ? "MovieCard--active" : ""}`}
+      onClick={handleCardClick}
+    >
+      <div className="MovieCard-posterWrap Group-poster-container">
         <img
-          src={getPosterUrl(movie.poster_path)}
-          alt={movie.title}
-          onError={(e) => {
-            e.target.onerror = null;
-            e.target.src = "/default-avatar.png";
+          src={posterUrl}
+          alt={title}
+          className="MovieCard-poster Group-movie-poster"
+          onError={(event) => {
+            event.currentTarget.src = "/default-avatar.png";
           }}
-          className="Group-movie-poster"
         />
-        <div className="overlay">
-          <FaInfoCircle
-            className="icon info-icon"
-            onClick={() => onInfoClick(movie)} 
-          />
 
-          <FaHeart
-            className={`icon heart-icon ${favorited ? "favorited" : ""}`}
-            onClick={toggleFavorite}
-          />
-          <FaTrashAlt
-            className="icon delete-icon"
-            onClick={() => onDelete(movie)}
-          />
+        {(isInWatchlist || onMarkWatched) && (
+          <span className="MovieCard-watchlistBadge">
+            <FaCheck /> Watchlist
+          </span>
+        )}
+
+        <div className="MovieCard-overlay overlay">
+          <div className="MovieCard-overlayContent">
+            <p className="MovieCard-overview">{overview}</p>
+            <div className="MovieCard-actions">
+              {onAdd && (
+                <button className="MovieCard-action" title="Add" onClick={(e) => handleAction(e, onAdd)}>
+                  <FaPlus />
+                </button>
+              )}
+              {watchedHandler && (
+                <button className="MovieCard-action" title="Watched" onClick={(e) => handleAction(e, watchedHandler)}>
+                  <FaEye />
+                </button>
+              )}
+              {onNotify && (
+                <button className="MovieCard-action" title="Notify" onClick={(e) => handleAction(e, onNotify)}>
+                  <FaBell />
+                </button>
+              )}
+              {favoriteHandler && (
+                <button
+                  className={`MovieCard-action ${favorited ? "MovieCard-action--active" : ""}`}
+                  title="Favorite"
+                  onClick={handleFavorite}
+                >
+                  <FaHeart />
+                </button>
+              )}
+              {onInfoClick && (
+                <button className="MovieCard-action" title="Details" onClick={(e) => handleAction(e, onInfoClick)}>
+                  <FaInfoCircle />
+                </button>
+              )}
+              {onDelete && (
+                <button className="MovieCard-action MovieCard-action--danger" title="Remove" onClick={(e) => handleAction(e, onDelete)}>
+                  <FaTrashAlt />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
-      <div className="Group-movie-details">
-        <p className="rating">
-          <span className="imdb-icon">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 122.88 122.88"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <g>
-                <path
-                  fill="#F5C518"
-                  d="M18.43,0h86.02c10.18,0,18.43,8.25,18.43,18.43v86.02c0,10.18-8.25,18.43-18.43,18.43H18.43C8.25,122.88,0,114.63,0,104.45l0-86.02C0,8.25,8.25,0,18.43,0L18.43,0z"
-                />
-                <path
-                  d="M24.96,78.72V44.16h-9.6v34.56H24.96L24.96,78.72z M45.36,44.16L43.2,60.24L42,51.6l-1.2-7.44l-12,0v34.56h8.16v-22.8 l3.36,22.8h6l3.12-23.28v23.28h8.16V44.16H45.36L45.36,44.16z M61.44,78.72V44.16h14.88c3.6,0,6.24,2.64,6.24,6v22.56 c0,3.36-2.64,6-6.24,6H61.44L61.44,78.72z M72.72,50.4l-2.16-0.24v22.56c1.2,0,2.16-0.24,2.4-0.72c0.48-0.48,0.48-1.92,0.48-4.32 V54.24v-2.88L72.72,50.4L72.72,50.4L72.72,50.4z M100.56,52.8h0.72c3.36,0,6.24,2.64,6.24,6v13.92c0,3.36-2.88,6-6.24,6l-0.72,0 c-1.92,0-3.84-0.96-5.04-2.64l-0.48,2.16H86.4V44.16h9.12V55.2C96.72,53.76,98.64,52.8,100.56,52.8L100.56,52.8z M98.64,69.6v-8.16 L98.4,58.8c-0.24-0.48-0.96-0.72-1.44-0.72c-0.48,0-1.2,0.24-1.44,0.72v13.68c0.24,0.48,0.96,0.72,1.44,0.72 c0.48,0,1.44-0.24,1.44-0.72L98.64,69.6L98.64,69.6z"
-                  fill="#000"
-                />
-              </g>
-            </svg>
-          </span>
-          {movie.vote_average}/10
-        </p>
+
+      <div className="MovieCard-body">
+        <h3 className="MovieCard-title movie-title">{title}</h3>
+        {renderImdbMeta()}
+        {footerContent || children}
       </div>
-    </div>
+    </article>
   );
 };
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useScroll, useTransform, motion } from "framer-motion";
+import { FaTrashAlt } from "react-icons/fa";
 import "./WatchTimeline.css";
 
 interface WatchedWithMember {
@@ -10,21 +11,31 @@ interface WatchedWithMember {
 
 interface TimelineMovie {
   _id: string;
+  historyItemId?: string;
+  id?: string;
   title: string;
   poster?: string;
+  poster_path?: string;
   vote_average?: number;
+  watchedAt?: string;
+  watchedDate?: string;
+  watchedLocation?: string;
   createdAt?: string;
   watchedWhere?: string;
   watchedWith?: WatchedWithMember[];
+  watchedNotes?: string;
 }
 
 interface TimelineEntry {
   label: string;
   movies: TimelineMovie[];
+  sortTime: number;
 }
 
 interface WatchTimelineProps {
   movies: TimelineMovie[];
+  onMovieClick?: (movie: TimelineMovie) => void;
+  onDeleteClick?: (movie: TimelineMovie) => void;
 }
 
 const getPosterUrl = (poster?: string) => {
@@ -32,14 +43,21 @@ const getPosterUrl = (poster?: string) => {
   return poster.startsWith("http") ? poster : `https://image.tmdb.org/t/p/w300${poster}`;
 };
 
-const getMovieDate = (movie: TimelineMovie): Date => {
-  if (movie.createdAt) return new Date(movie.createdAt);
+const getMovieDate = (movie: TimelineMovie): Date | null => {
+  const value = movie.watchedAt || movie.watchedDate || movie.createdAt;
+  if (value) {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+  if (!movie._id || movie._id.length < 8) return null;
   const timestamp = parseInt(movie._id.substring(0, 8), 16);
+  if (Number.isNaN(timestamp)) return null;
   return new Date(timestamp * 1000);
 };
 
 const formatDate = (movie: TimelineMovie): string => {
   const date = getMovieDate(movie);
+  if (!date) return "Unknown date";
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -47,21 +65,37 @@ const formatDate = (movie: TimelineMovie): string => {
   });
 };
 
-const groupByMonth = (movies: TimelineMovie[]): TimelineEntry[] => {
-  const map: Record<string, TimelineMovie[]> = {};
-  movies.forEach((movie) => {
-    const date = getMovieDate(movie);
-    const key = date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-    if (!map[key]) map[key] = [];
-    map[key].push(movie);
-  });
-  const sorted = Object.entries(map).sort(([a], [b]) => {
-    return new Date(b).getTime() - new Date(a).getTime();
-  });
-  return sorted.map(([label, movies]) => ({ label, movies }));
+const formatMonth = (date: Date | null) => {
+  if (!date) return "Unknown date";
+  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 };
 
-const WatchTimeline: React.FC<WatchTimelineProps> = ({ movies }) => {
+const groupByMonth = (movies: TimelineMovie[]): TimelineEntry[] => {
+  const map: Record<string, TimelineEntry> = {};
+  movies.forEach((movie) => {
+    const date = getMovieDate(movie);
+    const key = formatMonth(date);
+    const sortTime = date ? new Date(date.getFullYear(), date.getMonth(), 1).getTime() : -Infinity;
+    if (!map[key]) map[key] = { label: key, movies: [], sortTime };
+    map[key].movies.push(movie);
+  });
+  return Object.values(map)
+    .map((entry) => ({
+      ...entry,
+      movies: entry.movies.sort((a, b) => {
+        const aTime = getMovieDate(a)?.getTime() ?? -Infinity;
+        const bTime = getMovieDate(b)?.getTime() ?? -Infinity;
+        return bTime - aTime;
+      }),
+    }))
+    .sort((a, b) => b.sortTime - a.sortTime);
+};
+
+const WatchTimeline: React.FC<WatchTimelineProps> = ({
+  movies,
+  onMovieClick,
+  onDeleteClick,
+}) => {
   const ref = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(0);
@@ -105,9 +139,23 @@ const WatchTimeline: React.FC<WatchTimelineProps> = ({ movies }) => {
               <h3 className="watch-timeline-label-mobile">{entry.label}</h3>
               <div className="watch-timeline-movies-grid">
                 {entry.movies.map((movie) => (
-                  <div key={movie._id} className="watch-timeline-movie-card">
+                  <div
+                    key={movie.historyItemId || movie._id}
+                    className="watch-timeline-movie-card"
+                  >
+                    {onDeleteClick && (
+                      <button
+                        type="button"
+                        className="watch-timeline-delete-btn"
+                        title="Delete from history"
+                        aria-label={`Delete ${movie.title || "movie"} from history`}
+                        onClick={() => onDeleteClick(movie)}
+                      >
+                        <FaTrashAlt />
+                      </button>
+                    )}
                     <img
-                      src={getPosterUrl(movie.poster)}
+                      src={getPosterUrl(movie.poster || movie.poster_path)}
                       alt={movie.title}
                       className="watch-timeline-poster"
                       onError={(e) => {
@@ -121,9 +169,9 @@ const WatchTimeline: React.FC<WatchTimelineProps> = ({ movies }) => {
                       <span className="watch-timeline-meta-date">
                         {formatDate(movie)}
                       </span>
-                      {movie.watchedWhere && (
+                      {(movie.watchedLocation || movie.watchedWhere) && (
                         <span className="watch-timeline-meta-where">
-                          📍 {movie.watchedWhere}
+                          {movie.watchedLocation || movie.watchedWhere}
                         </span>
                       )}
                     </div>
@@ -149,6 +197,16 @@ const WatchTimeline: React.FC<WatchTimelineProps> = ({ movies }) => {
                           </div>
                         )}
                       </div>
+                    )}
+
+                    {onMovieClick && (
+                      <button
+                        type="button"
+                        className="watch-timeline-info-btn"
+                        onClick={() => onMovieClick(movie)}
+                      >
+                        Details
+                      </button>
                     )}
                   </div>
                 ))}

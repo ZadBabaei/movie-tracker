@@ -108,14 +108,50 @@
 
 .watch-timeline-movies-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 18px;
 }
 
 .watch-timeline-movie-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.watch-timeline-delete-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 50%;
+  background: rgba(10, 12, 18, 0.78);
+  color: rgba(255, 210, 210, 0.86);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-3px);
+  transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.watch-timeline-movie-card:hover .watch-timeline-delete-btn,
+.watch-timeline-delete-btn:focus-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.watch-timeline-delete-btn:hover {
+  background: rgba(190, 32, 32, 0.92);
+  color: #fff;
 }
 
 .watch-timeline-poster {
@@ -158,6 +194,10 @@
 .watch-timeline-meta-where {
   font-size: 0.65rem;
   color: #999;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .watch-timeline-meta-who {
@@ -194,6 +234,24 @@
   color: #ccc;
 }
 
+.watch-timeline-info-btn {
+  align-self: center;
+  margin-top: auto;
+  padding: 7px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ddd;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.watch-timeline-info-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
 /* Animated line */
 .watch-timeline-track {
   position: absolute;
@@ -220,6 +278,18 @@
 }
 
 @media (max-width: 768px) {
+  .watch-timeline-header {
+    padding: 28px 8px 14px;
+  }
+
+  .watch-timeline-heading {
+    font-size: clamp(1.25rem, 4vw, 1.55rem);
+  }
+
+  .watch-timeline-subheading {
+    font-size: 0.88rem;
+  }
+
   .watch-timeline-row {
     flex-direction: column;
     gap: 16px;
@@ -234,5 +304,116 @@
 
   .watch-timeline-movies-col {
     padding-left: 0;
+  }
+
+  .watch-timeline-movies-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .watch-timeline-container {
+    padding: 0 8px;
+  }
+
+  .watch-timeline-delete-btn {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .watch-timeline-container {
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  .watch-timeline-header {
+    padding: 18px 0 10px;
+  }
+
+  .watch-timeline-heading {
+    margin-bottom: 5px;
+    font-size: clamp(1.05rem, 5vw, 1.28rem);
+  }
+
+  .watch-timeline-subheading {
+    font-size: clamp(0.76rem, 3.4vw, 0.88rem);
+    line-height: 1.4;
+  }
+
+  .watch-timeline-row {
+    gap: 10px;
+    padding: 16px 0;
+  }
+
+  .watch-timeline-dot-wrapper,
+  .watch-timeline-track,
+  .watch-timeline-progress {
+    display: none;
+  }
+
+  .watch-timeline-label-col {
+    display: none;
+  }
+
+  .watch-timeline-label-mobile {
+    margin-bottom: 10px;
+    font-size: clamp(0.92rem, 4vw, 1.05rem);
+  }
+
+  .watch-timeline-movies-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .watch-timeline-movie-card {
+    padding: 8px;
+    border-radius: 12px;
+    gap: 6px;
+  }
+
+  .watch-timeline-delete-btn {
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+  }
+
+  .watch-timeline-poster {
+    border-radius: 9px;
+  }
+
+  .watch-timeline-movie-title {
+    font-size: clamp(0.68rem, 3.3vw, 0.78rem);
+  }
+
+  .watch-timeline-meta-date,
+  .watch-timeline-meta-where {
+    font-size: clamp(0.58rem, 2.8vw, 0.68rem);
+  }
+
+  .watch-timeline-avatar {
+    width: 20px;
+    height: 20px;
+    font-size: 9px;
+  }
+
+  .watch-timeline-info-btn {
+    min-height: 36px;
+    padding: 7px 10px;
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 340px) {
+  .watch-timeline-movies-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .watch-timeline-movie-card {
+    max-width: 170px;
+    justify-self: center;
   }
 }

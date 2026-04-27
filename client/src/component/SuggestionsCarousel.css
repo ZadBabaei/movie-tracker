@@ -125,6 +125,12 @@
 }
 
 @media (max-width: 768px) {
+  .suggestions-carousel-wrapper {
+    max-width: 100%;
+    margin-bottom: 24px;
+    padding: 0 8px;
+  }
+
   .carousel-slide {
     flex: 0 0 160px;
   }
@@ -136,5 +142,69 @@
 
   .suggestions-title {
     font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .suggestions-carousel-wrapper {
+    margin-bottom: 20px;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .suggestions-title {
+    font-size: clamp(0.95rem, 4.5vw, 1.1rem);
+    margin-bottom: 10px;
+  }
+
+  .suggestions-carousel {
+    gap: 6px;
+  }
+
+  .carousel-viewport {
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .carousel-viewport::-webkit-scrollbar {
+    display: none;
+  }
+
+  .carousel-container {
+    gap: 10px;
+  }
+
+  .carousel-slide {
+    flex: 0 0 136px;
+    scroll-snap-align: start;
+  }
+
+  .carousel-poster-wrapper {
+    width: 136px;
+    height: 204px;
+    border-radius: 10px;
+  }
+
+  .carousel-overlay {
+    opacity: 1;
+    padding: 10px 8px;
+    gap: 6px;
+  }
+
+  .carousel-movie-title {
+    font-size: 0.75rem;
+  }
+
+  .carousel-add-btn {
+    min-height: 34px;
+    padding: 7px 8px;
+    font-size: 0.72rem;
+  }
+
+  .carousel-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
   }
 }

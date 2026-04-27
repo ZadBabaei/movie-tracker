@@ -7,9 +7,12 @@ export interface IGroupInvitation {
 
 export interface IWatchedMovie {
   movieId: Types.ObjectId;
-  watchedDate: Date;
-  watchedWhere: string;
+  watchedDate?: Date;
+  watchedAt?: Date;
+  watchedWhere?: string;
+  watchedLocation?: string;
   watchedWith: Types.ObjectId[];
+  watchedNotes?: string;
 }
 
 export interface IGroup extends Document {
@@ -38,8 +41,11 @@ const groupSchema = new Schema<IGroup>(
       {
         movieId: { type: Schema.Types.ObjectId, ref: "Movie", required: true },
         watchedDate: { type: Date, default: Date.now },
+        watchedAt: { type: Date },
         watchedWhere: { type: String, default: "" },
+        watchedLocation: { type: String, default: "" },
         watchedWith: [{ type: Schema.Types.ObjectId, ref: "User" }],
+        watchedNotes: { type: String, default: "" },
       },
     ],
     currentPoll: { type: Schema.Types.ObjectId, ref: "Poll" },

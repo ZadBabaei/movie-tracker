@@ -347,18 +347,37 @@
 /* ===== Mobile Responsive ===== */
 @media (max-width: 480px) {
   .chat-widget-window {
-    bottom: 0;
-    right: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border-radius: 0;
-    border: none;
+    bottom: calc(90px + env(safe-area-inset-bottom));
+    right: 12px;
+    left: 12px;
+    width: calc(100vw - 24px);
+    height: 70vh;
+    max-height: 70vh;
+    border-radius: 16px;
+    border: 1px solid #2d2d2d;
+    z-index: 1100;
   }
 
   .chat-widget-toggle {
-    bottom: 16px;
+    bottom: calc(90px + env(safe-area-inset-bottom));
     right: 16px;
+    width: 52px;
+    height: 52px;
+    z-index: 1100;
+  }
+
+  .chat-widget-bubble {
+    max-width: 86%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .chat-widget-input-area {
+    padding: 10px;
+  }
+
+  .chat-widget-input {
+    min-width: 0;
   }
 }
 
@@ -366,12 +385,12 @@
   .chat-widget-window {
     width: 360px;
     height: 500px;
-    bottom: 88px;
+    bottom: calc(88px + env(safe-area-inset-bottom));
     right: 16px;
   }
 
   .chat-widget-toggle {
-    bottom: 16px;
+    bottom: calc(90px + env(safe-area-inset-bottom));
     right: 16px;
     width: 50px;
     height: 50px;

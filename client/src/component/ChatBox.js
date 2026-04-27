@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import {
   Chat,
   Channel,
-  MessageInput,
   MessageList,
   Window,
   LoadingIndicator,
@@ -12,7 +11,36 @@ import "stream-chat-react/dist/css/v2/index.css";
 import axios from "axios";
 import GroupChatSidbar from "./GroupChatSidbar";
 import CustomMessage from "./CustomMessage";
+import CustomChatInput from "./CustomChatInput";
 import "./ChatBox.css";
+
+const getMemberId = (member) => (member?._id || member?.id || member)?.toString();
+
+const getDisplayName = (member) =>
+  member?.name || member?.email || "Unknown user";
+
+const getAvatarUrl = (member) => {
+  if (member?.avatar) return member.avatar;
+  if (member?.image) return member.image;
+
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(
+    getDisplayName(member)
+  )}&background=1b2b45&color=ffffff`;
+};
+
+const normalizeMember = (member, currentUserId) => {
+  const id = getMemberId(member);
+  const name = getDisplayName(member);
+
+  return {
+    id,
+    name,
+    email: member?.email || "",
+    image: getAvatarUrl(member),
+    online: Boolean(member?.online),
+    isCurrentUser: id === currentUserId,
+  };
+};
 
 const ChatBox = ({ groupId }) => {
   const [chatClient, setChatClient] = useState(null);
@@ -21,6 +49,7 @@ const ChatBox = ({ groupId }) => {
   const [selectedMember, setSelectedMember] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [chatError, setChatError] = useState(null);
+  const [replyTarget, setReplyTarget] = useState(null);
 
   useEffect(() => {
     const initChat = async () => {
@@ -49,9 +78,13 @@ const ChatBox = ({ groupId }) => {
         const client = new StreamChat(apiKey);
         await client.connectUser({ id: userId, name }, chatToken);
 
+        const normalizedMembers = (groupMembers || [])
+          .map((member) => normalizeMember(member, userId))
+          .filter((member) => Boolean(member.id));
+
         const groupChannel = client.channel("messaging", `group-${groupId}`, {
           name: `Group ${groupId}`,
-          members: groupMembers.map((m) => (m._id || m.id).toString()),
+          members: normalizedMembers.map((member) => member.id),
         });
 
         await groupChannel.watch();
@@ -59,18 +92,7 @@ const ChatBox = ({ groupId }) => {
         setChatClient(client);
         setChannel(groupChannel);
         setCurrentUserId(userId);
-        setMembers(
-          groupMembers
-            .filter((m) => m._id !== userId)
-            .map((m) => ({
-              id: m._id || m.id,
-              name: m.name || "Unknown",
-              image:
-                m.avatar ||
-                `https://ui-avatars.com/api/?name=${m.name || "User"}`,
-              online: false,
-            }))
-        );
+        setMembers(normalizedMembers);
       } catch (error) {
         console.error("Stream Chat setup failed:", error);
         setChatError("Failed to load chat. Please try again later.");
@@ -108,6 +130,7 @@ const ChatBox = ({ groupId }) => {
     await groupChannel.watch();
     setChannel(groupChannel);
     setSelectedMember(null);
+    setReplyTarget(null);
   };
 
   if (chatError) return (
@@ -169,12 +192,19 @@ const CustomEmptyState = () => (
                   </div>
                 )}
                 Message={(props) => (
-                  <CustomMessage {...props} currentUserId={currentUserId} />
+                  <CustomMessage
+                    {...props}
+                    currentUserId={currentUserId}
+                    onReply={setReplyTarget}
+                  />
                 )}
                 className="custom-message-list"
               />
 
-              <MessageInput className="custom-message-input" />
+              <CustomChatInput
+                replyTarget={replyTarget}
+                onCancelReply={() => setReplyTarget(null)}
+              />
             </Window>
           </div>
         </Channel>

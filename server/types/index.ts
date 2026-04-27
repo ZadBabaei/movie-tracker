@@ -21,13 +21,25 @@ export interface IPollMovie {
   title: string;
   poster_path?: string;
   vote_average?: number;
-  selected?: number | null;
 }
 
 export interface IPollVote {
   userId: Types.ObjectId;
-  movieTmdbId: string;
-  rank: number;
+  rankings: {
+    movieTmdbId: string;
+    rank: number;
+  }[];
+}
+
+export interface IPollResult {
+  mode?: "ranked" | "runoff" | "randomTieBreak";
+  lowestScoreWins?: boolean;
+  randomTieBreak?: boolean;
+  movies?: {
+    movieTmdbId: string;
+    title?: string;
+    score: number;
+  }[];
 }
 
 export interface IPoll {
@@ -37,7 +49,9 @@ export interface IPoll {
   movies: IPollMovie[];
   votes: IPollVote[];
   status: "active" | "completed" | "cancelled";
+  round: number;
   winningMovieTmdbId?: string;
+  result?: IPollResult;
   createdAt: Date;
   expiresAt?: Date;
 }

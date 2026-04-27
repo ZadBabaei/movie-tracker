@@ -57,11 +57,16 @@ const GroupChat: React.FC = () => {
     socket.on("poll:runoff", () => {
       setPollStatus("active");
     });
+    socket.on("poll:cancelled", () => {
+      setPollStatus("none");
+      fetchPollHistory(id!);
+    });
 
     return () => {
       socket.off("poll:created");
       socket.off("poll:completed");
       socket.off("poll:runoff");
+      socket.off("poll:cancelled");
     };
   }, [socket, id]);
 

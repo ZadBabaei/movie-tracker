@@ -16,12 +16,38 @@ const extractTmdbId = (imdbID) => {
   return imdbID;
 };
 
+const formatWatchedDate = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown date";
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+const formatWatchedWith = (watchedWith) => {
+  if (!watchedWith) return "";
+  if (typeof watchedWith === "string") return watchedWith;
+  if (!Array.isArray(watchedWith)) return "";
+  return watchedWith
+    .map((member) => member?.name || member)
+    .filter(Boolean)
+    .join(", ");
+};
+
 const MovieDetailModal = ({ movie, onClose }) => {
   const [details, setDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(true);
 
   const poster = movie.poster_path || movie.poster;
-  const tmdbId = extractTmdbId(movie.imdbID);
+  const tmdbId = movie.tmdbId || extractTmdbId(movie.imdbID);
+  const watchedDate = formatWatchedDate(movie.watchedAt || movie.watchedDate || movie.createdAt);
+  const watchedLocation = movie.watchedLocation || movie.watchedWhere;
+  const watchedWith = formatWatchedWith(movie.watchedWith);
+  const watchedNotes = movie.watchedNotes;
+  const hasWatchMetadata = watchedDate || watchedLocation || watchedWith || watchedNotes;
 
   useEffect(() => {
     if (!tmdbId) {
@@ -118,21 +144,26 @@ const MovieDetailModal = ({ movie, onClose }) => {
         </div>
 
         {/* Watch metadata bar (shown on group pages) */}
-        {(movie.watchedDate || movie.watchedWhere || movie.watchedWith?.length > 0) && (
+        {hasWatchMetadata && (
           <div className="mdm-watch-meta">
-            {movie.watchedDate && (
+            {watchedDate && (
               <span className="mdm-watch-meta-item">
-                📅 {new Date(movie.watchedDate).toLocaleDateString("en-US", {
-                  month: "short", day: "numeric", year: "numeric"
-                })}
+                <span className="mdm-label">Watched on:</span> {watchedDate}
               </span>
             )}
-            {movie.watchedWhere && (
-              <span className="mdm-watch-meta-item">📍 {movie.watchedWhere}</span>
-            )}
-            {movie.watchedWith?.length > 0 && (
+            {watchedLocation && (
               <span className="mdm-watch-meta-item">
-                👥 {movie.watchedWith.map((m) => m.name).join(", ")}
+                <span className="mdm-label">Location:</span> {watchedLocation}
+              </span>
+            )}
+            {watchedWith && (
+              <span className="mdm-watch-meta-item">
+                <span className="mdm-label">Watched with:</span> {watchedWith}
+              </span>
+            )}
+            {watchedNotes && (
+              <span className="mdm-watch-meta-item mdm-watch-meta-item--wide">
+                <span className="mdm-label">Notes:</span> {watchedNotes}
               </span>
             )}
           </div>

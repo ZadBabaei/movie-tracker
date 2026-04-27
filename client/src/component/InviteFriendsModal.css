@@ -297,3 +297,59 @@
 .InviteFriendsModal-btn-cancel:hover {
   background: rgba(255, 255, 255, 0.15);
 }
+
+@media (max-width: 768px) {
+  .InviteFriendsModal-overlay {
+    align-items: flex-end;
+    padding: 12px 12px calc(84px + env(safe-area-inset-bottom));
+    box-sizing: border-box;
+  }
+
+  .InviteFriendsModal-container {
+    width: min(100%, 600px);
+    max-height: calc(100vh - 112px);
+    padding: 28px 16px 16px;
+    border-radius: 16px;
+  }
+
+  .InviteFriendsModal-close-btn {
+    top: 8px;
+    right: 8px;
+    width: 44px;
+    height: 44px;
+  }
+
+  .InviteFriendsModal-tabs {
+    overflow-x: auto;
+  }
+
+  .InviteFriendsModal-tab {
+    min-height: 44px;
+    min-width: 120px;
+  }
+
+  .InviteFriendsModal-user-item,
+  .InviteFriendsModal-link-display,
+  .InviteFriendsModal-btns-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .InviteFriendsModal-user-info {
+    min-width: 0;
+  }
+
+  .InviteFriendsModal-user-email {
+    overflow-wrap: anywhere;
+  }
+
+  .InviteFriendsModal-search-input,
+  .InviteFriendsModal-link-input,
+  .InviteFriendsModal-copy-btn,
+  .InviteFriendsModal-generate-btn,
+  .InviteFriendsModal-btns-container button,
+  .InviteFriendsModal-user-item button {
+    width: 100%;
+    min-height: 44px;
+  }
+}

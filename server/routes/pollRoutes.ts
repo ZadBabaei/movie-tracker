@@ -6,14 +6,281 @@ import { getIO } from "../socket";
 
 const router = express.Router();
 
-// ── Create a new poll ────────────────────────────────────────────────────────
+interface RankingPayload {
+  movieTmdbId: string;
+  rank: number;
+}
+
+interface CompletePollResult {
+  poll: any;
+  runoff?: boolean;
+}
+
+const normalizeMovie = (movie: any) => {
+  const tmdbId = (movie.tmdbId ?? movie.movieId ?? movie.id ?? "").toString();
+  return {
+    tmdbId,
+    title: movie.title,
+    poster_path: movie.poster_path,
+    vote_average: movie.vote_average,
+  };
+};
+
+const decoratePoll = (poll: any) => {
+  if (!poll) return poll;
+  poll.movies = (poll.movies || []).map((movie: any) => ({
+    ...movie,
+    id: movie.tmdbId,
+    movieId: movie.tmdbId,
+  }));
+  return poll;
+};
+
+const getVoterId = (vote: any) => {
+  const userId = vote.userId;
+  return (typeof userId === "object" ? userId._id : userId)?.toString();
+};
+
+const withVotingProgress = async (poll: any, currentUserId?: string) => {
+  if (!poll) return poll;
+  const group = await Group.findById(poll.groupId).populate("members", "_id name avatar").lean();
+  const members = (group?.members || []).map((member: any) => ({
+    _id: member._id.toString(),
+    name: member.name || "Unknown",
+    avatar: member.avatar,
+  }));
+  const votedIds = new Set((poll.votes || []).map(getVoterId).filter(Boolean));
+  const votedMembers = members.filter((member) => votedIds.has(member._id));
+  const pendingMembers = members.filter((member) => !votedIds.has(member._id));
+
+  return {
+    ...poll,
+    totalMembers: members.length,
+    votedMembers,
+    pendingMembers,
+    hasCurrentUserVoted: currentUserId ? votedIds.has(currentUserId.toString()) : false,
+  };
+};
+
+const getPopulatedPoll = async (pollId: any, currentUserId?: string) => {
+  const poll = await Poll.findById(pollId)
+    .populate("votes.userId", "name")
+    .populate("creator", "name")
+    .lean();
+  return withVotingProgress(decoratePoll(poll), currentUserId);
+};
+
+const validateRankings = (poll: any, rankings: RankingPayload[]): string | null => {
+  if (!Array.isArray(rankings) || rankings.length === 0) {
+    return "Rankings are required";
+  }
+
+  const pollMovieIds = poll.movies.map((m: any) => m.tmdbId.toString());
+  const pollMovieIdSet = new Set(pollMovieIds);
+  const submittedMovieIds = rankings.map((r) => (r.movieTmdbId ?? "").toString());
+  const submittedMovieIdSet = new Set(submittedMovieIds);
+
+  if (submittedMovieIdSet.size !== submittedMovieIds.length) {
+    return "A movie cannot be ranked twice";
+  }
+  if (submittedMovieIds.some((movieId) => !pollMovieIdSet.has(movieId))) {
+    return "Cannot vote for movies that are not in this poll";
+  }
+
+  const ranks = rankings.map((r) => Number(r.rank));
+  if (ranks.some((rank) => !Number.isInteger(rank))) {
+    return "Ranks must be whole numbers";
+  }
+
+  const isRunoff = (poll.round || 1) > 1;
+  if (isRunoff) {
+    if (rankings.length !== 1 || ranks[0] !== 1) {
+      return "Runoff voting requires choosing one #1 movie";
+    }
+    return null;
+  }
+
+  const movieCount = poll.movies.length;
+  if (rankings.length !== movieCount || submittedMovieIdSet.size !== movieCount) {
+    return "Rankings must include every movie in the poll";
+  }
+
+  const rankSet = new Set(ranks);
+  if (rankSet.size !== movieCount) {
+    return "Ranks must be unique";
+  }
+  if (ranks.some((rank) => rank < 1 || rank > movieCount)) {
+    return `Ranks must be between 1 and ${movieCount}`;
+  }
+
+  return null;
+};
+
+const rankedScores = (poll: any) => {
+  const scoreMap: Record<string, number> = {};
+  poll.movies.forEach((movie: any) => {
+    scoreMap[movie.tmdbId] = 0;
+  });
+
+  poll.votes.forEach((vote: any) => {
+    (vote.rankings || []).forEach((ranking: any) => {
+      if (scoreMap[ranking.movieTmdbId] !== undefined) {
+        scoreMap[ranking.movieTmdbId] += Number(ranking.rank);
+      }
+    });
+  });
+
+  return scoreMap;
+};
+
+const runoffCounts = (poll: any) => {
+  const countMap: Record<string, number> = {};
+  poll.movies.forEach((movie: any) => {
+    countMap[movie.tmdbId] = 0;
+  });
+
+  poll.votes.forEach((vote: any) => {
+    const firstChoice = (vote.rankings || []).find((ranking: any) => Number(ranking.rank) === 1);
+    if (firstChoice && countMap[firstChoice.movieTmdbId] !== undefined) {
+      countMap[firstChoice.movieTmdbId] += 1;
+    }
+  });
+
+  return countMap;
+};
+
+const resultMovies = (poll: any, scoreMap: Record<string, number>) =>
+  poll.movies.map((movie: any) => ({
+    movieTmdbId: movie.tmdbId,
+    title: movie.title,
+    score: scoreMap[movie.tmdbId] || 0,
+  }));
+
+const cancelPollWithoutWinner = async (poll: any) => {
+  poll.status = "cancelled";
+  poll.result = {
+    mode: poll.round > 1 ? "runoff" : "ranked",
+    lowestScoreWins: poll.round <= 1,
+    randomTieBreak: false,
+    movies: [],
+  };
+  await poll.save();
+  await Group.findByIdAndUpdate(poll.groupId, { $unset: { currentPoll: 1 } });
+  getIO().to(poll.groupId.toString()).emit("poll:cancelled", {
+    pollId: poll._id.toString(),
+    reason: "No votes were submitted.",
+  });
+  return { poll: await getPopulatedPoll(poll._id) };
+};
+
+const completeOrRunoff = async (poll: any, currentUserId?: string): Promise<CompletePollResult> => {
+  if (!poll.votes.length) {
+    return cancelPollWithoutWinner(poll);
+  }
+
+  const isRunoff = (poll.round || 1) > 1;
+
+  if (isRunoff) {
+    const scoreMap = runoffCounts(poll);
+    const maxScore = Math.max(...Object.values(scoreMap));
+    let winners = poll.movies.filter((movie: any) => (scoreMap[movie.tmdbId] || 0) === maxScore);
+    const randomTieBreak = winners.length > 1;
+
+    if (randomTieBreak) {
+      winners = [winners[Math.floor(Math.random() * winners.length)]];
+    }
+
+    poll.status = "completed";
+    poll.winningMovieTmdbId = winners[0].tmdbId;
+    poll.result = {
+      mode: randomTieBreak ? "randomTieBreak" : "runoff",
+      lowestScoreWins: false,
+      randomTieBreak,
+      movies: resultMovies(poll, scoreMap),
+    };
+    await poll.save();
+    await Group.findByIdAndUpdate(poll.groupId, { $unset: { currentPoll: 1 } });
+
+    const winnerMovie = winners[0];
+    getIO().to(poll.groupId.toString()).emit("poll:completed", {
+      pollId: poll._id.toString(),
+      winningMovieTmdbId: winnerMovie.tmdbId,
+      winnerTitle: winnerMovie.title,
+      winnerPoster: winnerMovie.poster_path || "",
+      randomTieBreak,
+    });
+
+    return { poll: await getPopulatedPoll(poll._id, currentUserId) };
+  }
+
+  const scoreMap = rankedScores(poll);
+  const minScore = Math.min(...Object.values(scoreMap));
+  const tiedMovies = poll.movies.filter((movie: any) => (scoreMap[movie.tmdbId] || 0) === minScore);
+
+  if (tiedMovies.length > 1) {
+    poll.movies = tiedMovies as any;
+    poll.votes = [];
+    poll.round = (poll.round || 1) + 1;
+    poll.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    poll.result = {
+      mode: "ranked",
+      lowestScoreWins: true,
+      randomTieBreak: false,
+      movies: resultMovies(poll, scoreMap),
+    };
+    await poll.save();
+
+    const runoffPoll = await getPopulatedPoll(poll._id, currentUserId);
+    getIO().to(poll.groupId.toString()).emit("poll:runoff", {
+      pollId: poll._id.toString(),
+      round: poll.round,
+      poll: runoffPoll,
+    });
+    // TODO: Send email notification for runoff if email notifications are added.
+
+    return { runoff: true, poll: runoffPoll };
+  }
+
+  const winnerMovie = tiedMovies[0];
+  poll.status = "completed";
+  poll.winningMovieTmdbId = winnerMovie.tmdbId;
+  poll.result = {
+    mode: "ranked",
+    lowestScoreWins: true,
+    randomTieBreak: false,
+    movies: resultMovies(poll, scoreMap),
+  };
+  await poll.save();
+  await Group.findByIdAndUpdate(poll.groupId, { $unset: { currentPoll: 1 } });
+
+  getIO().to(poll.groupId.toString()).emit("poll:completed", {
+    pollId: poll._id.toString(),
+    winningMovieTmdbId: winnerMovie.tmdbId,
+    winnerTitle: winnerMovie.title,
+    winnerPoster: winnerMovie.poster_path || "",
+    randomTieBreak: false,
+  });
+
+  return { poll: await getPopulatedPoll(poll._id, currentUserId) };
+};
+
 router.post("/create", authenticate, async (req: Request, res: Response) => {
   try {
-    const { groupId, movies, name } = req.body;
+    const { groupId, movies, name, deadline } = req.body;
     const userId = req.user!.id;
 
     if (!name || !name.trim()) {
       res.status(400).json({ msg: "Poll name is required" });
+      return;
+    }
+    if (!Array.isArray(movies) || movies.length < 2) {
+      res.status(400).json({ msg: "Add at least two movies before publishing a poll" });
+      return;
+    }
+
+    const normalizedMovies = movies.map(normalizeMovie);
+    if (normalizedMovies.some((movie: any) => !movie.tmdbId || !movie.title)) {
+      res.status(400).json({ msg: "Every poll movie needs a TMDB id and title" });
       return;
     }
 
@@ -23,45 +290,42 @@ router.post("/create", authenticate, async (req: Request, res: Response) => {
       return;
     }
 
+    let expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    if (deadline) {
+      const parsedDeadline = new Date(deadline);
+      if (Number.isNaN(parsedDeadline.getTime()) || parsedDeadline <= new Date()) {
+        res.status(400).json({ msg: "Poll deadline must be a future date" });
+        return;
+      }
+      expiresAt = parsedDeadline;
+    }
+
     const poll = new Poll({
       name: name.trim(),
       groupId,
       creator: userId,
-      movies: movies.map((movie: any) => ({
-        tmdbId: movie.id.toString(),
-        title: movie.title,
-        poster_path: movie.poster_path,
-        vote_average: movie.vote_average,
-      })),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      movies: normalizedMovies,
+      expiresAt,
     });
 
     await poll.save();
-
-    // Update Group: set currentPoll and push to pollHistory
     await Group.findByIdAndUpdate(groupId, {
       currentPoll: poll._id,
       $push: { pollHistory: poll._id },
     });
 
-    // Map movies to include id/movieId fields (consistent with active poll endpoint)
-    const pollObj = poll.toObject();
-    pollObj.movies = pollObj.movies.map((movie: any) => ({
-      ...movie,
-      id: movie.tmdbId,
-      movieId: movie.tmdbId,
-    }));
-
-    res.json(pollObj);
+    const decoratedPoll = await getPopulatedPoll(poll._id, userId);
+    getIO().to(groupId.toString()).emit("poll:created", decoratedPoll);
+    res.json(decoratedPoll);
   } catch (error) {
     console.error("Error creating poll:", error);
     res.status(500).json({ msg: "Server error" });
   }
 });
 
-// ── Get active poll for a group ──────────────────────────────────────────────
 router.get("/group/:groupId/active", authenticate, async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.id;
     const poll = await Poll.findOne({
       groupId: req.params.groupId,
       status: "active",
@@ -70,27 +334,32 @@ router.get("/group/:groupId/active", authenticate, async (req: Request, res: Res
       .populate("creator", "name")
       .lean();
 
-    if (poll) {
-      (poll as any).movies = poll.movies.map((movie) => ({
-        id: movie.tmdbId,
-        movieId: movie.tmdbId,
-        title: movie.title,
-        poster_path: movie.poster_path,
-        vote_average: movie.vote_average,
-      }));
+    if (!poll) {
+      res.json(null);
+      return;
     }
 
-    res.json(poll);
+    if (poll.expiresAt && new Date(poll.expiresAt) <= new Date()) {
+      const livePoll = await Poll.findById(poll._id);
+      if (!livePoll) {
+        res.json(null);
+        return;
+      }
+      const completed = await completeOrRunoff(livePoll, userId);
+      res.json(completed.runoff ? completed.poll : completed.poll);
+      return;
+    }
+
+    res.json(await withVotingProgress(decoratePoll(poll), userId));
   } catch (error) {
     console.error("Error fetching active poll:", error);
     res.status(500).json({ msg: "Server error" });
   }
 });
 
-// ── Submit/update a vote (multi-select, no ranks) ────────────────────────────
 router.post("/vote", authenticate, async (req: Request, res: Response) => {
   try {
-    const { pollId, movieIds } = req.body;
+    const { pollId, rankings } = req.body;
     const userId = req.user!.id;
 
     const poll = await Poll.findById(pollId);
@@ -103,142 +372,39 @@ router.post("/vote", authenticate, async (req: Request, res: Response) => {
       return;
     }
 
-    // Remove all existing votes by this user
-    poll.votes = poll.votes.filter(
-      (vote) => vote.userId.toString() !== userId.toString()
-    );
-
-    // Add one vote entry per selected movie
-    if (Array.isArray(movieIds)) {
-      movieIds.forEach((movieId: string) => {
-        poll.votes.push({ userId: userId as any, movieTmdbId: movieId.toString() });
-      });
+    const validationError = validateRankings(poll, rankings);
+    if (validationError) {
+      res.status(400).json({ msg: validationError });
+      return;
     }
+
+    poll.votes = poll.votes.filter((vote: any) => vote.userId.toString() !== userId.toString()) as any;
+    poll.votes.push({
+      userId: userId as any,
+      rankings: rankings.map((ranking: RankingPayload) => ({
+        movieTmdbId: ranking.movieTmdbId.toString(),
+        rank: Number(ranking.rank),
+      })),
+    } as any);
 
     await poll.save();
 
-    // ── Auto-complete: check if all group members have voted ──
     const group = await Group.findById(poll.groupId);
     if (group) {
-      const uniqueVoters = new Set(poll.votes.map((v) => v.userId.toString()));
+      const uniqueVoters = new Set(poll.votes.map((vote: any) => vote.userId.toString()));
       if (uniqueVoters.size >= group.members.length) {
-        // All members voted — auto-complete the poll
-        const scoreMap: Record<string, number> = {};
-        poll.movies.forEach((m) => { scoreMap[m.tmdbId] = 0; });
-        poll.votes.forEach((vote) => {
-          scoreMap[vote.movieTmdbId] = (scoreMap[vote.movieTmdbId] || 0) + 1;
-        });
-
-        const maxScore = Math.max(...Object.values(scoreMap), 0);
-        const tiedMovies = poll.movies.filter((m) => (scoreMap[m.tmdbId] || 0) === maxScore);
-
-        if (tiedMovies.length > 1 && maxScore > 0) {
-          if ((poll.round || 1) >= 2) {
-            // Round 2+ tie → random winner
-            const randomWinner = tiedMovies[Math.floor(Math.random() * tiedMovies.length)];
-            poll.status = "completed";
-            poll.winningMovieTmdbId = randomWinner.tmdbId;
-            await poll.save();
-            await Group.findByIdAndUpdate(poll.groupId, { $unset: { currentPoll: 1 } });
-
-            const completedPoll = await Poll.findById(pollId)
-              .populate("votes.userId", "name")
-              .populate("creator", "name")
-              .lean();
-            if (completedPoll) {
-              (completedPoll as any).movies = completedPoll.movies.map((movie) => ({
-                id: movie.tmdbId, movieId: movie.tmdbId,
-                title: movie.title, poster_path: movie.poster_path, vote_average: movie.vote_average,
-              }));
-            }
-
-            getIO().to(poll.groupId.toString()).emit("poll:completed", {
-              pollId: poll._id.toString(),
-              winningMovieTmdbId: randomWinner.tmdbId,
-              winnerTitle: randomWinner.title,
-              winnerPoster: randomWinner.poster_path || "",
-            });
-
-            res.json({ autoCompleted: true, poll: completedPoll });
-            return;
-          } else {
-            // Round 1 tie → runoff
-            poll.movies = tiedMovies as any;
-            poll.votes = [];
-            poll.round = (poll.round || 1) + 1;
-            await poll.save();
-
-            const runoffPoll = await Poll.findById(pollId)
-              .populate("votes.userId", "name")
-              .populate("creator", "name")
-              .lean();
-            if (runoffPoll) {
-              (runoffPoll as any).movies = runoffPoll.movies.map((movie) => ({
-                id: movie.tmdbId, movieId: movie.tmdbId,
-                title: movie.title, poster_path: movie.poster_path, vote_average: movie.vote_average,
-              }));
-            }
-
-            getIO().to(poll.groupId.toString()).emit("poll:runoff", {
-              pollId: poll._id.toString(),
-              round: poll.round,
-              poll: runoffPoll,
-            });
-
-            res.json({ autoCompleted: true, runoff: true, poll: runoffPoll });
-            return;
-          }
-        } else {
-          // Clear winner — auto-complete
-          const winningMovieId = tiedMovies[0]?.tmdbId || poll.movies[0]?.tmdbId || "";
-          poll.status = "completed";
-          poll.winningMovieTmdbId = winningMovieId;
-          await poll.save();
-          await Group.findByIdAndUpdate(poll.groupId, { $unset: { currentPoll: 1 } });
-
-          const completedPoll = await Poll.findById(pollId)
-            .populate("votes.userId", "name")
-            .populate("creator", "name")
-            .lean();
-          if (completedPoll) {
-            (completedPoll as any).movies = completedPoll.movies.map((movie) => ({
-              id: movie.tmdbId, movieId: movie.tmdbId,
-              title: movie.title, poster_path: movie.poster_path, vote_average: movie.vote_average,
-            }));
-          }
-
-          const winnerMovie = poll.movies.find((m) => m.tmdbId === winningMovieId);
-          getIO().to(poll.groupId.toString()).emit("poll:completed", {
-            pollId: poll._id.toString(),
-            winningMovieTmdbId: winningMovieId,
-            winnerTitle: winnerMovie?.title || "",
-            winnerPoster: winnerMovie?.poster_path || "",
-          });
-
-          res.json({ autoCompleted: true, poll: completedPoll });
-          return;
-        }
+        const completed = await completeOrRunoff(poll, userId);
+        res.json({ autoCompleted: true, ...completed });
+        return;
       }
     }
 
-    // ── Normal vote update (not all members voted yet) ──
-    const populatedPoll = await Poll.findById(pollId)
-      .populate("votes.userId", "name")
-      .populate("creator", "name")
-      .lean();
-
+    const populatedPoll = await getPopulatedPoll(pollId, userId);
     if (populatedPoll) {
-      (populatedPoll as any).movies = populatedPoll.movies.map((movie) => ({
-        id: movie.tmdbId,
-        movieId: movie.tmdbId,
-        title: movie.title,
-        poster_path: movie.poster_path,
-        vote_average: movie.vote_average,
-      }));
-    }
-
-    if (populatedPoll) {
-      getIO().to(populatedPoll.groupId.toString()).emit("poll:updated", populatedPoll);
+      getIO().to(populatedPoll.groupId.toString()).emit("poll:updated", {
+        ...populatedPoll,
+        hasCurrentUserVoted: false,
+      });
     }
     res.json(populatedPoll);
   } catch (error) {
@@ -247,7 +413,6 @@ router.post("/vote", authenticate, async (req: Request, res: Response) => {
   }
 });
 
-// ── Cancel a poll ────────────────────────────────────────────────────────────
 router.post("/:pollId/cancel", authenticate, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
@@ -256,7 +421,8 @@ router.post("/:pollId/cancel", authenticate, async (req: Request, res: Response)
       res.status(404).json({ msg: "Poll not found" });
       return;
     }
-    if (poll.creator.toString() !== userId) {
+    const isPollCreator = poll.creator.toString() === userId;
+    if (!isPollCreator) {
       res.status(403).json({ msg: "Only poll creator can cancel the poll" });
       return;
     }
@@ -267,9 +433,10 @@ router.post("/:pollId/cancel", authenticate, async (req: Request, res: Response)
 
     poll.status = "cancelled";
     await poll.save();
-
-    // Clear currentPoll on the group
     await Group.findByIdAndUpdate(poll.groupId, { $unset: { currentPoll: 1 } });
+    getIO().to(poll.groupId.toString()).emit("poll:cancelled", {
+      pollId: poll._id.toString(),
+    });
 
     res.json({ msg: "Poll cancelled successfully", poll });
   } catch (error) {
@@ -278,7 +445,6 @@ router.post("/:pollId/cancel", authenticate, async (req: Request, res: Response)
   }
 });
 
-// ── Complete a poll (with tie-breaking runoff) ───────────────────────────────
 router.post("/:pollId/complete", authenticate, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
@@ -296,95 +462,14 @@ router.post("/:pollId/complete", authenticate, async (req: Request, res: Respons
       return;
     }
 
-    // Count-based scoring: each vote entry = 1 point
-    const scoreMap: Record<string, number> = {};
-    poll.movies.forEach((m) => { scoreMap[m.tmdbId] = 0; });
-    poll.votes.forEach((vote) => {
-      const mid = vote.movieTmdbId;
-      scoreMap[mid] = (scoreMap[mid] || 0) + 1;
-    });
-
-    const maxScore = Math.max(...Object.values(scoreMap), 0);
-    const tiedMovies = poll.movies.filter((m) => (scoreMap[m.tmdbId] || 0) === maxScore);
-
-    // Tie-breaking
-    if (tiedMovies.length > 1 && maxScore > 0) {
-      if ((poll.round || 1) >= 2) {
-        // Round 2+ tie → random winner
-        const randomWinner = tiedMovies[Math.floor(Math.random() * tiedMovies.length)];
-        poll.status = "completed";
-        poll.winningMovieTmdbId = randomWinner.tmdbId;
-        await poll.save();
-        await Group.findByIdAndUpdate(poll.groupId, { $unset: { currentPoll: 1 } });
-
-        const winnerMovie = randomWinner;
-        getIO().to(poll.groupId.toString()).emit("poll:completed", {
-          pollId: poll._id.toString(),
-          winningMovieTmdbId: randomWinner.tmdbId,
-          winnerTitle: winnerMovie.title,
-          winnerPoster: winnerMovie.poster_path || "",
-        });
-
-        res.json(poll);
-        return;
-      }
-
-      // Round 1 tie → runoff
-      poll.movies = tiedMovies as any;
-      poll.votes = [];
-      poll.round = (poll.round || 1) + 1;
-      await poll.save();
-
-      const populatedPoll = await Poll.findById(poll._id)
-        .populate("votes.userId", "name")
-        .populate("creator", "name")
-        .lean();
-
-      if (populatedPoll) {
-        (populatedPoll as any).movies = populatedPoll.movies.map((movie) => ({
-          id: movie.tmdbId,
-          movieId: movie.tmdbId,
-          title: movie.title,
-          poster_path: movie.poster_path,
-          vote_average: movie.vote_average,
-        }));
-      }
-
-      getIO().to(poll.groupId.toString()).emit("poll:runoff", {
-        pollId: poll._id.toString(),
-        round: poll.round,
-        poll: populatedPoll,
-      });
-
-      res.json({ runoff: true, poll: populatedPoll });
-      return;
-    }
-
-    // Single winner
-    const winningMovieId = tiedMovies[0]?.tmdbId || poll.movies[0]?.tmdbId || "";
-    poll.status = "completed";
-    poll.winningMovieTmdbId = winningMovieId;
-    await poll.save();
-
-    // Clear currentPoll on the group
-    await Group.findByIdAndUpdate(poll.groupId, { $unset: { currentPoll: 1 } });
-
-    const winnerMovie = poll.movies.find((m) => m.tmdbId === winningMovieId);
-    getIO().to(poll.groupId.toString()).emit("poll:completed", {
-      pollId: poll._id.toString(),
-      winningMovieTmdbId: winningMovieId,
-      winnerTitle: winnerMovie?.title || "",
-      winnerPoster: winnerMovie?.poster_path || "",
-    });
-
-    res.json(poll);
+    const completed = await completeOrRunoff(poll, userId);
+    res.json(completed.runoff ? completed : completed.poll);
   } catch (error) {
     console.error("Error completing poll:", error);
     res.status(500).json({ msg: "Server error" });
   }
 });
 
-// ── Add movie to an active poll ──────────────────────────────────────────────
 router.post("/:pollId/add-movie", authenticate, async (req: Request, res: Response) => {
   try {
     const { movie } = req.body;
@@ -394,64 +479,69 @@ router.post("/:pollId/add-movie", authenticate, async (req: Request, res: Respon
       return;
     }
 
-    const alreadyExists = poll.movies.some((m) => m.tmdbId === movie.id.toString());
-    if (alreadyExists) {
-      res.json(poll);
-      return;
+    const normalizedMovie = normalizeMovie(movie);
+    const alreadyExists = poll.movies.some((m) => m.tmdbId === normalizedMovie.tmdbId);
+    if (!alreadyExists) {
+      poll.movies.push(normalizedMovie as any);
+      await poll.save();
     }
 
-    poll.movies.push({
-      tmdbId: movie.id.toString(),
-      title: movie.title,
-      poster_path: movie.poster_path,
-      vote_average: movie.vote_average,
-    });
-
-    await poll.save();
-    res.json(poll);
+    res.json(await getPopulatedPoll(poll._id));
   } catch (error) {
     console.error("Error adding movie to poll:", error);
     res.status(500).json({ msg: "Server error" });
   }
 });
 
-// ── Get poll results ─────────────────────────────────────────────────────────
 router.get("/:pollId/results", authenticate, async (req: Request, res: Response) => {
   try {
     const poll = await Poll.findById(req.params.pollId)
       .populate("votes.userId", "name")
+      .populate("creator", "name")
       .lean();
     if (!poll) {
       res.status(404).json({ msg: "Poll not found" });
       return;
     }
 
-    // Count-based scoring
-    const scoreMap: Record<string, number> = {};
-    poll.votes.forEach((vote) => {
-      const mid = vote.movieTmdbId;
-      scoreMap[mid] = (scoreMap[mid] || 0) + 1;
-    });
+    const isRunoffResult = poll.result?.mode === "runoff" || poll.result?.mode === "randomTieBreak" || (poll.round || 1) > 1;
+    const scoreMap = poll.result?.movies?.length
+      ? poll.result.movies.reduce((acc: Record<string, number>, item: any) => {
+          acc[item.movieTmdbId] = item.score;
+          return acc;
+        }, {})
+      : isRunoffResult
+        ? runoffCounts(poll)
+        : rankedScores(poll);
 
     const rankedMovies = poll.movies
-      .map((m) => ({
-        id: m.tmdbId,
-        movieId: m.tmdbId,
-        title: m.title,
-        poster_path: m.poster_path,
-        vote_average: m.vote_average,
-        score: scoreMap[m.tmdbId] || 0,
+      .map((movie: any) => ({
+        id: movie.tmdbId,
+        movieId: movie.tmdbId,
+        title: movie.title,
+        poster_path: movie.poster_path,
+        vote_average: movie.vote_average,
+        score: scoreMap[movie.tmdbId] || 0,
       }))
-      .sort((a, b) => b.score - a.score);
+      .sort((a: any, b: any) => isRunoffResult ? b.score - a.score : a.score - b.score);
 
-    res.json({ ...poll, movies: rankedMovies, winningMovieTmdbId: poll.winningMovieTmdbId });
+    res.json({
+      ...poll,
+      movies: rankedMovies,
+      winningMovieTmdbId: poll.winningMovieTmdbId,
+      result: poll.result || {
+        mode: isRunoffResult ? "runoff" : "ranked",
+        lowestScoreWins: !isRunoffResult,
+        randomTieBreak: false,
+        movies: resultMovies(poll, scoreMap),
+      },
+    });
   } catch (error) {
     console.error("Error fetching poll results:", error);
     res.status(500).json({ msg: "Server error" });
   }
 });
 
-// ── Get poll history for a group ─────────────────────────────────────────────
 router.get("/group/:groupId/history", authenticate, async (req: Request, res: Response) => {
   try {
     const polls = await Poll.find({
@@ -463,7 +553,7 @@ router.get("/group/:groupId/history", authenticate, async (req: Request, res: Re
       .lean();
 
     const history = polls.map((poll) => {
-      const winnerMovie = poll.movies.find((m) => m.tmdbId === poll.winningMovieTmdbId);
+      const winnerMovie = poll.movies.find((movie: any) => movie.tmdbId === poll.winningMovieTmdbId);
       return {
         _id: poll._id,
         name: poll.name,
@@ -472,6 +562,7 @@ router.get("/group/:groupId/history", authenticate, async (req: Request, res: Re
         winningMovieTmdbId: poll.winningMovieTmdbId,
         winnerTitle: winnerMovie?.title || null,
         winnerPoster: winnerMovie?.poster_path || null,
+        randomTieBreak: poll.result?.randomTieBreak || false,
         createdAt: poll.createdAt,
         creator: poll.creator,
       };
@@ -484,7 +575,6 @@ router.get("/group/:groupId/history", authenticate, async (req: Request, res: Re
   }
 });
 
-// ── Delete a poll ────────────────────────────────────────────────────────────
 router.delete("/:pollId", authenticate, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
@@ -494,7 +584,6 @@ router.delete("/:pollId", authenticate, async (req: Request, res: Response) => {
       return;
     }
 
-    // Auth: only poll creator or group admin can delete
     const group = await Group.findById(poll.groupId);
     const isPollCreator = poll.creator.toString() === userId;
     const isGroupAdmin = group?.creator.toString() === userId;
@@ -504,13 +593,11 @@ router.delete("/:pollId", authenticate, async (req: Request, res: Response) => {
       return;
     }
 
-    // If deleting an active poll, clear currentPoll on group
     if (poll.status === "active" && group) {
       group.currentPoll = undefined;
       await group.save();
     }
 
-    // Remove from pollHistory
     if (group) {
       await Group.findByIdAndUpdate(poll.groupId, {
         $pull: { pollHistory: poll._id },

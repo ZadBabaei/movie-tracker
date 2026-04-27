@@ -97,6 +97,164 @@
   transform: translateY(-4px);
 }
 
+.VoteModal-rank-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 12px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.VoteModal-rank-poster {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 10px;
+  background: #111;
+}
+
+.VoteModal-rank-title {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
+  min-height: 38px;
+  text-align: center;
+}
+
+.VoteModal-rank-select-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #bbb;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.VoteModal-rank-select {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  color: #fff;
+  padding: 10px 12px;
+  font-size: 14px;
+  outline: none;
+}
+
+.VoteModal-rank-select:focus {
+  border-color: #e50914;
+  box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.18);
+}
+
+.VoteModal-rank-select option {
+  background: #1f1f1f;
+  color: #fff;
+}
+
+.VoteModal-runoff-choice {
+  width: 100%;
+  padding: 11px 14px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #444, #2b2b2b);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.VoteModal-runoff-choice:hover,
+.VoteModal-runoff-choice.selected {
+  background: linear-gradient(135deg, #e50914, #b31217);
+  transform: translateY(-1px);
+}
+
+.VoteModal-waiting-panel {
+  max-width: 760px;
+  margin: 24px auto;
+  padding: 26px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  text-align: center;
+}
+
+.VoteModal-submitted-badge {
+  display: inline-flex;
+  margin-bottom: 14px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.18);
+  color: #86efac;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.VoteModal-deadline-note {
+  color: #aaa;
+  font-size: 13px;
+  margin: 6px 0 0;
+}
+
+.VoteModal-progress-lists {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 22px;
+  text-align: left;
+}
+
+.VoteModal-progress-list {
+  min-height: 120px;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.VoteModal-progress-list h4 {
+  width: 100%;
+  color: #eee;
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+
+.VoteModal-member-chip,
+.VoteModal-progress-empty {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+
+.VoteModal-member-chip {
+  background: rgba(34, 197, 94, 0.16);
+  color: #bbf7d0;
+}
+
+.VoteModal-member-chip--pending {
+  background: rgba(255, 255, 255, 0.08);
+  color: #cfcfcf;
+}
+
+.VoteModal-progress-empty {
+  color: #888;
+}
+
 .VoteModal-badge {
   position: absolute;
   top: -8px;
@@ -979,6 +1137,18 @@
   color: #666;
 }
 
+.VoteModal-create-label {
+  display: block;
+  color: #aaa;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.VoteModal-mobile-deadline-fields {
+  display: none;
+}
+
 /* ── Create Section ───────────────────────────────────────────── */
 
 .VoteModal-create-section {
@@ -1073,6 +1243,18 @@
   font-size: 14px;
 }
 
+.VoteModal-random-note {
+  background: rgba(255, 193, 7, 0.12);
+  border: 1px solid rgba(255, 193, 7, 0.25);
+  border-radius: 10px;
+  color: #ffd54f;
+  font-size: 13px;
+  line-height: 1.4;
+  margin: 0 auto 16px;
+  max-width: 320px;
+  padding: 10px 12px;
+}
+
 /* ── Poll History Section ─────────────────────────────────────── */
 
 .VoteModal-history-section {
@@ -1086,6 +1268,96 @@
   font-weight: 600;
   color: #aaa;
   margin-bottom: 12px;
+}
+
+@media (max-width: 768px) {
+  .VoteModal-overlay {
+    align-items: flex-end;
+    padding: 10px;
+  }
+
+  .VoteModal-content {
+    width: 100%;
+    max-height: calc(100vh - 84px);
+    padding: 20px 14px;
+    border-radius: 16px;
+    box-sizing: border-box;
+  }
+
+  .VoteModal-close-btn {
+    top: 12px;
+    right: 12px;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+  }
+
+  .VoteModal-title {
+    padding-inline: 44px;
+    font-size: 20px;
+  }
+
+  .VoteModal-movie-grid {
+    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+    gap: 14px;
+    padding: 8px 0;
+  }
+
+  .VoteModal-history-item {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .VoteModal-publish-btn {
+    width: 100%;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  .VoteModal-movie-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .VoteModal-rank-card {
+    padding: 9px;
+  }
+
+  .VoteModal-rank-title {
+    font-size: 13px;
+    min-height: 34px;
+  }
+
+  .VoteModal-rank-select {
+    min-height: 42px;
+    padding-inline: 8px;
+  }
+
+  .VoteModal-deadline-input-desktop {
+    display: none;
+  }
+
+  .VoteModal-mobile-deadline-fields {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+
+  .VoteModal-mobile-deadline-input {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    margin-bottom: 0;
+    -webkit-appearance: none;
+    appearance: none;
+  }
 }
 
 .VoteModal-history-list {
@@ -1268,6 +1540,39 @@
   font-size: 14px;
   font-weight: 500;
   margin-bottom: 12px;
+}
+
+@media (max-width: 768px) {
+  .VoteModal-overlay {
+    align-items: flex-end;
+    padding: 12px 12px calc(84px + env(safe-area-inset-bottom));
+  }
+
+  .VoteModal-content {
+    width: min(100%, 1200px);
+    max-height: calc(100vh - 112px);
+    overflow-x: hidden;
+  }
+
+  .VoteModal-button-group {
+    flex-direction: column;
+  }
+
+  .VoteModal-submit-btn,
+  .VoteModal-reset-btn,
+  .results-close-btn {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .VoteModal-poll-name-input {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .VoteModal-selected-chips {
+    max-width: 100%;
+  }
 }
 
 /* (old winner poster styles removed – replaced by results-cinematic) */

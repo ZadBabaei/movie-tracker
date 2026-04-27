@@ -1,6 +1,15 @@
 import React from "react";
 import "./GroupChatSidbar.css";
 
+const getInitials = (name) =>
+  (name || "Unknown user")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+
 const GroupChatSidbar = ({ members, onSelectMember }) => {
   return (
     <div className="GroupSidebar-sidebar-container">
@@ -15,14 +24,21 @@ const GroupChatSidbar = ({ members, onSelectMember }) => {
             onClick={() => onSelectMember(member)}
           >
             <div className="GroupSidebar-member-info">
-              <img
-                src={member.image || "/default-avatar.png"}
-                alt={member.name || "User"}
-                className="GroupSidebar-avatar"
-              />
+              {member.image ? (
+                <img
+                  src={member.image}
+                  alt={member.name || "User"}
+                  className="GroupSidebar-avatar"
+                />
+              ) : (
+                <span className="GroupSidebar-avatar GroupSidebar-avatar-fallback">
+                  {getInitials(member.name)}
+                </span>
+              )}
               <div className="GroupSidebar-name-status">
                 <span className="GroupSidebar-name">
-                  {member.name || "Unknown"}
+                  {member.name || member.email || "Unknown user"}
+                  {member.isCurrentUser ? " (You)" : ""}
                 </span>
                 <span
                   className={`GroupSidebar-status ${
@@ -31,13 +47,6 @@ const GroupChatSidbar = ({ members, onSelectMember }) => {
                 />
               </div>
             </div>
-            <li
-              key={member.id}
-              className={`group-member ${
-                onSelectMember?.id === member.id ? "active" : ""
-              }`}
-              onClick={() => onSelectMember(member)}
-            ></li>
           </li>
         ))}
       </ul>

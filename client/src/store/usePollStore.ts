@@ -4,9 +4,38 @@ import axios from "axios";
 export interface PollMovie {
   id?: string;
   movieId?: string;
+  tmdbId?: string;
   title: string;
   poster_path?: string;
   vote_average?: number;
+  score?: number;
+}
+
+export interface PollRanking {
+  movieTmdbId: string;
+  rank: number;
+}
+
+export interface PollVote {
+  userId: { _id: string; name: string } | string;
+  rankings: PollRanking[];
+}
+
+export interface PollMemberProgress {
+  _id: string;
+  name: string;
+  avatar?: string;
+}
+
+export interface PollResult {
+  mode?: "ranked" | "runoff" | "randomTieBreak";
+  lowestScoreWins?: boolean;
+  randomTieBreak?: boolean;
+  movies?: {
+    movieTmdbId: string;
+    title?: string;
+    score: number;
+  }[];
 }
 
 export interface Poll {
@@ -15,11 +44,17 @@ export interface Poll {
   groupId?: string;
   creator?: { _id: string; name: string } | string;
   movies: PollMovie[];
-  votes: any[];
+  votes: PollVote[];
   status: "active" | "completed" | "cancelled";
   round: number;
   winningMovieTmdbId?: string;
+  result?: PollResult;
   createdAt?: string;
+  expiresAt?: string;
+  totalMembers?: number;
+  votedMembers?: PollMemberProgress[];
+  pendingMembers?: PollMemberProgress[];
+  hasCurrentUserVoted?: boolean;
 }
 
 export interface PollHistoryItem {
@@ -30,6 +65,7 @@ export interface PollHistoryItem {
   winningMovieTmdbId?: string;
   winnerTitle?: string;
   winnerPoster?: string;
+  randomTieBreak?: boolean;
   createdAt: string;
   creator?: { _id: string; name: string };
 }
@@ -39,20 +75,24 @@ interface PollState {
   selectedMoviesForVote: PollMovie[];
   pollHistory: PollHistoryItem[];
   pollName: string;
-  selectedVoteIds: string[];
+  pollDeadline: string;
+  voteRankings: Record<string, number>;
+  runoffSelectionId: string;
 
   setCurrentPoll: (poll: Poll | null) => void;
   handleMovieSelectForVote: (movie: PollMovie) => void;
   clearVoteSelections: () => void;
   setPollName: (name: string) => void;
-  toggleVoteSelection: (movieId: string, maxSelections?: number) => void;
-  clearVoteIds: () => void;
+  setPollDeadline: (deadline: string) => void;
+  setMovieRank: (movieId: string, rank: number | "") => void;
+  setRunoffSelection: (movieId: string) => void;
+  clearVoteRankings: () => void;
   createPoll: (groupId: string) => Promise<Poll>;
   fetchCurrentPoll: (groupId: string) => Promise<Poll | null>;
   completePoll: (pollId: string) => Promise<Poll>;
   cancelPoll: (pollId: string) => Promise<void>;
   addMovieToCurrentPoll: (movie: PollMovie) => Promise<void>;
-  submitVote: (pollId: string, movieIds: string[]) => Promise<void>;
+  submitVote: (pollId: string, rankings: PollRanking[]) => Promise<void>;
   fetchPollHistory: (groupId: string) => Promise<void>;
   fetchPollResults: (pollId: string) => Promise<void>;
   deletePoll: (pollId: string) => Promise<void>;
@@ -63,22 +103,31 @@ export const usePollStore = create<PollState>((set, get) => ({
   selectedMoviesForVote: [],
   pollHistory: [],
   pollName: "",
-  selectedVoteIds: [],
+  pollDeadline: "",
+  voteRankings: {},
+  runoffSelectionId: "",
 
   setCurrentPoll: (poll) => set({ currentPoll: poll }),
 
   setPollName: (name) => set({ pollName: name }),
 
-  toggleVoteSelection: (movieId, maxSelections = 3) => {
-    const { selectedVoteIds } = get();
-    if (selectedVoteIds.includes(movieId)) {
-      set({ selectedVoteIds: selectedVoteIds.filter((id) => id !== movieId) });
-    } else if (selectedVoteIds.length < maxSelections) {
-      set({ selectedVoteIds: [...selectedVoteIds, movieId] });
+  setPollDeadline: (deadline) => set({ pollDeadline: deadline }),
+
+  setMovieRank: (movieId, rank) => {
+    const { voteRankings } = get();
+    if (rank === "") {
+      const nextRankings = { ...voteRankings };
+      delete nextRankings[movieId];
+      set({ voteRankings: nextRankings });
+      return;
     }
+
+    set({ voteRankings: { ...voteRankings, [movieId]: Number(rank) } });
   },
 
-  clearVoteIds: () => set({ selectedVoteIds: [] }),
+  setRunoffSelection: (movieId) => set({ runoffSelectionId: movieId }),
+
+  clearVoteRankings: () => set({ voteRankings: {}, runoffSelectionId: "" }),
 
   handleMovieSelectForVote: (movie) => {
     const { selectedMoviesForVote, currentPoll, addMovieToCurrentPoll } = get();
@@ -91,17 +140,22 @@ export const usePollStore = create<PollState>((set, get) => ({
     }
   },
 
-  clearVoteSelections: () => set({ selectedMoviesForVote: [], selectedVoteIds: [] }),
+  clearVoteSelections: () => set({ selectedMoviesForVote: [], voteRankings: {}, runoffSelectionId: "" }),
 
   createPoll: async (groupId: string): Promise<Poll> => {
     const token = localStorage.getItem("token");
-    const { selectedMoviesForVote, pollName } = get();
+    const { selectedMoviesForVote, pollName, pollDeadline } = get();
     const res = await axios.post(
       "/api/polls/create",
-      { groupId, movies: selectedMoviesForVote, name: pollName },
+      {
+        groupId,
+        movies: selectedMoviesForVote,
+        name: pollName,
+        deadline: pollDeadline ? new Date(pollDeadline).toISOString() : undefined,
+      },
       { headers: { Authorization: `Bearer ${token}` } }
     );
-    set({ currentPoll: res.data, selectedMoviesForVote: [], pollName: "" });
+    set({ currentPoll: res.data, selectedMoviesForVote: [], pollName: "", pollDeadline: "" });
     return res.data;
   },
 
@@ -128,11 +182,11 @@ export const usePollStore = create<PollState>((set, get) => ({
     );
     // Handle runoff: poll stays active with tied movies
     if (res.data.runoff) {
-      set({ currentPoll: res.data.poll, selectedVoteIds: [] });
+      set({ currentPoll: res.data.poll, voteRankings: {}, runoffSelectionId: "" });
       return res.data.poll;
     }
     // Normal completion
-    set({ currentPoll: res.data, selectedMoviesForVote: [], selectedVoteIds: [] });
+    set({ currentPoll: res.data, selectedMoviesForVote: [], voteRankings: {}, runoffSelectionId: "" });
     return res.data;
   },
 
@@ -143,7 +197,7 @@ export const usePollStore = create<PollState>((set, get) => ({
       {},
       { headers: { Authorization: `Bearer ${token}` } }
     );
-    set({ currentPoll: null, selectedMoviesForVote: [], selectedVoteIds: [] });
+    set({ currentPoll: null, selectedMoviesForVote: [], voteRankings: {}, runoffSelectionId: "" });
   },
 
   addMovieToCurrentPoll: async (movie: PollMovie): Promise<void> => {
@@ -162,26 +216,27 @@ export const usePollStore = create<PollState>((set, get) => ({
     }
   },
 
-  submitVote: async (pollId: string, movieIds: string[]): Promise<void> => {
+  submitVote: async (pollId: string, rankings: PollRanking[]): Promise<void> => {
     try {
       const token = localStorage.getItem("token");
       const res = await axios.post(
         "/api/polls/vote",
-        { pollId, movieIds },
+        { pollId, rankings },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       // Handle auto-completion (all members voted)
       if (res.data.autoCompleted) {
         if (res.data.runoff) {
-          set({ currentPoll: res.data.poll, selectedVoteIds: [] });
+          set({ currentPoll: res.data.poll, voteRankings: {}, runoffSelectionId: "" });
         } else {
-          set({ currentPoll: res.data.poll, selectedMoviesForVote: [], selectedVoteIds: [] });
+          set({ currentPoll: res.data.poll, selectedMoviesForVote: [], voteRankings: {}, runoffSelectionId: "" });
         }
       } else {
-        set({ currentPoll: res.data });
+        set({ currentPoll: res.data, voteRankings: {}, runoffSelectionId: "" });
       }
     } catch (err) {
       console.error("Vote error:", err);
+      throw err;
     }
   },
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   FaHome,
@@ -8,6 +8,7 @@ import {
   FaThList,
   FaSignOutAlt,
   FaComments,
+  FaEllipsisH,
 } from "react-icons/fa";
 import { useModalStore } from "../store/useModalStore";
 import { useUserStore } from "../store/useUserStore";
@@ -22,15 +23,18 @@ const VerticalNavbar: React.FC = () => {
   const { openGroupsModal } = useModalStore();
   const { profile, fetchProfile } = useUserStore();
   const { favoriteGroups, fetchFavoriteGroups, groupList, fetchGroups } = useGroupStore();
-  const [showGroupSubmenu, setShowGroupSubmenu] = useState(false);
-  const [showChatSubmenu, setShowChatSubmenu] = useState(false);
   const { unreadMap, totalUnread } = useUnreadCounts();
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
 
   useEffect(() => {
     if (!profile) fetchProfile();
     fetchFavoriteGroups();
     fetchGroups();
   }, [profile, fetchProfile, fetchFavoriteGroups, fetchGroups]);
+
+  useEffect(() => {
+    setIsMoreOpen(false);
+  }, [location.pathname]);
 
   const submenuGroups = favoriteGroups.length > 0
     ? favoriteGroups.slice(0, 2)
@@ -43,10 +47,39 @@ const VerticalNavbar: React.FC = () => {
     }
   };
 
+  const currentGroupId = useMemo(() => {
+    const match = location.pathname.match(/^\/group\/([^/]+)/);
+    return match?.[1];
+  }, [location.pathname]);
+
+  const goToGroupChat = () => {
+    if (currentGroupId) {
+      navigate(`/group/${currentGroupId}/chat`);
+      return;
+    }
+
+    const fallbackGroup = favoriteGroups[0] || groupList[0];
+    navigate(fallbackGroup ? `/group/${fallbackGroup._id}/chat` : "/my-groups");
+  };
+
+  const logout = () => {
+    localStorage.removeItem("token");
+    useUserStore.getState().clear();
+    navigate("/");
+  };
+
+  const isActive = (paths: string[]) =>
+    paths.some((path) =>
+      path.endsWith("*")
+        ? location.pathname.startsWith(path.slice(0, -1))
+        : location.pathname === path
+    );
+
   const getInitials = (name: string) =>
     name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
   return (
+    <>
     <nav className="vertical-navbar">
       <img className="logo logo-img" src={logo} alt="Logo" />
       <ul className="navbar-list">
@@ -56,23 +89,18 @@ const VerticalNavbar: React.FC = () => {
             <span className="label">Home</span>
           </a>
         </li>
-        <li
-          className="navbar-item navbar-item--groups"
-          onMouseEnter={() => setShowGroupSubmenu(true)}
-          onMouseLeave={() => setShowGroupSubmenu(false)}
-        >
+        <li className="navbar-item navbar-item--groups">
           <a href="#" className="navbar-link" onClick={handleGroupsClick}>
             <span className="icon"><FaUsers /></span>
             <span className="label">Groups</span>
           </a>
-          {showGroupSubmenu && submenuGroups.length > 0 && (
+          {submenuGroups.length > 0 && (
             <div className="navbar-group-submenu">
               {submenuGroups.map((g) => (
                 <div
                   key={g._id}
                   className="navbar-group-submenu-item"
                   onClick={() => {
-                    setShowGroupSubmenu(false);
                     navigate(`/group/${g._id}`);
                   }}
                 >
@@ -82,7 +110,6 @@ const VerticalNavbar: React.FC = () => {
               <div
                 className="navbar-group-submenu-item navbar-group-submenu-all"
                 onClick={() => {
-                  setShowGroupSubmenu(false);
                   navigate("/my-groups");
                 }}
               >
@@ -103,24 +130,19 @@ const VerticalNavbar: React.FC = () => {
             <span className="label">Messages</span>
           </a>
         </li>
-        <li
-          className="navbar-item navbar-item--chat"
-          onMouseEnter={() => setShowChatSubmenu(true)}
-          onMouseLeave={() => setShowChatSubmenu(false)}
-        >
+        <li className="navbar-item navbar-item--chat">
           <a href="#" className="navbar-link" onClick={(e) => e.preventDefault()}>
             <span className="icon"><FaComments /></span>
             {totalUnread > 0 && <span className="unread-dot" />}
             <span className="label">Group Chats</span>
           </a>
-          {showChatSubmenu && groupList.length > 0 && (
+          {groupList.length > 0 && (
             <div className="navbar-chat-submenu">
               {groupList.slice(0, 5).map((g) => (
                 <div
                   key={g._id}
                   className="navbar-chat-submenu-item"
                   onClick={() => {
-                    setShowChatSubmenu(false);
                     navigate(`/group/${g._id}/chat`);
                   }}
                 >
@@ -158,9 +180,7 @@ const VerticalNavbar: React.FC = () => {
           className="navbar-link navbar-link--logout"
           onClick={(e) => {
             e.preventDefault();
-            localStorage.removeItem("token");
-            useUserStore.getState().clear();
-            navigate("/");
+            logout();
           }}
         >
           <span className="icon"><FaSignOutAlt /></span>
@@ -168,6 +188,72 @@ const VerticalNavbar: React.FC = () => {
         </a>
       </div>
     </nav>
+    <nav className="mobile-bottom-nav" aria-label="Primary navigation">
+      <button
+        type="button"
+        className={`mobile-nav-item ${isActive(["/home"]) ? "active" : ""}`}
+        onClick={() => navigate("/home")}
+      >
+        <FaHome />
+        <span>Home</span>
+      </button>
+      <button
+        type="button"
+        className={`mobile-nav-item ${isActive(["/my-groups", "/group/*"]) ? "active" : ""}`}
+        onClick={() => navigate("/my-groups")}
+      >
+        <FaUsers />
+        <span>Groups</span>
+      </button>
+      <button
+        type="button"
+        className={`mobile-nav-item ${isActive(["/watchlist"]) ? "active" : ""}`}
+        onClick={() => navigate("/watchlist")}
+      >
+        <FaThList />
+        <span>Watchlist</span>
+      </button>
+      <button
+        type="button"
+        className={`mobile-nav-item ${location.pathname.endsWith("/chat") ? "active" : ""}`}
+        onClick={goToGroupChat}
+      >
+        <span className="mobile-nav-icon-wrap">
+          <FaComments />
+          {totalUnread > 0 && <span className="mobile-unread-dot" />}
+        </span>
+        <span>Chat</span>
+      </button>
+      <div className="mobile-more-wrap">
+        <button
+          type="button"
+          className={`mobile-nav-item ${isMoreOpen ? "active" : ""}`}
+          onClick={() => setIsMoreOpen((open) => !open)}
+          aria-expanded={isMoreOpen}
+          aria-haspopup="menu"
+        >
+          <FaEllipsisH />
+          <span>More</span>
+        </button>
+        {isMoreOpen && (
+          <div className="mobile-more-menu" role="menu">
+            <button type="button" onClick={() => navigate("/profile")} role="menuitem">
+              Profile
+            </button>
+            <button type="button" onClick={() => navigate("/inbox")} role="menuitem">
+              Inbox
+            </button>
+            <button type="button" onClick={() => navigate("/about")} role="menuitem">
+              About
+            </button>
+            <button type="button" onClick={logout} role="menuitem">
+              Log Out
+            </button>
+          </div>
+        )}
+      </div>
+    </nav>
+    </>
   );
 };
 

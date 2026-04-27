@@ -85,7 +85,15 @@ router.delete("/:movieId", authenticate, async (req: Request, res: Response) => 
 // POST /api/watchlist/:movieId/mark-watched — move to group's watched list
 router.post("/:movieId/mark-watched", authenticate, async (req: Request, res: Response) => {
   try {
-    const { groupId, watchedDate, watchedWhere, watchedWith } = req.body;
+    const {
+      groupId,
+      watchedAt,
+      watchedDate,
+      watchedLocation,
+      watchedWhere,
+      watchedWith,
+      watchedNotes,
+    } = req.body;
     if (!groupId) {
       res.status(400).json({ msg: "groupId is required" });
       return;
@@ -112,7 +120,15 @@ router.post("/:movieId/mark-watched", authenticate, async (req: Request, res: Re
     // Migrate old plain-ObjectId entries to subdocument format
     group.movies = group.movies.map((m: any) => {
       if (m.movieId) return m;
-      return { movieId: m, watchedDate: new Date(), watchedWhere: "", watchedWith: [] };
+      return {
+        movieId: m,
+        watchedDate: new Date(),
+        watchedAt: new Date(),
+        watchedWhere: "",
+        watchedLocation: "",
+        watchedWith: [],
+        watchedNotes: "",
+      };
     }) as any;
 
     // Add movie to group if not already there
@@ -120,11 +136,16 @@ router.post("/:movieId/mark-watched", authenticate, async (req: Request, res: Re
       (m: any) => (m.movieId || m).toString() === movie._id.toString()
     );
     if (!alreadyInGroup) {
+      const parsedWatchedAt = watchedAt || watchedDate ? new Date(watchedAt || watchedDate) : new Date();
+      const locationPayload = watchedLocation || watchedWhere || "";
       group.movies.push({
         movieId: movie._id,
-        watchedDate: watchedDate ? new Date(watchedDate) : new Date(),
-        watchedWhere: watchedWhere || "",
+        watchedDate: parsedWatchedAt,
+        watchedAt: parsedWatchedAt,
+        watchedWhere: locationPayload,
+        watchedLocation: locationPayload,
         watchedWith: watchedWith?.length ? watchedWith : [req.user!.id],
+        watchedNotes: watchedNotes || "",
       } as any);
     }
     await group.save();

@@ -10,6 +10,9 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Set OPENAI_MODEL in the server .env to change the assistant chat model.
+const assistantModel = process.env.OPENAI_MODEL || "gpt-4o-mini";
+
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -79,7 +82,7 @@ router.post("/chat", authenticate, async (req: Request, res: Response) => {
     res.setHeader("Connection", "keep-alive");
 
     const stream = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: assistantModel,
       messages,
       stream: true,
       max_tokens: 1000,

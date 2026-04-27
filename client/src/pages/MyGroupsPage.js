@@ -57,6 +57,13 @@ const MyGroupsPage = () => {
     return String.fromCharCode(97 + index);
   };
 
+  const formatDate = (date) =>
+    new Date(date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+
   return (
     <>
       <VerticalNavbar />
@@ -78,60 +85,100 @@ const MyGroupsPage = () => {
         ) : groups.length === 0 ? (
           <p>You are not a member of any groups.</p>
         ) : (
-          <table className="group-table">
-            <thead>
-              <tr>
-                <th>Group Name</th>
-                <th>Group Members</th>
-                <th>Created At</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            <table className="group-table">
+              <thead>
+                <tr>
+                  <th>Group Name</th>
+                  <th>Group Members</th>
+                  <th>Created At</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {groups.map((group) => (
+                  <tr key={group._id}>
+                    <td id="GroupNameSize">
+                      <span
+                        className="group-link"
+                        onClick={() => navigate(`/group/${group._id}`)}
+                      >
+                        {group.name}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="member-avatars">
+                        {group.members?.slice(0, 5).map((member) => (
+                          <div
+                            key={member._id}
+                            className={`avatar-circle color-${getColorClass(
+                              member.name
+                            )}`}
+                            data-tooltip={member.name}
+                          >
+                            {member.avatar ? (
+                              <img src={member.avatar} alt={member.name} />
+                            ) : (
+                              <>
+                                <span className="initial">
+                                  {member.name
+                                    ? member.name.charAt(0).toUpperCase()
+                                    : "?"}
+                                </span>
+                                <span className="full-name">{member.name}</span>
+                              </>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                    <td>{formatDate(group.createdAt)}</td>
+                    <td>
+                      <IconButton
+                        size="small"
+                        onClick={async () => {
+                          const result = await toggleFavoriteGroup(group._id);
+                          if (result === true) {
+                            toast.success("Added to favorites!");
+                          } else if (result === false) {
+                            toast.info("Removed from favorites.");
+                          } else {
+                            toast.warn("You can only have 2 favorite groups. Unfavorite one first.");
+                          }
+                        }}
+                        sx={{ color: "#ffc107", mr: 1 }}
+                      >
+                        {favoriteGroups.some((fg) => fg._id === group._id) ? (
+                          <Star />
+                        ) : (
+                          <StarBorder />
+                        )}
+                      </IconButton>
+                      <button
+                        className="group-table-chat-btn"
+                        onClick={() => navigate(`/group/${group._id}/chat`)}
+                      >
+                        Group Chat
+                      </button>
+                      <button onClick={() => handleLeaveGroup(group._id)}>
+                        Leave
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="mobile-group-card-list">
               {groups.map((group) => (
-                <tr key={group._id}>
-                  <td id="GroupNameSize">
-                    <span
-                      className="group-link"
-                      onClick={() => navigate(`/group/${group._id}`)}
-                    >
-                      {group.name}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="member-avatars">
-                      {group.members?.slice(0, 5).map((member) => (
-                        <div
-                          key={member._id}
-                          className={`avatar-circle color-${getColorClass(
-                            member.name
-                          )}`}
-                          data-tooltip={member.name}
-                        >
-                          {member.avatar ? (
-                            <img src={member.avatar} alt={member.name} />
-                          ) : (
-                            <>
-                              <span className="initial">
-                                {member.name
-                                  ? member.name.charAt(0).toUpperCase()
-                                  : "?"}
-                              </span>
-                              <span className="full-name">{member.name}</span>
-                            </>
-                          )}
-                        </div>
-                      ))}
+                <article className="mobile-group-card" key={`mobile-${group._id}`}>
+                  <div className="mobile-group-card-header">
+                    <div>
+                      <h2>{group.name}</h2>
+                      <p>
+                        Admin: {group.creator?.name || "Unknown"} - {formatDate(group.createdAt)}
+                      </p>
                     </div>
-                  </td>
-                  <td>
-                    {new Date(group.createdAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </td>
-                  <td>
                     <IconButton
                       size="small"
                       onClick={async () => {
@@ -144,7 +191,7 @@ const MyGroupsPage = () => {
                           toast.warn("You can only have 2 favorite groups. Unfavorite one first.");
                         }
                       }}
-                      sx={{ color: "#ffc107", mr: 1 }}
+                      sx={{ color: "#ffc107", flexShrink: 0 }}
                     >
                       {favoriteGroups.some((fg) => fg._id === group._id) ? (
                         <Star />
@@ -152,20 +199,47 @@ const MyGroupsPage = () => {
                         <StarBorder />
                       )}
                     </IconButton>
-                    <button
-                      className="group-table-chat-btn"
-                      onClick={() => navigate(`/group/${group._id}/chat`)}
-                    >
-                      Group Chat
+                  </div>
+
+                  <div className="mobile-group-members">
+                    <span>Members</span>
+                    <div className="member-avatars">
+                      {group.members?.slice(0, 4).map((member) => (
+                        <div
+                          key={member._id}
+                          className={`avatar-circle color-${getColorClass(member.name)}`}
+                          title={member.name || member.email || "Member"}
+                        >
+                          {member.avatar ? (
+                            <img src={member.avatar} alt={member.name || "Member"} />
+                          ) : (
+                            <span className="initial">
+                              {member.name ? member.name.charAt(0).toUpperCase() : "?"}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                      {(group.members?.length || 0) > 4 && (
+                        <span className="mobile-member-count">+{group.members.length - 4}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mobile-group-actions">
+                    <button onClick={() => navigate(`/group/${group._id}`)}>
+                      Open Group
                     </button>
-                    <button onClick={() => handleLeaveGroup(group._id)}>
+                    <button onClick={() => navigate(`/group/${group._id}/chat`)}>
+                      Chat
+                    </button>
+                    <button className="mobile-group-leave" onClick={() => handleLeaveGroup(group._id)}>
                       Leave
                     </button>
-                  </td>
-                </tr>
+                  </div>
+                </article>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
     </>

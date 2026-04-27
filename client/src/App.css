@@ -2,3 +2,16 @@
  * {
   box-sizing: border-box;
 }
+
+html,
+body,
+#root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+@media (max-width: 768px) {
+  body {
+    padding-bottom: calc(90px + env(safe-area-inset-bottom));
+  }
+}
