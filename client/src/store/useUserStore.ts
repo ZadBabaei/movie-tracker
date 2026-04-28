@@ -7,6 +7,7 @@ export interface UserProfile {
   email: string;
   avatar: string;
   firstLogin: boolean;
+  createdAt?: string;
 }
 
 export interface UserStats {
@@ -16,12 +17,29 @@ export interface UserStats {
   pollsCreated: number;
 }
 
+export interface RecentActivity {
+  id: string;
+  type: "watchlist" | "group" | "poll-vote" | "poll-created" | "profile";
+  title: string;
+  description: string;
+  createdAt: string;
+  icon?: string;
+}
+
+export interface ProfileDashboard {
+  user: UserProfile;
+  stats: UserStats;
+  recentActivity: RecentActivity[];
+}
+
 interface UserState {
   profile: UserProfile | null;
   stats: UserStats | null;
+  recentActivity: RecentActivity[];
   loading: boolean;
 
   fetchProfile: () => Promise<UserProfile | null>;
+  fetchDashboard: () => Promise<ProfileDashboard | null>;
   updateProfile: (data: { name?: string; email?: string }) => Promise<void>;
   uploadAvatar: (file: File) => Promise<void>;
   removeAvatar: () => Promise<void>;
@@ -38,6 +56,7 @@ const authHeader = () => ({
 export const useUserStore = create<UserState>((set) => ({
   profile: null,
   stats: null,
+  recentActivity: [],
   loading: false,
 
   setProfile: (profile) => set({ profile }),
@@ -50,6 +69,23 @@ export const useUserStore = create<UserState>((set) => ({
       return res.data;
     } catch {
       set({ profile: null, loading: false });
+      return null;
+    }
+  },
+
+  fetchDashboard: async () => {
+    try {
+      set({ loading: true });
+      const res = await axios.get("/api/profile/dashboard", authHeader());
+      set({
+        profile: res.data.user,
+        stats: res.data.stats,
+        recentActivity: res.data.recentActivity || [],
+        loading: false,
+      });
+      return res.data;
+    } catch {
+      set({ profile: null, stats: null, recentActivity: [], loading: false });
       return null;
     }
   },
@@ -94,5 +130,5 @@ export const useUserStore = create<UserState>((set) => ({
     }
   },
 
-  clear: () => set({ profile: null, stats: null }),
+  clear: () => set({ profile: null, stats: null, recentActivity: [] }),
 }));

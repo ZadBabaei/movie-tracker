@@ -9,18 +9,23 @@ export interface IUser extends Document {
   favoriteGroups: Types.ObjectId[];
   avatar?: string;
   firstLogin: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-const userSchema = new Schema<IUser>({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  watchlist: [{ type: Schema.Types.ObjectId, ref: "Movie", default: [] }],
-  favorites: [{ type: Schema.Types.ObjectId, ref: "Movie", default: [] }],
-  favoriteGroups: [{ type: Schema.Types.ObjectId, ref: "Group", default: [] }],
-  avatar: { type: String, default: "" },
-  firstLogin: { type: Boolean, default: true },
-});
+const userSchema = new Schema<IUser>(
+  {
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    watchlist: [{ type: Schema.Types.ObjectId, ref: "Movie", default: [] }],
+    favorites: [{ type: Schema.Types.ObjectId, ref: "Movie", default: [] }],
+    favoriteGroups: [{ type: Schema.Types.ObjectId, ref: "Group", default: [] }],
+    avatar: { type: String, default: "" },
+    firstLogin: { type: Boolean, default: true },
+  },
+  { timestamps: true }
+);
 
 const User: Model<IUser> =
   mongoose.models.User || mongoose.model<IUser>("User", userSchema, "users");

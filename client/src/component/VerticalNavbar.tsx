@@ -39,6 +39,7 @@ const VerticalNavbar: React.FC = () => {
   const submenuGroups = favoriteGroups.length > 0
     ? favoriteGroups.slice(0, 2)
     : groupList.slice(0, 2);
+  const chatQuickGroups = groupList.slice(0, 2);
 
   const handleGroupsClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -94,29 +95,27 @@ const VerticalNavbar: React.FC = () => {
             <span className="icon"><FaUsers /></span>
             <span className="label">Groups</span>
           </a>
-          {submenuGroups.length > 0 && (
-            <div className="navbar-group-submenu">
-              {submenuGroups.map((g) => (
-                <div
-                  key={g._id}
-                  className="navbar-group-submenu-item"
-                  onClick={() => {
-                    navigate(`/group/${g._id}`);
-                  }}
-                >
-                  {g.name}
-                </div>
-              ))}
-              <div
-                className="navbar-group-submenu-item navbar-group-submenu-all"
+          <div className="navbar-hover-row" aria-label="Groups quick links">
+            <button
+              type="button"
+              className="navbar-hover-pill navbar-hover-pill--primary"
+              onClick={handleGroupsClick}
+            >
+              Groups
+            </button>
+            {submenuGroups.map((g) => (
+              <button
+                key={g._id}
+                type="button"
+                className="navbar-hover-pill"
                 onClick={() => {
-                  navigate("/my-groups");
+                  navigate(`/group/${g._id}`);
                 }}
               >
-                All Groups
-              </div>
-            </div>
-          )}
+                <span className="navbar-hover-pill-text">{g.name}</span>
+              </button>
+            ))}
+          </div>
         </li>
         <li className="navbar-item">
           <a href="/watchlist" className="navbar-link">
@@ -131,29 +130,42 @@ const VerticalNavbar: React.FC = () => {
           </a>
         </li>
         <li className="navbar-item navbar-item--chat">
-          <a href="#" className="navbar-link" onClick={(e) => e.preventDefault()}>
+          <a
+            href="#"
+            className="navbar-link"
+            onClick={(e) => {
+              e.preventDefault();
+              goToGroupChat();
+            }}
+          >
             <span className="icon"><FaComments /></span>
             {totalUnread > 0 && <span className="unread-dot" />}
             <span className="label">Group Chats</span>
           </a>
-          {groupList.length > 0 && (
-            <div className="navbar-chat-submenu">
-              {groupList.slice(0, 5).map((g) => (
-                <div
-                  key={g._id}
-                  className="navbar-chat-submenu-item"
-                  onClick={() => {
-                    navigate(`/group/${g._id}/chat`);
-                  }}
-                >
-                  <span>{g.name}</span>
-                  {(unreadMap[g._id] || 0) > 0 && (
-                    <span className="unread-badge">{unreadMap[g._id]}</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="navbar-hover-row" aria-label="Group chat quick links">
+            <button
+              type="button"
+              className="navbar-hover-pill navbar-hover-pill--primary"
+              onClick={goToGroupChat}
+            >
+              Group Chats
+            </button>
+            {chatQuickGroups.map((g) => (
+              <button
+                key={g._id}
+                type="button"
+                className="navbar-hover-pill navbar-hover-pill--chat"
+                onClick={() => {
+                  navigate(`/group/${g._id}/chat`);
+                }}
+              >
+                <span className="navbar-hover-pill-text">{g.name}</span>
+                {(unreadMap[g._id] || 0) > 0 && (
+                  <span className="unread-badge">{unreadMap[g._id]}</span>
+                )}
+              </button>
+            ))}
+          </div>
         </li>
         <li className="navbar-item">
           <a href="/profile" className="navbar-link navbar-link--profile">

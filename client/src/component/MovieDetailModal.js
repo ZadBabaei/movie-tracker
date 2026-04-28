@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { FaTimes, FaStar } from "react-icons/fa";
+import { FaTimes } from "react-icons/fa";
 import CommentSection from "./CommentSection";
 import "./MovieDetailModal.css";
 
@@ -10,10 +10,48 @@ const getPosterUrl = (path) => {
   return path.startsWith("http") ? path : `https://image.tmdb.org/t/p/w500${path}`;
 };
 
-const extractTmdbId = (imdbID) => {
-  if (!imdbID) return null;
-  if (imdbID.startsWith("tmdb-")) return imdbID.replace("tmdb-", "");
-  return imdbID;
+const getTmdbMovieId = (movie = {}) => {
+  const explicitId = movie.tmdbId || movie.movieTmdbId || movie.tmdbMovieId;
+  if (explicitId) return explicitId.toString();
+
+  const imdbId = movie.imdbID || movie.imdb_id;
+  if (typeof imdbId === "string" && imdbId.startsWith("tt")) {
+    return "";
+  }
+  if (typeof imdbId === "string" && imdbId.startsWith("tmdb-")) {
+    return imdbId.replace("tmdb-", "");
+  }
+
+  const id = movie.movieId || movie.id;
+  if (typeof id === "string" && id.startsWith("tt")) {
+    return "";
+  }
+  return id ? id.toString() : "";
+};
+
+const getImdbUrlFromMovie = (movie = {}) => {
+  const imdbId = movie.imdb_id || movie.imdbID || movie.id;
+  return typeof imdbId === "string" && imdbId.startsWith("tt")
+    ? `https://www.imdb.com/title/${imdbId}/`
+    : "";
+};
+
+const getDisplayRating = (movie = {}, details = {}) => {
+  const rating =
+    movie.imdbRating ??
+    movie.imdb_rating ??
+    details?.imdbRating ??
+    movie.vote_average ??
+    details?.vote_average;
+
+  if (rating === undefined || rating === null || rating === "") return "N/A";
+
+  const numericRating = Number(rating);
+  const formattedRating = Number.isFinite(numericRating)
+    ? numericRating.toFixed(1)
+    : String(rating).trim();
+
+  return formattedRating ? `${formattedRating} / 10` : "N/A";
 };
 
 const formatWatchedDate = (value) => {
@@ -40,9 +78,10 @@ const formatWatchedWith = (watchedWith) => {
 const MovieDetailModal = ({ movie, onClose }) => {
   const [details, setDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(true);
+  const [imdbUrl, setImdbUrl] = useState("");
 
   const poster = movie.poster_path || movie.poster;
-  const tmdbId = movie.tmdbId || extractTmdbId(movie.imdbID);
+  const tmdbId = getTmdbMovieId(movie);
   const watchedDate = formatWatchedDate(movie.watchedAt || movie.watchedDate || movie.createdAt);
   const watchedLocation = movie.watchedLocation || movie.watchedWhere;
   const watchedWith = formatWatchedWith(movie.watchedWith);
@@ -72,14 +111,50 @@ const MovieDetailModal = ({ movie, onClose }) => {
     fetchDetails();
   }, [tmdbId]);
 
+  useEffect(() => {
+    const existingImdbUrl = getImdbUrlFromMovie(movie);
+
+    setImdbUrl("");
+    if (existingImdbUrl) {
+      setImdbUrl(existingImdbUrl);
+      return undefined;
+    }
+    if (!tmdbId || !TMDB_KEY) return undefined;
+
+    const controller = new AbortController();
+
+    fetch(
+      `https://api.themoviedb.org/3/movie/${encodeURIComponent(tmdbId)}/external_ids?api_key=${TMDB_KEY}`,
+      { signal: controller.signal }
+    )
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (data?.imdb_id) {
+          setImdbUrl(`https://www.imdb.com/title/${data.imdb_id}/`);
+        }
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError") setImdbUrl("");
+      });
+
+    return () => controller.abort();
+  }, [movie, tmdbId]);
+
   const director = details?.credits?.crew?.find((c) => c.job === "Director")?.name;
   const cast = details?.credits?.cast?.slice(0, 4).map((a) => a.name) || [];
   const year = details?.release_date ? new Date(details.release_date).getFullYear() : null;
   const overview = details?.overview;
   const genres = details?.genres?.map((g) => g.name) || [];
   const runtime = details?.runtime;
+  const rating = getDisplayRating(movie, details);
 
   const mongoId = movie._id;
+  const imdbRatingContent = (
+    <>
+      <span className="mdm-imdb-badge">IMDb</span>
+      <span className="mdm-rating-text">{rating}</span>
+    </>
+  );
 
   return (
     <div className="mdm-overlay" onClick={onClose}>
@@ -102,10 +177,20 @@ const MovieDetailModal = ({ movie, onClose }) => {
               {year && <span className="mdm-year"> ({year})</span>}
             </h2>
 
-            <div className="mdm-rating">
-              <FaStar className="mdm-star" />
-              <span>{movie.vote_average ? `${Number(movie.vote_average).toFixed(1)} / 10` : "N/A"}</span>
-            </div>
+            {imdbUrl ? (
+              <a
+                className="mdm-rating mdm-rating-link"
+                href={imdbUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                aria-label={`Open ${movie.title} on IMDb`}
+              >
+                {imdbRatingContent}
+              </a>
+            ) : (
+              <div className="mdm-rating">{imdbRatingContent}</div>
+            )}
 
             {genres.length > 0 && (
               <div className="mdm-genres">

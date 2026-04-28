@@ -46,7 +46,7 @@ background: linear-gradient(to top, #17421d, #040a1c);
   position: absolute;
   top: 0;
   left: 100%;
-  width: 10px;
+  width: 18px;
   height: 100%;
 }
 
@@ -158,73 +158,81 @@ background: linear-gradient(to top, #17421d, #040a1c);
   display: none;
 }
 
-.navbar-group-submenu,
-.navbar-chat-submenu {
+.navbar-hover-row {
   position: absolute;
-  left: 100%;
-  top: 0;
-  margin-left: 8px;
-  background: rgba(4, 10, 28, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 8px 0;
-  min-width: 180px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  left: calc(100% + 12px);
+  top: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 110px);
   z-index: 1001;
-  backdrop-filter: blur(12px);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
+  transform: translateY(-50%) translateX(-12px);
+  transition: opacity 0.24s ease, transform 0.24s ease, visibility 0.24s ease;
 }
 
-.navbar-item--groups:hover .navbar-group-submenu,
-.navbar-item--chat:hover .navbar-chat-submenu {
+.navbar-hover-row::before {
+  content: "";
+  position: absolute;
+  right: 100%;
+  top: 0;
+  width: 18px;
+  height: 100%;
+}
+
+.navbar-item--groups:hover .navbar-hover-row,
+.navbar-item--chat:hover .navbar-hover-row {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+  transform: translateY(-50%) translateX(0);
 }
 
-.navbar-group-submenu-item {
-  padding: 10px 16px;
-  color: #bfbfc0;
+.navbar-hover-pill {
+  min-width: 0;
+  max-width: 150px;
+  padding: 1rem 1rem;
+  border: 0;
+  border-radius: 20px;
+  background: #ffffff;
+  color: #406ff3;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   cursor: pointer;
-  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: normal;
   white-space: nowrap;
-  transition: background-color 0.2s, color 0.2s;
+  transition: all 0.3s ease;
 }
 
-.navbar-group-submenu-item:hover {
-  background-color: rgba(10, 83, 41, 0.6);
-  color: white;
+.navbar-hover-pill:hover {
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.navbar-group-submenu-all {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  margin-top: 4px;
-  padding-top: 10px;
-  font-weight: 600;
-  color: #4caf50;
+.navbar-hover-pill--primary {
+  flex: 0 0 auto;
 }
 
 /* ── Chat Submenu ──────────────────── */
 
-.navbar-chat-submenu-item {
-  padding: 10px 16px;
-  color: #bfbfc0;
-  cursor: pointer;
-  font-size: 13px;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  transition: background-color 0.2s, color 0.2s;
+.navbar-hover-pill--chat {
+  padding-right: 12px;
 }
 
-.navbar-chat-submenu-item:hover {
-  background-color: rgba(10, 83, 41, 0.6);
-  color: white;
+.navbar-hover-pill-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .unread-badge {
@@ -240,6 +248,7 @@ background: linear-gradient(to top, #17421d, #040a1c);
   align-items: center;
   justify-content: center;
   line-height: 1;
+  flex: 0 0 auto;
 }
 
 .unread-dot {

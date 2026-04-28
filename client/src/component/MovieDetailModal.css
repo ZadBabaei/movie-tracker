@@ -95,17 +95,48 @@
 }
 
 .mdm-rating {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  width: fit-content;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid transparent;
   font-size: 0.95rem;
+  font-weight: 700;
   color: #e0e0e0;
   margin-bottom: 12px;
 }
 
-.mdm-star {
-  color: #f5c518;
-  font-size: 0.9rem;
+.mdm-rating-link {
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.mdm-rating-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(245, 197, 24, 0.38);
+  box-shadow: 0 0 0 3px rgba(245, 197, 24, 0.12);
+}
+
+.mdm-imdb-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  padding: 3px 5px;
+  border-radius: 5px;
+  background: #f5c518;
+  color: #111;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.mdm-rating-text {
+  color: #f2f4f8;
 }
 
 .mdm-genres {

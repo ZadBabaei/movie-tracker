@@ -3,10 +3,128 @@ import multer from "multer";
 import { authenticate } from "../middleware/authMiddleware";
 import User from "../models/user";
 import Group from "../models/Groups";
+import Movie from "../models/movie";
 import Poll from "../models/Poll";
 import cloudinary from "../utils/cloudinary";
 
 const router = express.Router();
+
+type ActivityType = "watchlist" | "group" | "poll-vote" | "poll-created" | "profile";
+
+interface ProfileStats {
+  groupsJoined: number;
+  moviesWatched: number;
+  pollsVoted: number;
+  pollsCreated: number;
+}
+
+interface RecentActivity {
+  id: string;
+  type: ActivityType;
+  title: string;
+  description: string;
+  createdAt: string;
+  icon?: string;
+}
+
+const toIsoString = (value?: Date | string | null) => {
+  const date = value ? new Date(value) : new Date();
+  return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+};
+
+const getProfileStats = async (userId: string, watchlistLength?: number): Promise<ProfileStats> => {
+  const [groupsJoined, pollsVoted, pollsCreated, user] = await Promise.all([
+    Group.countDocuments({ members: userId }),
+    Poll.countDocuments({ "votes.userId": userId }),
+    Poll.countDocuments({ creator: userId }),
+    watchlistLength === undefined ? User.findById(userId).select("watchlist").lean() : null,
+  ]);
+
+  return {
+    groupsJoined,
+    moviesWatched: watchlistLength ?? user?.watchlist?.length ?? 0,
+    pollsVoted,
+    pollsCreated,
+  };
+};
+
+const getRecentActivity = async (userId: string, watchlistIds: any[] = []): Promise<RecentActivity[]> => {
+  const [watchlistMovies, groups, votedPolls, createdPolls, user] = await Promise.all([
+    watchlistIds.length
+      ? Movie.find({ _id: { $in: watchlistIds } })
+          .select("title createdAt")
+          .sort({ createdAt: -1 })
+          .limit(4)
+          .lean()
+      : [],
+    Group.find({ members: userId })
+      .select("name creator createdAt")
+      .sort({ createdAt: -1 })
+      .limit(4)
+      .lean(),
+    Poll.find({ "votes.userId": userId })
+      .select("name createdAt")
+      .sort({ createdAt: -1 })
+      .limit(4)
+      .lean(),
+    Poll.find({ creator: userId })
+      .select("name createdAt")
+      .sort({ createdAt: -1 })
+      .limit(4)
+      .lean(),
+    User.findById(userId).select("createdAt updatedAt").lean(),
+  ]);
+
+  const activities: RecentActivity[] = [
+    ...watchlistMovies.map((movie: any) => ({
+      id: `watchlist-${movie._id}`,
+      type: "watchlist" as ActivityType,
+      title: `Added ${movie.title || "a movie"} to your watchlist`,
+      description: "Movies queued up and ready to roll",
+      createdAt: toIsoString(movie.createdAt),
+      icon: "film",
+    })),
+    ...groups.map((group: any) => ({
+      id: `group-${group._id}`,
+      type: "group" as ActivityType,
+      title: `Joined ${group.name || "a movie group"}`,
+      description: "Connected with fellow film lovers",
+      createdAt: toIsoString(group.createdAt),
+      icon: "users",
+    })),
+    ...votedPolls.map((poll: any) => ({
+      id: `poll-vote-${poll._id}`,
+      type: "poll-vote" as ActivityType,
+      title: `Voted in ${poll.name || "a group poll"}`,
+      description: "Had your say on what to watch next",
+      createdAt: toIsoString(poll.createdAt),
+      icon: "poll",
+    })),
+    ...createdPolls.map((poll: any) => ({
+      id: `poll-created-${poll._id}`,
+      type: "poll-created" as ActivityType,
+      title: `Created ${poll.name || "a group poll"}`,
+      description: "Planned movie nights with friends",
+      createdAt: toIsoString(poll.createdAt),
+      icon: "chart",
+    })),
+  ];
+
+  if (user?.createdAt) {
+    activities.push({
+      id: `profile-${userId}`,
+      type: "profile",
+      title: "Created your profile",
+      description: "Started tracking movie nights with your groups",
+      createdAt: toIsoString(user.createdAt),
+      icon: "star",
+    });
+  }
+
+  return activities
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 8);
+};
 
 // Multer: store in memory buffer (we upload to Cloudinary, not disk)
 const upload = multer({
@@ -131,32 +249,48 @@ router.delete("/avatar", authenticate, async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/profile/dashboard — consolidated profile, stats, and recent activity
+router.get("/dashboard", authenticate, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const user = await User.findById(userId)
+      .select("_id name email avatar firstLogin createdAt watchlist")
+      .lean();
+
+    if (!user) {
+      res.status(404).json({ msg: "User not found" });
+      return;
+    }
+
+    const [stats, recentActivity] = await Promise.all([
+      getProfileStats(userId, user.watchlist?.length ?? 0),
+      getRecentActivity(userId, user.watchlist || []),
+    ]);
+
+    res.json({
+      user: {
+        _id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar || "",
+        firstLogin: user.firstLogin,
+        createdAt: user.createdAt ? toIsoString(user.createdAt) : undefined,
+      },
+      stats,
+      recentActivity,
+    });
+  } catch (error) {
+    console.error("Error fetching profile dashboard:", error);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
+
 // GET /api/profile/stats — get user statistics
 router.get("/stats", authenticate, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
-
-    // Groups joined
-    const groupsJoined = await Group.countDocuments({ members: userId });
-
-    // Movies in watchlist
-    const user = await User.findById(userId);
-    const moviesWatched = user?.watchlist?.length || 0;
-
-    // Polls voted in
-    const pollsVoted = await Poll.countDocuments({
-      "votes.userId": userId,
-    });
-
-    // Polls created
-    const pollsCreated = await Poll.countDocuments({ creator: userId });
-
-    res.json({
-      groupsJoined,
-      moviesWatched,
-      pollsVoted,
-      pollsCreated,
-    });
+    const stats = await getProfileStats(userId);
+    res.json(stats);
   } catch (error) {
     console.error("Error fetching stats:", error);
     res.status(500).json({ msg: "Server error" });

@@ -43,6 +43,6 @@ const userSchema = new mongoose_1.Schema({
     favoriteGroups: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Group", default: [] }],
     avatar: { type: String, default: "" },
     firstLogin: { type: Boolean, default: true },
-});
+}, { timestamps: true });
 const User = mongoose_1.default.models.User || mongoose_1.default.model("User", userSchema, "users");
 exports.default = User;
