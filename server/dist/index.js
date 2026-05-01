@@ -20,12 +20,16 @@ const watchlistRoutes_1 = __importDefault(require("./routes/watchlistRoutes"));
 const profileRoutes_1 = __importDefault(require("./routes/profileRoutes"));
 const assistantRoutes_1 = __importDefault(require("./routes/assistantRoutes"));
 const commentRoutes_1 = __importDefault(require("./routes/commentRoutes"));
+const bugReportRoutes_1 = __importDefault(require("./routes/bugReportRoutes"));
 const app = (0, express_1.default)();
 const httpServer = http_1.default.createServer(app);
 const PORT = process.env.PORT || 5000;
 (0, socket_1.initIO)(httpServer);
 app.use((0, cors_1.default)());
-app.use(express_1.default.json());
+app.use(express_1.default.json({ limit: "3mb" }));
+app.get("/api/health", (_req, res) => {
+    res.json({ ok: true });
+});
 app.use("/api/groups", groupRoutes_1.default);
 app.use("/api/inbox", inboxRoutes_1.default);
 app.use("/api/user", userRoutes_1.default);
@@ -36,6 +40,7 @@ app.use("/api/watchlist", watchlistRoutes_1.default);
 app.use("/api/profile", profileRoutes_1.default);
 app.use("/api/assistant", assistantRoutes_1.default);
 app.use("/api/comments", commentRoutes_1.default);
+app.use("/api/bug-reports", bugReportRoutes_1.default);
 app.use((err, req, res, next) => {
     console.error("Global error handler:", err);
     res.status(500).json({

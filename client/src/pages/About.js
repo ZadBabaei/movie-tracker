@@ -1,7 +1,18 @@
-import React from "react";
+import React, { useState } from "react";
 import VerticalNavbar from "../component/VerticalNavbar";
-import { FaUsers, FaVoteYea, FaFilm, FaComments, FaHeart, FaClock } from "react-icons/fa";
+import { toast } from "react-toastify";
+import {
+  FaBug,
+  FaClock,
+  FaComments,
+  FaFilm,
+  FaHeart,
+  FaTimes,
+  FaUsers,
+  FaVoteYea,
+} from "react-icons/fa";
 import { SiReact, SiNodedotjs, SiMongodb, SiSocketdotio } from "react-icons/si";
+import apiClient from "../api/apiClient";
 import "./About.css";
 
 const features = [
@@ -44,7 +55,91 @@ const stack = [
   { icon: <SiSocketdotio />, label: "Socket.io", color: "#ffffff" },
 ];
 
+const severityOptions = ["Low", "Medium", "High", "Critical"];
+
+const emptyBugReport = {
+  title: "",
+  description: "",
+  stepsToReproduce: "",
+  expectedResult: "",
+  actualResult: "",
+  affectedPage: "",
+  severity: "Medium",
+  screenshotUrl: "",
+};
+
 const About = () => {
+  const bugReportsEnabled = process.env.REACT_APP_ENABLE_BUG_REPORTS === "true";
+  const [showBugModal, setShowBugModal] = useState(false);
+  const [bugReport, setBugReport] = useState(emptyBugReport);
+  const [submittingBugReport, setSubmittingBugReport] = useState(false);
+  const [screenshotName, setScreenshotName] = useState("");
+
+  const updateBugReport = (field, value) => {
+    setBugReport((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const closeBugModal = () => {
+    if (submittingBugReport) return;
+    setShowBugModal(false);
+    setBugReport(emptyBugReport);
+    setScreenshotName("");
+  };
+
+  const handleScreenshotChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      updateBugReport("screenshotUrl", "");
+      setScreenshotName("");
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Screenshot must be an image file.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Screenshot must be under 2MB.");
+      event.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      updateBugReport("screenshotUrl", reader.result || "");
+      setScreenshotName(file.name);
+    };
+    reader.onerror = () => toast.error("Unable to attach screenshot.");
+    reader.readAsDataURL(file);
+  };
+
+  const handleBugReportSubmit = async (event) => {
+    event.preventDefault();
+    setSubmittingBugReport(true);
+
+    try {
+      const token = localStorage.getItem("token");
+      await apiClient.post(
+        "/api/bug-reports",
+        {
+          ...bugReport,
+          pageUrl: window.location.href,
+          browserInfo: window.navigator.userAgent,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      toast.success("Bug report submitted.");
+      closeBugModal();
+    } catch (error) {
+      toast.error(error.response?.data?.msg || "Failed to submit bug report.");
+    } finally {
+      setSubmittingBugReport(false);
+    }
+  };
+
   return (
     <div className="about-page">
       <VerticalNavbar />
@@ -89,7 +184,157 @@ const About = () => {
             ))}
           </div>
         </section>
+
+        {bugReportsEnabled && (
+          <section className="about-bug-report">
+            <div className="about-bug-report-copy">
+              <span className="about-bug-report-icon"><FaBug /></span>
+              <div>
+                <h2 className="about-section-title">Testing feedback</h2>
+                <p>
+                  Found something broken during staging? Send a report with the page,
+                  browser details, and reproduction notes.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="about-bug-report-btn"
+              onClick={() => setShowBugModal(true)}
+            >
+              Report a Bug
+            </button>
+          </section>
+        )}
       </main>
+
+      {bugReportsEnabled && showBugModal && (
+        <div className="bug-report-overlay" onClick={closeBugModal}>
+          <form className="bug-report-modal" onSubmit={handleBugReportSubmit} onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="bug-report-close"
+              onClick={closeBugModal}
+              aria-label="Close bug report form"
+            >
+              <FaTimes />
+            </button>
+
+            <div className="bug-report-header">
+              <span className="bug-report-icon"><FaBug /></span>
+              <div>
+                <h2>Report a Bug</h2>
+                <p>Include enough detail for staging triage.</p>
+              </div>
+            </div>
+
+            <label className="bug-report-field">
+              <span>Title</span>
+              <input
+                value={bugReport.title}
+                onChange={(e) => updateBugReport("title", e.target.value)}
+                maxLength={160}
+                required
+              />
+            </label>
+
+            <label className="bug-report-field">
+              <span>What happened?</span>
+              <textarea
+                value={bugReport.description}
+                onChange={(e) => updateBugReport("description", e.target.value)}
+                rows={3}
+                required
+              />
+            </label>
+
+            <label className="bug-report-field">
+              <span>Steps to reproduce</span>
+              <textarea
+                value={bugReport.stepsToReproduce}
+                onChange={(e) => updateBugReport("stepsToReproduce", e.target.value)}
+                rows={3}
+                required
+              />
+            </label>
+
+            <div className="bug-report-grid">
+              <label className="bug-report-field">
+                <span>Expected result</span>
+                <textarea
+                  value={bugReport.expectedResult}
+                  onChange={(e) => updateBugReport("expectedResult", e.target.value)}
+                  rows={2}
+                  required
+                />
+              </label>
+
+              <label className="bug-report-field">
+                <span>Actual result</span>
+                <textarea
+                  value={bugReport.actualResult}
+                  onChange={(e) => updateBugReport("actualResult", e.target.value)}
+                  rows={2}
+                  required
+                />
+              </label>
+            </div>
+
+            <div className="bug-report-grid">
+              <label className="bug-report-field">
+                <span>Page/feature affected</span>
+                <input
+                  value={bugReport.affectedPage}
+                  onChange={(e) => updateBugReport("affectedPage", e.target.value)}
+                  maxLength={160}
+                  required
+                />
+              </label>
+
+              <label className="bug-report-field">
+                <span>Severity</span>
+                <select
+                  value={bugReport.severity}
+                  onChange={(e) => updateBugReport("severity", e.target.value)}
+                >
+                  {severityOptions.map((severity) => (
+                    <option key={severity} value={severity}>{severity}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <label className="bug-report-field">
+              <span>Screenshot</span>
+              <input type="file" accept="image/*" onChange={handleScreenshotChange} />
+              {screenshotName && <small>{screenshotName}</small>}
+            </label>
+
+            <div className="bug-report-captured">
+              <span>{window.location.href}</span>
+              <span>{window.navigator.userAgent}</span>
+            </div>
+
+            <div className="bug-report-actions">
+              <button
+                type="button"
+                className="bug-report-secondary"
+                onClick={closeBugModal}
+                disabled={submittingBugReport}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="bug-report-primary"
+                disabled={submittingBugReport}
+              >
+                {submittingBugReport ? "Submitting..." : "Submit report"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 };

@@ -17,6 +17,7 @@ import watchlistRoutes from "./routes/watchlistRoutes";
 import profileRoutes from "./routes/profileRoutes";
 import assistantRoutes from "./routes/assistantRoutes";
 import commentRoutes from "./routes/commentRoutes";
+import bugReportRoutes from "./routes/bugReportRoutes";
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -25,7 +26,11 @@ const PORT = process.env.PORT || 5000;
 initIO(httpServer);
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "3mb" }));
+
+app.get("/api/health", (_req, res) => {
+  res.json({ ok: true });
+});
 
 app.use("/api/groups", groupRoutes);
 app.use("/api/inbox", inboxRoutes);
@@ -37,6 +42,7 @@ app.use("/api/watchlist", watchlistRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/assistant", assistantRoutes);
 app.use("/api/comments", commentRoutes);
+app.use("/api/bug-reports", bugReportRoutes);
 
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error("Global error handler:", err);

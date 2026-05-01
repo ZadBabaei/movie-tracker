@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { IBugReport } from "../models/BugReport";
 
 const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, APP_URL } = process.env;
 
@@ -51,4 +52,57 @@ export async function sendGroupInviteEmail(
     console.error("Failed to send invite email:", error);
     throw error;
   }
+}
+
+const escapeHtml = (value: string | undefined) =>
+  String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+export async function sendBugReportEmail(to: string, bugReport: IBugReport): Promise<void> {
+  const screenshotText = bugReport.screenshotUrl
+    ? bugReport.screenshotUrl.startsWith("data:")
+      ? "Screenshot was stored with the bug report payload."
+      : bugReport.screenshotUrl
+    : "None";
+
+  const html = `
+    <div style="background:#111;color:#e8e8e8;font-family:Arial,sans-serif;padding:28px;">
+      <div style="max-width:720px;margin:0 auto;background:#181818;border:1px solid #ffffff1a;border-radius:12px;padding:24px;">
+        <h1 style="margin:0 0 8px;color:#fff;">New Movie Tracker Bug Report</h1>
+        <p style="margin:0 0 20px;color:#ff6b72;font-weight:bold;">${escapeHtml(bugReport.severity)} severity</p>
+        <h2 style="margin:0 0 18px;color:#fff;">${escapeHtml(bugReport.title)}</h2>
+
+        <p><strong>User:</strong> ${escapeHtml(bugReport.userName)} (${escapeHtml(bugReport.userEmail)})</p>
+        <p><strong>Affected page:</strong> ${escapeHtml(bugReport.affectedPage)}</p>
+        <p><strong>Current URL:</strong> ${escapeHtml(bugReport.pageUrl)}</p>
+        <p><strong>Browser:</strong> ${escapeHtml(bugReport.browserInfo)}</p>
+
+        <hr style="border:0;border-top:1px solid #ffffff1a;margin:20px 0;" />
+
+        <p><strong>What happened?</strong></p>
+        <p style="white-space:pre-wrap;">${escapeHtml(bugReport.description)}</p>
+
+        <p><strong>Steps to reproduce</strong></p>
+        <p style="white-space:pre-wrap;">${escapeHtml(bugReport.stepsToReproduce)}</p>
+
+        <p><strong>Expected result</strong></p>
+        <p style="white-space:pre-wrap;">${escapeHtml(bugReport.expectedResult)}</p>
+
+        <p><strong>Actual result</strong></p>
+        <p style="white-space:pre-wrap;">${escapeHtml(bugReport.actualResult)}</p>
+
+        <p><strong>Screenshot:</strong> ${escapeHtml(screenshotText)}</p>
+      </div>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: `"Movie Tracker" <${SMTP_USER}>`,
+    to,
+    subject: `[Bug][${bugReport.severity}] ${bugReport.title}`,
+    html,
+  });
 }
