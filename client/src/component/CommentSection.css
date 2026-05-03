@@ -104,6 +104,14 @@
   flex-shrink: 0;
 }
 
+.comment-avatar img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
 .comment-avatar-icon {
   font-size: 2rem;
   color: #444;

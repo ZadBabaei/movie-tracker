@@ -6,6 +6,8 @@ export interface IUser extends Document {
   password?: string;
   provider?: "local" | "google";
   googleId?: string;
+  passwordResetToken?: string;
+  passwordResetExpires?: Date;
   watchlist: Types.ObjectId[];
   favorites: Types.ObjectId[];
   favoriteGroups: Types.ObjectId[];
@@ -27,6 +29,8 @@ const userSchema = new Schema<IUser>(
     },
     provider: { type: String, enum: ["local", "google"], default: "local" },
     googleId: { type: String, unique: true, sparse: true },
+    passwordResetToken: { type: String },
+    passwordResetExpires: { type: Date },
     watchlist: [{ type: Schema.Types.ObjectId, ref: "Movie", default: [] }],
     favorites: [{ type: Schema.Types.ObjectId, ref: "Movie", default: [] }],
     favoriteGroups: [{ type: Schema.Types.ObjectId, ref: "Group", default: [] }],

@@ -4,6 +4,7 @@ import net from "net";
 import { StreamChat } from "stream-chat";
 import User from "../models/user";
 import Group from "../models/Groups";
+import { getDefaultAvatarUrl } from "../utils/avatar";
 
 const router = express.Router();
 const linkPreviewCache = new Map<string, LinkPreview>();
@@ -217,7 +218,7 @@ router.post("/token", async (req: Request, res: Response) => {
       groupMembers.map((m) => ({
         id: (m._id as any).toString(),
         name: m.name || m.email || "Unknown user",
-        image: m.avatar || undefined,
+        image: m.avatar || getDefaultAvatarUrl(m.name, m.email),
       }))
     );
 

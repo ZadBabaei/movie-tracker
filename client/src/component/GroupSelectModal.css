@@ -138,34 +138,6 @@
   border-color: #ff4747;
 }
 
-.group-select-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.group-select-chip {
-  padding: 8px 14px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 20px;
-  color: #ccc;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.group-select-chip:hover {
-  border-color: #ff7373;
-  color: white;
-}
-
-.group-select-chip--active {
-  background: rgba(255, 71, 71, 0.2);
-  border-color: #ff4747;
-  color: white;
-}
-
 .group-select-loading {
   color: #888;
   font-size: 0.85rem;

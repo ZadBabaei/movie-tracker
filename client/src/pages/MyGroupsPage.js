@@ -9,6 +9,7 @@ import StarBorder from "@mui/icons-material/StarBorder";
 import { useGroupStore } from "../store/useGroupStore";
 import VerticalNavbar from "../component/VerticalNavbar";
 import Hero from "../component/Hero";
+import { getAvatarUrl } from "../utils/avatar";
 import "./MyGroupsPage.css";
 
 const MyGroupsPage = () => {
@@ -125,18 +126,8 @@ const MyGroupsPage = () => {
                             )}`}
                             data-tooltip={member.name}
                           >
-                            {member.avatar ? (
-                              <img src={member.avatar} alt={member.name} />
-                            ) : (
-                              <>
-                                <span className="initial">
-                                  {member.name
-                                    ? member.name.charAt(0).toUpperCase()
-                                    : "?"}
-                                </span>
-                                <span className="full-name">{member.name}</span>
-                              </>
-                            )}
+                            <img src={getAvatarUrl(member)} alt={member.name} />
+                            <span className="full-name">{member.name}</span>
                           </div>
                         ))}
                       </div>
@@ -219,13 +210,7 @@ const MyGroupsPage = () => {
                           className={`avatar-circle color-${getColorClass(member.name)}`}
                           title={member.name || member.email || "Member"}
                         >
-                          {member.avatar ? (
-                            <img src={member.avatar} alt={member.name || "Member"} />
-                          ) : (
-                            <span className="initial">
-                              {member.name ? member.name.charAt(0).toUpperCase() : "?"}
-                            </span>
-                          )}
+                          <img src={getAvatarUrl(member)} alt={member.name || "Member"} />
                         </div>
                       ))}
                       {(group.members?.length || 0) > 4 && (

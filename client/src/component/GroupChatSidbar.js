@@ -1,14 +1,6 @@
 import React from "react";
 import "./GroupChatSidbar.css";
-
-const getInitials = (name) =>
-  (name || "Unknown user")
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
+import { getAvatarUrl } from "../utils/avatar";
 
 const GroupChatSidbar = ({ members, onSelectMember }) => {
   return (
@@ -24,17 +16,11 @@ const GroupChatSidbar = ({ members, onSelectMember }) => {
             onClick={() => onSelectMember(member)}
           >
             <div className="GroupSidebar-member-info">
-              {member.image ? (
-                <img
-                  src={member.image}
-                  alt={member.name || "User"}
-                  className="GroupSidebar-avatar"
-                />
-              ) : (
-                <span className="GroupSidebar-avatar GroupSidebar-avatar-fallback">
-                  {getInitials(member.name)}
-                </span>
-              )}
+              <img
+                src={getAvatarUrl(member)}
+                alt={member.name || "User"}
+                className="GroupSidebar-avatar"
+              />
               <div className="GroupSidebar-name-status">
                 <span className="GroupSidebar-name">
                   {member.name || member.email || "Unknown user"}

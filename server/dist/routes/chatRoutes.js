@@ -9,6 +9,7 @@ const net_1 = __importDefault(require("net"));
 const stream_chat_1 = require("stream-chat");
 const user_1 = __importDefault(require("../models/user"));
 const Groups_1 = __importDefault(require("../models/Groups"));
+const avatar_1 = require("../utils/avatar");
 const router = express_1.default.Router();
 const linkPreviewCache = new Map();
 const LINK_PREVIEW_TIMEOUT_MS = 5000;
@@ -168,7 +169,7 @@ router.post("/token", async (req, res) => {
         await chatClient.upsertUsers(groupMembers.map((m) => ({
             id: m._id.toString(),
             name: m.name || m.email || "Unknown user",
-            image: m.avatar || undefined,
+            image: m.avatar || (0, avatar_1.getDefaultAvatarUrl)(m.name, m.email),
         })));
         res.json({
             token: chatToken,

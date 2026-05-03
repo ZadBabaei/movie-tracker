@@ -1,11 +1,26 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1777419599800,
-  "projectRoot": "c:\\Mehrzad\\Programing\\movie traker",
+  "lastScanned": 1777818521859,
+  "projectRoot": "C:\\Mehrzad\\Programing\\movie traker",
   "techStack": {
-    "languages": [],
-    "frameworks": [],
-    "packageManager": null,
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "@playwright/test",
+        "version": "1.57.0",
+        "category": "testing"
+      }
+    ],
+    "packageManager": "npm",
     "runtime": null
   },
   "build": {
@@ -13,7 +28,11 @@
     "testCommand": null,
     "lintCommand": null,
     "devCommand": null,
-    "scripts": {}
+    "scripts": {
+      "e2e": "playwright test",
+      "e2e:ui": "playwright test --ui",
+      "e2e:report": "playwright show-report"
+    }
   },
   "conventions": {
     "namingStyle": null,
@@ -24,7 +43,9 @@
   "structure": {
     "isMonorepo": false,
     "workspaces": [],
-    "mainDirectories": [],
+    "mainDirectories": [
+      "tests"
+    ],
     "gitBranches": null
   },
   "customNotes": [],
@@ -33,7 +54,7 @@
       "path": "client",
       "purpose": null,
       "fileCount": 9,
-      "lastAccessed": 1777419599701,
+      "lastAccessed": 1777818521809,
       "keyFiles": [
         "client.dev.err.log",
         "client.dev.log",
@@ -45,21 +66,21 @@
     "designRefrences": {
       "path": "designRefrences",
       "purpose": null,
-      "fileCount": 5,
-      "lastAccessed": 1777419599705,
+      "fileCount": 7,
+      "lastAccessed": 1777818521811,
       "keyFiles": [
         "auth-signin-reference.png",
         "auth-signup-reference.png",
-        "auth-vector-reference.png",
-        "profile-mockup.html",
-        "profile-page-reference.png"
+        "authVectorReference.png",
+        "client_secret_64381903409-qtlj7du7dlahoes5icjrtsn42k842g5f.apps.googleusercontent.com.json",
+        "CRA-ARC-qr.pdf"
       ]
     },
     "Docs": {
       "path": "Docs",
       "purpose": "Documentation",
       "fileCount": 6,
-      "lastAccessed": 1777419599707,
+      "lastAccessed": 1777818521826,
       "keyFiles": [
         "Bug reports.md",
         "comment section.md",
@@ -68,11 +89,20 @@
         "timeline feature.md"
       ]
     },
+    "playwright-report": {
+      "path": "playwright-report",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1777818521827,
+      "keyFiles": [
+        "index.html"
+      ]
+    },
     "server": {
       "path": "server",
       "purpose": null,
-      "fileCount": 10,
-      "lastAccessed": 1777419599708,
+      "fileCount": 12,
+      "lastAccessed": 1777818521828,
       "keyFiles": [
         "index.ts",
         "package-lock.json",
@@ -81,11 +111,25 @@
         "server.dev.log"
       ]
     },
+    "test-results": {
+      "path": "test-results",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1777818521829,
+      "keyFiles": []
+    },
+    "tests": {
+      "path": "tests",
+      "purpose": "Test files",
+      "fileCount": 0,
+      "lastAccessed": 1777818521830,
+      "keyFiles": []
+    },
     "client\\build": {
       "path": "client\\build",
       "purpose": "Build output",
       "fileCount": 10,
-      "lastAccessed": 1777419599709,
+      "lastAccessed": 1777818521831,
       "keyFiles": [
         "asset-manifest.json",
         "chat-box.png",
@@ -96,14 +140,14 @@
       "path": "client\\node_modules",
       "purpose": "Dependencies",
       "fileCount": 1,
-      "lastAccessed": 1777419599717,
+      "lastAccessed": 1777818521835,
       "keyFiles": []
     },
     "server\\dist": {
       "path": "server\\dist",
       "purpose": "Distribution/build output",
       "fileCount": 2,
-      "lastAccessed": 1777419599720,
+      "lastAccessed": 1777818521838,
       "keyFiles": [
         "index.js",
         "socket.js"
@@ -113,7 +157,7 @@
       "path": "server\\middleware",
       "purpose": "Middleware",
       "fileCount": 1,
-      "lastAccessed": 1777419599721,
+      "lastAccessed": 1777818521839,
       "keyFiles": [
         "authMiddleware.ts"
       ]
@@ -121,50 +165,50 @@
     "server\\models": {
       "path": "server\\models",
       "purpose": "Data models",
-      "fileCount": 6,
-      "lastAccessed": 1777419599722,
+      "fileCount": 7,
+      "lastAccessed": 1777818521839,
       "keyFiles": [
+        "BugReport.ts",
         "Comment.ts",
-        "Groups.ts",
-        "InvitationLink.ts"
+        "Groups.ts"
       ]
     },
     "server\\node_modules": {
       "path": "server\\node_modules",
       "purpose": "Dependencies",
       "fileCount": 1,
-      "lastAccessed": 1777419599725,
+      "lastAccessed": 1777818521844,
       "keyFiles": []
     },
     "server\\routes": {
       "path": "server\\routes",
       "purpose": "Route handlers",
-      "fileCount": 10,
-      "lastAccessed": 1777419599727,
+      "fileCount": 11,
+      "lastAccessed": 1777818521845,
       "keyFiles": [
         "assistantRoutes.ts",
         "authRoutes.ts",
-        "chatRoutes.ts"
+        "bugReportRoutes.ts"
       ]
     }
   },
   "hotPaths": [
     {
       "path": "server\\routes\\groupRoutes.ts",
-      "accessCount": 19,
-      "lastAccessed": 1774922829026,
+      "accessCount": 21,
+      "lastAccessed": 1777818724652,
+      "type": "file"
+    },
+    {
+      "path": "client\\src\\component\\VerticalNavbar.tsx",
+      "accessCount": 17,
+      "lastAccessed": 1777818737402,
       "type": "file"
     },
     {
       "path": "client\\src\\pages\\GroupPage.tsx",
       "accessCount": 16,
       "lastAccessed": 1774923187511,
-      "type": "file"
-    },
-    {
-      "path": "client\\src\\component\\VerticalNavbar.tsx",
-      "accessCount": 16,
-      "lastAccessed": 1777421454931,
       "type": "file"
     },
     {
@@ -187,8 +231,8 @@
     },
     {
       "path": "client\\src\\component\\ChatBox.js",
-      "accessCount": 8,
-      "lastAccessed": 1774900890646,
+      "accessCount": 9,
+      "lastAccessed": 1777818734520,
       "type": "file"
     },
     {
@@ -199,8 +243,8 @@
     },
     {
       "path": "client\\src\\component\\InviteFriendsModal.tsx",
-      "accessCount": 7,
-      "lastAccessed": 1774882571767,
+      "accessCount": 8,
+      "lastAccessed": 1777818745603,
       "type": "file"
     },
     {
@@ -223,32 +267,44 @@
     },
     {
       "path": "client\\src\\component\\WatchTimeline.tsx",
-      "accessCount": 5,
-      "lastAccessed": 1774923134631,
-      "type": "file"
-    },
-    {
-      "path": "client\\src\\component\\GroupNameModal.js",
-      "accessCount": 4,
-      "lastAccessed": 1774882836994,
+      "accessCount": 6,
+      "lastAccessed": 1777818759238,
       "type": "file"
     },
     {
       "path": "client\\src\\App.tsx",
-      "accessCount": 4,
-      "lastAccessed": 1774883017606,
+      "accessCount": 5,
+      "lastAccessed": 1777818647537,
       "type": "file"
     },
     {
       "path": "client\\src\\component\\MovieDetailModal.js",
-      "accessCount": 4,
-      "lastAccessed": 1774923203048,
+      "accessCount": 5,
+      "lastAccessed": 1777818748454,
+      "type": "file"
+    },
+    {
+      "path": "client\\src\\component\\GroupNameModal.js",
+      "accessCount": 5,
+      "lastAccessed": 1777818760900,
       "type": "file"
     },
     {
       "path": "server\\package.json",
-      "accessCount": 3,
-      "lastAccessed": 1774900911683,
+      "accessCount": 4,
+      "lastAccessed": 1777818539245,
+      "type": "file"
+    },
+    {
+      "path": "client\\package.json",
+      "accessCount": 4,
+      "lastAccessed": 1777818539645,
+      "type": "file"
+    },
+    {
+      "path": "client\\src\\component\\FavoritesCarousel.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1777818751652,
       "type": "file"
     },
     {
@@ -258,15 +314,33 @@
       "type": "file"
     },
     {
-      "path": "client\\src\\component\\FavoritesCarousel.tsx",
+      "path": "server\\routes\\pollRoutes.ts",
       "accessCount": 3,
-      "lastAccessed": 1777419795471,
+      "lastAccessed": 1777818726167,
       "type": "file"
     },
     {
-      "path": "client\\package.json",
+      "path": "client\\src\\hooks\\useSocket.ts",
       "accessCount": 3,
-      "lastAccessed": 1777420186486,
+      "lastAccessed": 1777818726498,
+      "type": "file"
+    },
+    {
+      "path": "server\\routes\\authRoutes.ts",
+      "accessCount": 3,
+      "lastAccessed": 1777818727253,
+      "type": "file"
+    },
+    {
+      "path": "client\\src\\component\\VoteModal.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1777818735803,
+      "type": "file"
+    },
+    {
+      "path": "client\\src\\component\\SuggestionsCarousel.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1777818750901,
       "type": "file"
     },
     {
@@ -282,21 +356,9 @@
       "type": "directory"
     },
     {
-      "path": "server\\routes\\pollRoutes.ts",
-      "accessCount": 2,
-      "lastAccessed": 1774850841662,
-      "type": "file"
-    },
-    {
       "path": "server\\models\\Comment.ts",
       "accessCount": 2,
       "lastAccessed": 1774850847417,
-      "type": "file"
-    },
-    {
-      "path": "client\\src\\component\\VoteModal.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1774850854668,
       "type": "file"
     },
     {
@@ -318,15 +380,63 @@
       "type": "file"
     },
     {
-      "path": "client\\src\\hooks\\useSocket.ts",
+      "path": "server\\index.ts",
       "accessCount": 2,
-      "lastAccessed": 1774900990381,
+      "lastAccessed": 1777818642875,
       "type": "file"
     },
     {
-      "path": "client\\src\\component\\SuggestionsCarousel.tsx",
+      "path": "server\\socket.ts",
       "accessCount": 2,
-      "lastAccessed": 1777419795846,
+      "lastAccessed": 1777818643945,
+      "type": "file"
+    },
+    {
+      "path": "server\\middleware\\authMiddleware.ts",
+      "accessCount": 2,
+      "lastAccessed": 1777818645055,
+      "type": "file"
+    },
+    {
+      "path": "server\\types\\express.d.ts",
+      "accessCount": 2,
+      "lastAccessed": 1777818645931,
+      "type": "file"
+    },
+    {
+      "path": "server\\utils\\emailService.ts",
+      "accessCount": 2,
+      "lastAccessed": 1777818647815,
+      "type": "file"
+    },
+    {
+      "path": "client\\src\\AppRouter.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1777818648013,
+      "type": "file"
+    },
+    {
+      "path": "server\\routes\\assistantRoutes.ts",
+      "accessCount": 2,
+      "lastAccessed": 1777818724237,
+      "type": "file"
+    },
+    {
+      "path": "client\\src\\component\\ChatWidget\\ChatWidget.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1777818733230,
+      "type": "file"
+    },
+    {
+      "path": "client\\src\\component\\GroupsModal.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1777818737334,
+      "type": "file"
+    },
+    {
+      "path": "client\\src\\component\\MovieCard.js",
+      "accessCount": 2,
+      "lastAccessed": 1777818747619,
       "type": "file"
     },
     {
@@ -360,42 +470,6 @@
       "type": "directory"
     },
     {
-      "path": "client\\src\\AppRouter.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1774850668259,
-      "type": "file"
-    },
-    {
-      "path": "client\\src\\component\\MovieCard.js",
-      "accessCount": 1,
-      "lastAccessed": 1774850682427,
-      "type": "file"
-    },
-    {
-      "path": "server\\index.ts",
-      "accessCount": 1,
-      "lastAccessed": 1774850685036,
-      "type": "file"
-    },
-    {
-      "path": "client\\src\\component\\ChatWidget\\ChatWidget.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1774850686799,
-      "type": "file"
-    },
-    {
-      "path": "server\\middleware\\authMiddleware.ts",
-      "accessCount": 1,
-      "lastAccessed": 1774850687557,
-      "type": "file"
-    },
-    {
-      "path": "server\\socket.ts",
-      "accessCount": 1,
-      "lastAccessed": 1774850690811,
-      "type": "file"
-    },
-    {
       "path": "server\\models\\movie.ts",
       "accessCount": 1,
       "lastAccessed": 1774850704861,
@@ -408,18 +482,6 @@
       "type": "file"
     },
     {
-      "path": "client\\src\\component\\GroupsModal.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1774850722811,
-      "type": "file"
-    },
-    {
-      "path": "server\\routes\\authRoutes.ts",
-      "accessCount": 1,
-      "lastAccessed": 1774850728646,
-      "type": "file"
-    },
-    {
       "path": "client\\src\\store\\useUserStore.ts",
       "accessCount": 1,
       "lastAccessed": 1774850744209,
@@ -429,24 +491,6 @@
       "path": "client\\src\\store\\usePollStore.ts",
       "accessCount": 1,
       "lastAccessed": 1774850745401,
-      "type": "file"
-    },
-    {
-      "path": "server\\routes\\assistantRoutes.ts",
-      "accessCount": 1,
-      "lastAccessed": 1774850746826,
-      "type": "file"
-    },
-    {
-      "path": "server\\utils\\emailService.ts",
-      "accessCount": 1,
-      "lastAccessed": 1774850748261,
-      "type": "file"
-    },
-    {
-      "path": "server\\types\\express.d.ts",
-      "accessCount": 1,
-      "lastAccessed": 1774850748973,
       "type": "file"
     }
   ],

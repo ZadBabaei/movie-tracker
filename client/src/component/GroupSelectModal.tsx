@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { FaTimes, FaArrowLeft, FaArrowRight } from "react-icons/fa";
 import apiClient from "../api/apiClient";
+import { getAvatarUrl } from "../utils/avatar";
 import "./GroupSelectModal.css";
 
 interface GroupOption {
@@ -27,8 +28,6 @@ interface GroupSelectModalProps {
   groups: GroupOption[];
   movieTitle: string;
 }
-
-const WHERE_SUGGESTIONS = ["Cinema", "Home", "Friend's Place", "Streaming"];
 
 const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
   isOpen,
@@ -169,22 +168,14 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
 
               <div className="group-select-field">
                 <label>Where did you watch?</label>
-                <div className="group-select-chips">
-                  {WHERE_SUGGESTIONS.map((place) => (
-                    <button
-                      key={place}
-                      className={`group-select-chip ${
-                        watchedWhere === place ? "group-select-chip--active" : ""
-                      }`}
-                      data-testid="group-select-location"
-                      onClick={() =>
-                        setWatchedWhere(watchedWhere === place ? "" : place)
-                      }
-                    >
-                      {place}
-                    </button>
-                  ))}
-                </div>
+                <input
+                  type="text"
+                  value={watchedWhere}
+                  onChange={(e) => setWatchedWhere(e.target.value)}
+                  className="group-select-input"
+                  placeholder="e.g. Cineplex, home, Netflix, Zad's place"
+                  data-testid="group-select-location-input"
+                />
               </div>
 
               <div className="group-select-actions">
@@ -235,11 +226,7 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
                         onClick={() => toggleMember(member._id)}
                       >
                         <div className="member-chip-avatar">
-                          {member.avatar ? (
-                            <img src={member.avatar} alt={member.name} />
-                          ) : (
-                            <span>{member.name.charAt(0).toUpperCase()}</span>
-                          )}
+                          <img src={getAvatarUrl(member)} alt={member.name} />
                         </div>
                         <span className="member-chip-name">{member.name}</span>
                         {watchedWith.includes(member._id) && (

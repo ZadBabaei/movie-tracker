@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { FaReply, FaUserCircle } from "react-icons/fa";
+import { FaReply } from "react-icons/fa";
+import { getAvatarUrl } from "../utils/avatar";
 import "./CommentSection.css";
 
 const formatDate = (dateStr) => {
@@ -23,7 +24,14 @@ const CommentCard = ({ comment, onReply, depth = 0 }) => {
   return (
     <div className={`comment-card ${depth > 0 ? "comment-card-reply" : ""}`}>
       <div className="comment-avatar">
-        <FaUserCircle className="comment-avatar-icon" />
+        <img
+          src={getAvatarUrl({
+            name: comment.username,
+            avatar: comment.userAvatar,
+            id: comment.userId,
+          })}
+          alt={comment.username}
+        />
       </div>
       <div className="comment-body">
         <div className="comment-header">

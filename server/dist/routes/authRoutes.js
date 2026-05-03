@@ -7,9 +7,12 @@ const express_1 = __importDefault(require("express"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const mongoose_1 = __importDefault(require("mongoose"));
+const crypto_1 = __importDefault(require("crypto"));
 const google_auth_library_1 = require("google-auth-library");
 const user_1 = __importDefault(require("../models/user"));
 const Groups_1 = __importDefault(require("../models/Groups"));
+const emailService_1 = require("../utils/emailService");
+const avatar_1 = require("../utils/avatar");
 const router = express_1.default.Router();
 const googleClient = new google_auth_library_1.OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const buildAuthToken = (user, rememberMe = false) => jsonwebtoken_1.default.sign({ id: user._id, name: user.name }, process.env.JWT_SECRET, { expiresIn: rememberMe ? "7d" : "24h" });
@@ -21,9 +24,11 @@ const buildAuthUser = (user) => ({
     firstLogin: user.firstLogin ?? true,
 });
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const genericPasswordResetMessage = "If an account exists for that email, we sent a reset link.";
+const hashResetToken = (token) => crypto_1.default.createHash("sha256").update(token).digest("hex");
 router.post("/register", async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { name, email, password, avatar } = req.body;
         if (!name || !email || !password) {
             res.status(400).json({ msg: "Please fill in all fields" });
             return;
@@ -34,7 +39,13 @@ router.post("/register", async (req, res) => {
             return;
         }
         const hashedPassword = await bcryptjs_1.default.hash(password, 10);
-        const newUser = new user_1.default({ name, email, password: hashedPassword, provider: "local" });
+        const newUser = new user_1.default({
+            name,
+            email,
+            password: hashedPassword,
+            provider: "local",
+            avatar: avatar || (0, avatar_1.getDefaultAvatarUrl)(name, email),
+        });
         const savedUser = await newUser.save();
         res.json({ msg: "Signup successful", user: buildAuthUser(savedUser) });
     }
@@ -71,6 +82,68 @@ router.post("/login", async (req, res) => {
         res.status(500).json({ msg: "Server error" });
     }
 });
+router.post("/forgot-password", async (req, res) => {
+    try {
+        const email = String(req.body?.email || "").trim().toLowerCase();
+        if (!email) {
+            res.json({ msg: genericPasswordResetMessage });
+            return;
+        }
+        const user = await user_1.default.findOne({
+            email: { $regex: `^${escapeRegex(email)}$`, $options: "i" },
+        });
+        if (user) {
+            const rawToken = crypto_1.default.randomBytes(32).toString("hex");
+            user.passwordResetToken = hashResetToken(rawToken);
+            user.passwordResetExpires = new Date(Date.now() + 30 * 60 * 1000);
+            await user.save();
+            const appUrl = process.env.APP_URL || "http://localhost:3000";
+            const resetLink = `${appUrl.replace(/\/$/, "")}/reset-password/${rawToken}`;
+            try {
+                await (0, emailService_1.sendPasswordResetEmail)(user.email, resetLink);
+            }
+            catch (error) {
+                user.passwordResetToken = undefined;
+                user.passwordResetExpires = undefined;
+                await user.save();
+                console.error("Failed to send password reset email:", error);
+            }
+        }
+        res.json({ msg: genericPasswordResetMessage });
+    }
+    catch (error) {
+        console.error("Error in forgot-password route:", error);
+        res.json({ msg: genericPasswordResetMessage });
+    }
+});
+router.post("/reset-password/:token", async (req, res) => {
+    try {
+        const token = String(req.params.token || "");
+        const password = String(req.body?.password || "");
+        if (password.length < 8) {
+            res.status(400).json({ msg: "Password must be at least 8 characters." });
+            return;
+        }
+        const user = await user_1.default.findOne({
+            passwordResetToken: hashResetToken(token),
+            passwordResetExpires: { $gt: new Date() },
+        });
+        if (!user) {
+            res.status(400).json({ msg: "Reset link is invalid or has expired." });
+            return;
+        }
+        user.password = await bcryptjs_1.default.hash(password, 10);
+        user.provider = user.googleId ? user.provider || "google" : "local";
+        user.passwordResetToken = undefined;
+        user.passwordResetExpires = undefined;
+        await user.save();
+        res.json({ msg: "Password reset successful. You can now sign in." });
+    }
+    catch (error) {
+        console.error("Error in reset-password route:", error);
+        res.status(500).json({ msg: "Unable to reset password." });
+    }
+});
 router.post("/google", async (req, res) => {
     try {
         const { credential } = req.body;
@@ -100,6 +173,7 @@ router.post("/google", async (req, res) => {
         const email = payload.email.toLowerCase();
         const name = payload.name || email.split("@")[0];
         const picture = payload.picture || "";
+        const avatar = picture || (0, avatar_1.getDefaultAvatarUrl)(name, email);
         let user = await user_1.default.findOne({
             $or: [{ googleId }, { email: { $regex: `^${escapeRegex(email)}$`, $options: "i" } }],
         });
@@ -107,7 +181,7 @@ router.post("/google", async (req, res) => {
             user = await user_1.default.create({
                 name,
                 email,
-                avatar: picture,
+                avatar,
                 provider: "google",
                 googleId,
             });
@@ -122,8 +196,8 @@ router.post("/google", async (req, res) => {
                 user.provider = user.password ? "local" : "google";
                 shouldSave = true;
             }
-            if (!user.avatar && picture) {
-                user.avatar = picture;
+            if (!user.avatar) {
+                user.avatar = avatar;
                 shouldSave = true;
             }
             if (shouldSave) {

@@ -28,13 +28,14 @@ router.post("/", authMiddleware_1.authenticate, async (req, res) => {
         const { movieId, text, parentId } = req.body;
         if (!movieId || !text)
             return res.status(400).json({ msg: "movieId and text required" });
-        const user = await user_1.default.findById(req.user.id).select("name");
+        const user = await user_1.default.findById(req.user.id).select("name email avatar");
         if (!user)
             return res.status(404).json({ msg: "User not found" });
         const comment = new Comment_1.default({
             movieId,
             userId: req.user.id,
             username: user.name,
+            userAvatar: user.avatar || "",
             text,
             parentId: parentId || null,
         });

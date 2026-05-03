@@ -2,9 +2,12 @@ import express, { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
+import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
 import User from "../models/user";
 import Group from "../models/Groups";
+import { sendPasswordResetEmail } from "../utils/emailService";
+import { getDefaultAvatarUrl } from "../utils/avatar";
 
 const router = express.Router();
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -25,10 +28,14 @@ const buildAuthUser = (user: any) => ({
 });
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const genericPasswordResetMessage = "If an account exists for that email, we sent a reset link.";
+
+const hashResetToken = (token: string) =>
+  crypto.createHash("sha256").update(token).digest("hex");
 
 router.post("/register", async (req: Request, res: Response) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, avatar } = req.body;
     if (!name || !email || !password) {
       res.status(400).json({ msg: "Please fill in all fields" });
       return;
@@ -41,7 +48,13 @@ router.post("/register", async (req: Request, res: Response) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ name, email, password: hashedPassword, provider: "local" });
+    const newUser = new User({
+      name,
+      email,
+      password: hashedPassword,
+      provider: "local",
+      avatar: avatar || getDefaultAvatarUrl(name, email),
+    });
     const savedUser = await newUser.save();
 
     res.json({ msg: "Signup successful", user: buildAuthUser(savedUser) });
@@ -83,6 +96,77 @@ router.post("/login", async (req: Request, res: Response) => {
   }
 });
 
+router.post("/forgot-password", async (req: Request, res: Response) => {
+  try {
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    if (!email) {
+      res.json({ msg: genericPasswordResetMessage });
+      return;
+    }
+
+    const user = await User.findOne({
+      email: { $regex: `^${escapeRegex(email)}$`, $options: "i" },
+    });
+
+    if (user) {
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      user.passwordResetToken = hashResetToken(rawToken);
+      user.passwordResetExpires = new Date(Date.now() + 30 * 60 * 1000);
+      await user.save();
+
+      const appUrl = process.env.APP_URL || "http://localhost:3000";
+      const resetLink = `${appUrl.replace(/\/$/, "")}/reset-password/${rawToken}`;
+
+      try {
+        await sendPasswordResetEmail(user.email, resetLink);
+      } catch (error) {
+        user.passwordResetToken = undefined;
+        user.passwordResetExpires = undefined;
+        await user.save();
+        console.error("Failed to send password reset email:", error);
+      }
+    }
+
+    res.json({ msg: genericPasswordResetMessage });
+  } catch (error) {
+    console.error("Error in forgot-password route:", error);
+    res.json({ msg: genericPasswordResetMessage });
+  }
+});
+
+router.post("/reset-password/:token", async (req: Request, res: Response) => {
+  try {
+    const token = String(req.params.token || "");
+    const password = String(req.body?.password || "");
+
+    if (password.length < 8) {
+      res.status(400).json({ msg: "Password must be at least 8 characters." });
+      return;
+    }
+
+    const user = await User.findOne({
+      passwordResetToken: hashResetToken(token),
+      passwordResetExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      res.status(400).json({ msg: "Reset link is invalid or has expired." });
+      return;
+    }
+
+    user.password = await bcrypt.hash(password, 10);
+    user.provider = user.googleId ? user.provider || "google" : "local";
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    res.json({ msg: "Password reset successful. You can now sign in." });
+  } catch (error) {
+    console.error("Error in reset-password route:", error);
+    res.status(500).json({ msg: "Unable to reset password." });
+  }
+});
+
 router.post("/google", async (req: Request, res: Response) => {
   try {
     const { credential } = req.body;
@@ -118,6 +202,7 @@ router.post("/google", async (req: Request, res: Response) => {
     const email = payload.email.toLowerCase();
     const name = payload.name || email.split("@")[0];
     const picture = payload.picture || "";
+    const avatar = picture || getDefaultAvatarUrl(name, email);
 
     let user = await User.findOne({
       $or: [{ googleId }, { email: { $regex: `^${escapeRegex(email)}$`, $options: "i" } }],
@@ -127,7 +212,7 @@ router.post("/google", async (req: Request, res: Response) => {
       user = await User.create({
         name,
         email,
-        avatar: picture,
+        avatar,
         provider: "google",
         googleId,
       });
@@ -144,8 +229,8 @@ router.post("/google", async (req: Request, res: Response) => {
         shouldSave = true;
       }
 
-      if (!user.avatar && picture) {
-        user.avatar = picture;
+      if (!user.avatar) {
+        user.avatar = avatar;
         shouldSave = true;
       }
 

@@ -1,7 +1,7 @@
 {
-  "tool_name": "Glob",
-  "tool_input_preview": "{\"pattern\":\"client/src/component/Hero.*\"}",
-  "error": "Ripgrep search timed out after 20 seconds. The search may have matched files but did not complete in time. Try searching a more specific path or pattern.",
-  "timestamp": "2026-04-28T23:43:59.556Z",
-  "retry_count": 1
+  "tool_name": "mcp__plugin_oh-my-claudecode_t__lsp_diagnostics",
+  "tool_input_preview": "{\"file\":\"C:/Mehrzad/Programing/movie traker/server/socket.ts\"}",
+  "error": "Language server 'typescript-language-server' not found.\nInstall with: npm install -g typescript-language-server typescript",
+  "timestamp": "2026-05-03T14:33:06.880Z",
+  "retry_count": 8
 }

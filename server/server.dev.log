@@ -8,6 +8,10 @@
 [33m[nodemon] watching extensions: ts,json[39m
 [32m[nodemon] starting `ts-node index.ts`[39m
 Server running on port 5000
+[31m[nodemon] app crashed - waiting for file chan[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `ts-node index.ts`[39m
+[32m[nodemon] restarting du[32m[nodemon] restar[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `ts-[32m[nodemon] restarting due to changes...[39m[32m[nodemon] start[32m[nodemon] restarting du[32m[nodemon] restar[32m[nodemon] starting `ts-[32m[nodemon] startServer running on port 5000
 MongoDB Connected to: test
 Collections: [
   'comments',

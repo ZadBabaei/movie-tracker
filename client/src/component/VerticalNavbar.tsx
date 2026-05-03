@@ -14,6 +14,7 @@ import { useModalStore } from "../store/useModalStore";
 import { useUserStore } from "../store/useUserStore";
 import { useGroupStore } from "../store/useGroupStore";
 import { useUnreadCounts } from "../hooks/useUnreadCounts";
+import { getAvatarUrl } from "../utils/avatar";
 import "./VerticalNavbar.css";
 import logo from "../assets/Logo PM.png";
 
@@ -75,9 +76,6 @@ const VerticalNavbar: React.FC = () => {
         ? location.pathname.startsWith(path.slice(0, -1))
         : location.pathname === path
     );
-
-  const getInitials = (name: string) =>
-    name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
   return (
     <>
@@ -169,13 +167,7 @@ const VerticalNavbar: React.FC = () => {
         </li>
         <li className="navbar-item">
           <a href="/profile" className="navbar-link navbar-link--profile">
-            {profile?.avatar ? (
-              <img src={profile.avatar} alt="" className="navbar-avatar" />
-            ) : (
-              <span className="navbar-avatar-placeholder">
-                {profile ? getInitials(profile.name) : "?"}
-              </span>
-            )}
+            <img src={getAvatarUrl(profile || {})} alt="" className="navbar-avatar" />
             <span className="label">Profile</span>
           </a>
         </li>

@@ -38,6 +38,7 @@ const CommentSchema = new mongoose_1.Schema({
     movieId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Movie", required: true },
     userId: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },
     username: { type: String, required: true },
+    userAvatar: { type: String, default: "" },
     text: { type: String, required: true },
     parentId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Comment", default: null },
 }, { timestamps: true });

@@ -1,5 +1,6 @@
 import React from "react";
 import { useMessageContext } from "stream-chat-react";
+import { getDefaultAvatarUrl } from "../utils/avatar";
 
 const URL_REGEX = /(https?:\/\/[^\s<>"']+)/g;
 
@@ -12,11 +13,6 @@ const sanitizeUrl = (url) => {
     return null;
   }
 };
-
-const getAvatarFallback = (name) =>
-  `https://ui-avatars.com/api/?name=${encodeURIComponent(
-    name || "User"
-  )}&background=1b2b45&color=ffffff`;
 
 const LinkifiedText = ({ text }) => {
   if (!text) return null;
@@ -84,11 +80,11 @@ const CustomMessage = ({ currentUserId, onReply }) => {
     <div className={`message-row ${isMyMessage ? "mine" : "theirs"}`}>
       {!isMyMessage && (
         <img
-          src={message.user?.image || getAvatarFallback(senderName)}
+          src={message.user?.image || getDefaultAvatarUrl({ name: senderName })}
           alt={senderName}
           className="chat-avatar"
           onError={(event) => {
-            event.currentTarget.src = getAvatarFallback(senderName);
+            event.currentTarget.src = getDefaultAvatarUrl({ name: senderName });
           }}
         />
       )}

@@ -45,6 +45,8 @@ const userSchema = new mongoose_1.Schema({
     },
     provider: { type: String, enum: ["local", "google"], default: "local" },
     googleId: { type: String, unique: true, sparse: true },
+    passwordResetToken: { type: String },
+    passwordResetExpires: { type: Date },
     watchlist: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Movie", default: [] }],
     favorites: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Movie", default: [] }],
     favoriteGroups: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Group", default: [] }],

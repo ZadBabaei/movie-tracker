@@ -23,6 +23,7 @@ function AuthPage({ initialMode = "signin" }) {
   const [mode, setMode] = useState(initialMode);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [forgotEmail, setForgotEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -39,6 +40,8 @@ function AuthPage({ initialMode = "signin" }) {
   }, [initialMode]);
 
   const isSignup = mode === "signup";
+  const isForgotPassword = mode === "forgot-password";
+  const genericResetMessage = "If an account exists for that email, we sent a reset link.";
 
   const showComingSoon = () => {
     setToast("Social sign-in coming soon!");
@@ -47,11 +50,6 @@ function AuthPage({ initialMode = "signin" }) {
 
   const showGoogleConfigError = () => {
     setError("Google sign-in is not configured yet.");
-  };
-
-  const showPasswordResetSoon = () => {
-    setToast("Password reset coming soon!");
-    setTimeout(() => setToast(null), 3000);
   };
 
   const redirectAfterAuth = (user) => {
@@ -97,12 +95,23 @@ function AuthPage({ initialMode = "signin" }) {
     redirectAfterAuth(loginRes.data.user);
   };
 
+  const handleForgotPassword = async () => {
+    await apiClient.post("/api/auth/forgot-password", {
+      email: forgotEmail,
+    });
+    setError(null);
+    setToast(genericResetMessage);
+    setTimeout(() => setToast(null), 4200);
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError(null);
     setSubmitting(true);
     try {
-      if (isSignup) {
+      if (isForgotPassword) {
+        await handleForgotPassword();
+      } else if (isSignup) {
         await handleSignup();
       } else {
         await handleLogin();
@@ -110,7 +119,11 @@ function AuthPage({ initialMode = "signin" }) {
     } catch (err) {
       setError(
         err.response?.data?.msg ||
-          (isSignup ? "Signup failed. Maybe the user already exists." : "Invalid credentials. Please try again.")
+          (isForgotPassword
+            ? "Unable to send reset link. Please try again."
+            : isSignup
+              ? "Signup failed. Maybe the user already exists."
+              : "Invalid credentials. Please try again.")
       );
     } finally {
       setSubmitting(false);
@@ -120,6 +133,9 @@ function AuthPage({ initialMode = "signin" }) {
   const switchMode = (nextMode) => {
     setMode(nextMode);
     setError(null);
+    if (nextMode === "forgot-password") {
+      setForgotEmail(email);
+    }
   };
 
   const handleGoogleSuccess = async (credentialResponse) => {
@@ -186,8 +202,8 @@ function AuthPage({ initialMode = "signin" }) {
           </div>
         </div>
 
-        <section className="AuthPage-card" aria-label={isSignup ? "Create account" : "Sign in"}>
-          <div className="AuthPage-toggle" role="tablist" aria-label="Authentication mode">
+        <section className="AuthPage-card" aria-label={isForgotPassword ? "Reset password" : isSignup ? "Create account" : "Sign in"}>
+          {!isForgotPassword && <div className="AuthPage-toggle" role="tablist" aria-label="Authentication mode">
             <button
               type="button"
               className={!isSignup ? "active" : ""}
@@ -206,15 +222,35 @@ function AuthPage({ initialMode = "signin" }) {
             >
               Sign Up
             </button>
-          </div>
+          </div>}
 
           <div className="AuthPage-cardHeader">
-            <h2>{isSignup ? "Create your account" : "Welcome back"}</h2>
-            <p>{isSignup ? "Join the community of cinephiles today." : "Please enter your details to continue."}</p>
+            <h2>{isForgotPassword ? "Reset your password" : isSignup ? "Create your account" : "Welcome back"}</h2>
+            <p>
+              {isForgotPassword
+                ? "Enter your email and we will send a secure reset link."
+                : isSignup
+                  ? "Join the community of cinephiles today."
+                  : "Please enter your details to continue."}
+            </p>
           </div>
 
           <form className="AuthPage-form" onSubmit={handleSubmit}>
-            {isSignup && (
+            {isForgotPassword ? (
+              <label className="AuthPage-field">
+                <span>Email Address</span>
+                <div className="AuthPage-inputWrap">
+                  <FaEnvelope />
+                  <input
+                    type="email"
+                    value={forgotEmail}
+                    onChange={(event) => setForgotEmail(event.target.value)}
+                    placeholder="name@example.com"
+                    required
+                  />
+                </div>
+              </label>
+            ) : isSignup && (
               <label className="AuthPage-field">
                 <span>Full Name</span>
                 <div className="AuthPage-inputWrap">
@@ -224,7 +260,7 @@ function AuthPage({ initialMode = "signin" }) {
               </label>
             )}
 
-            <label className="AuthPage-field">
+            {!isForgotPassword && <label className="AuthPage-field">
               <span>{isSignup ? "Email Address" : "Email Address"}</span>
               <div className="AuthPage-inputWrap">
                 <FaEnvelope />
@@ -236,9 +272,9 @@ function AuthPage({ initialMode = "signin" }) {
                   required
                 />
               </div>
-            </label>
+            </label>}
 
-            <label className="AuthPage-field">
+            {!isForgotPassword && <label className="AuthPage-field">
               <span>Password</span>
               <div className="AuthPage-inputWrap">
                 <FaLock />
@@ -253,9 +289,9 @@ function AuthPage({ initialMode = "signin" }) {
                   {showPassword ? <FaEyeSlash /> : <FaRegEye />}
                 </button>
               </div>
-            </label>
+            </label>}
 
-            {isSignup && (
+            {!isForgotPassword && isSignup && (
               <label className="AuthPage-field">
                 <span>Confirm Password</span>
                 <div className="AuthPage-inputWrap">
@@ -274,37 +310,37 @@ function AuthPage({ initialMode = "signin" }) {
               </label>
             )}
 
-            {!isSignup ? (
+            {!isForgotPassword && !isSignup ? (
               <div className="AuthPage-row">
                 <label className="AuthPage-check">
                   <input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} />
                   <span>Remember me</span>
                 </label>
-                <button type="button" className="AuthPage-inlineBtn" onClick={showPasswordResetSoon}>
+                <button type="button" className="AuthPage-inlineBtn" onClick={() => switchMode("forgot-password")}>
                   Forgot password?
                 </button>
               </div>
-            ) : (
+            ) : !isForgotPassword ? (
               <label className="AuthPage-check AuthPage-terms">
                 <input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} />
                 <span>
                   I agree to the <Link to="/terms">Terms of Service</Link> and Privacy Policy
                 </span>
               </label>
-            )}
+            ) : null}
 
             {error && <p className="AuthPage-error">{error}</p>}
 
             <button className="AuthPage-submit" type="submit" disabled={submitting}>
-              {submitting ? "Please wait..." : isSignup ? "Create Account" : "Sign In"}
+              {submitting ? "Please wait..." : isForgotPassword ? "Send reset link" : isSignup ? "Create Account" : "Sign In"}
             </button>
           </form>
 
-          <div className="AuthPage-divider">
+          {!isForgotPassword && <div className="AuthPage-divider">
             <span>OR CONTINUE WITH</span>
-          </div>
+          </div>}
 
-          <div className="AuthPage-socials">
+          {!isForgotPassword && <div className="AuthPage-socials">
             {GOOGLE_CLIENT_ID ? (
               <div className="AuthPage-socialGoogle" aria-label="Continue with Google">
                 <GoogleLogin
@@ -327,12 +363,12 @@ function AuthPage({ initialMode = "signin" }) {
             <button type="button" onClick={showComingSoon} aria-label="Continue with X">
               <FaXTwitter />
             </button>
-          </div>
+          </div>}
 
           <p className="AuthPage-bottomText">
-            {isSignup ? "Already have an account?" : "New here?"}{" "}
-            <button type="button" onClick={() => switchMode(isSignup ? "signin" : "signup")}>
-              {isSignup ? "Sign in" : "Create an account"}
+            {isForgotPassword ? "Remembered your password?" : isSignup ? "Already have an account?" : "New here?"}{" "}
+            <button type="button" onClick={() => switchMode(isForgotPassword || isSignup ? "signin" : "signup")}>
+              {isForgotPassword || isSignup ? "Sign in" : "Create an account"}
             </button>
           </p>
         </section>

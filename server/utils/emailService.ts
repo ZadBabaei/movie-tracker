@@ -54,6 +54,33 @@ export async function sendGroupInviteEmail(
   }
 }
 
+export async function sendPasswordResetEmail(to: string, resetLink: string): Promise<void> {
+  const html = `
+    <div style="background:#040a1c;color:#e0e0e0;font-family:Arial,sans-serif;padding:40px 20px;text-align:center;">
+      <div style="max-width:520px;margin:0 auto;background:#071425;border-radius:12px;padding:32px;border:1px solid #2ecc7140;">
+        <h1 style="color:#70efa2;margin:0 0 8px;">Movie Tracker</h1>
+        <p style="color:#aaa;font-size:14px;margin:0 0 24px;">Reset your password</p>
+        <p style="font-size:16px;line-height:1.6;margin:0 0 24px;">
+          We received a request to reset your Movie Tracker password. This link expires soon.
+        </p>
+        <a href="${resetLink}" style="display:inline-block;background:#2ecc71;color:#052211;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:16px;">
+          Reset Password
+        </a>
+        <p style="color:#777;font-size:12px;line-height:1.5;margin:24px 0 0;">
+          If you did not request this, you can ignore this email. Your password was not changed.
+        </p>
+      </div>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: `"Movie Tracker" <${SMTP_USER}>`,
+    to,
+    subject: "Reset your Movie Tracker password",
+    html,
+  });
+}
+
 const escapeHtml = (value: string | undefined) =>
   String(value || "")
     .replace(/&/g, "&amp;")

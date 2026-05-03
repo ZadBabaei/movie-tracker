@@ -13,6 +13,7 @@ import { useGroupStore } from "../store/useGroupStore";
 import { jwtDecode } from "jwt-decode";
 import { FaTimes } from "react-icons/fa";
 import { toast } from "react-toastify";
+import { getAvatarUrl } from "../utils/avatar";
 
 interface Member {
   _id: string;
@@ -348,7 +349,7 @@ const GroupPage: React.FC = () => {
                   )}
                   <div className="member-avatar-wrapper">
                     <img
-                      src={member.avatar || "https://i.pravatar.cc/100?u=" + member._id}
+                      src={getAvatarUrl(member)}
                       alt={member.name}
                       className="member-avatar"
                     />
@@ -462,11 +463,7 @@ const GroupPage: React.FC = () => {
                       onClick={() => toggleWatchedWith(member._id)}
                     >
                       <span className="watched-details-member-avatar">
-                        {member.avatar ? (
-                          <img src={member.avatar} alt={member.name} />
-                        ) : (
-                          member.name.charAt(0).toUpperCase()
-                        )}
+                        <img src={getAvatarUrl(member)} alt={member.name} />
                       </span>
                       {member.name}
                     </button>

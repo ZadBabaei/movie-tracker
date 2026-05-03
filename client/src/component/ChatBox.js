@@ -12,21 +12,13 @@ import axios from "axios";
 import GroupChatSidbar from "./GroupChatSidbar";
 import CustomMessage from "./CustomMessage";
 import CustomChatInput from "./CustomChatInput";
+import { getAvatarUrl } from "../utils/avatar";
 import "./ChatBox.css";
 
 const getMemberId = (member) => (member?._id || member?.id || member)?.toString();
 
 const getDisplayName = (member) =>
   member?.name || member?.email || "Unknown user";
-
-const getAvatarUrl = (member) => {
-  if (member?.avatar) return member.avatar;
-  if (member?.image) return member.image;
-
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(
-    getDisplayName(member)
-  )}&background=1b2b45&color=ffffff`;
-};
 
 const normalizeMember = (member, currentUserId) => {
   const id = getMemberId(member);
@@ -36,7 +28,7 @@ const normalizeMember = (member, currentUserId) => {
     id,
     name,
     email: member?.email || "",
-    image: getAvatarUrl(member),
+    image: getAvatarUrl({ ...member, name }),
     online: Boolean(member?.online),
     isCurrentUser: id === currentUserId,
   };

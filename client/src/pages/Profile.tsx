@@ -19,6 +19,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import VerticalNavbar from "../component/VerticalNavbar";
 import { useUserStore } from "../store/useUserStore";
+import { getAvatarUrl } from "../utils/avatar";
 import "./Profile.css";
 
 const Profile: React.FC = () => {
@@ -154,6 +155,7 @@ const Profile: React.FC = () => {
   }
 
   const initials = getInitials(profile.name);
+  const profileAvatarUrl = getAvatarUrl(profile);
   const statItems = [
     {
       label: "Groups Joined",
@@ -272,11 +274,7 @@ const Profile: React.FC = () => {
           <div className="Profile-hero-content">
             <div className="Profile-avatar-ring">
               <div className="Profile-avatar" onClick={handleAvatarClick}>
-                {profile.avatar ? (
-                  <img src={profile.avatar} alt="Avatar" className="Profile-avatar-img" />
-                ) : (
-                  <span>{initials}</span>
-                )}
+                <img src={profileAvatarUrl} alt="Avatar" className="Profile-avatar-img" />
                 <div className="Profile-avatar-overlay">
                   {uploading ? <div className="Profile-avatar-spinner" /> : <FaCamera />}
                 </div>
@@ -431,7 +429,7 @@ const Profile: React.FC = () => {
 
             <div className="Profile-account-user">
               <div className="Profile-account-avatar-sm">
-                {profile.avatar ? <img src={profile.avatar} alt="" /> : <span>{initials}</span>}
+                <img src={profileAvatarUrl} alt="" />
               </div>
               <div>
                 <span className="Profile-account-user-name">{profile.name}</span>

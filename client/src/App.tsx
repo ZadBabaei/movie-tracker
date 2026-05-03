@@ -19,6 +19,7 @@ import ToastWrapper from "./component/ToastWrapper";
 import GroupChat from "./pages/GroupChat";
 import JoinByLink from "./pages/JoinByLink";
 import Terms from "./pages/Terms";
+import ResetPassword from "./pages/ResetPassword";
 import ProtectedRoute from "./utils/ProtectedRoute";
 import { useModalStore } from "./store/useModalStore";
 import { useGroupStore } from "./store/useGroupStore";
@@ -83,6 +84,7 @@ function App({ isAuthenticated, isAuthPage }: AppProps) {
         <Route path="/" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/invite/:token" element={<JoinByLink />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/terms" element={<Terms />} />
 
         {/* Protected Routes */}
