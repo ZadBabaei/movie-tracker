@@ -10,6 +10,36 @@ body,
   overflow-x: hidden;
 }
 
+/* UI chrome list reset. Keep document/content lists, such as Terms, untouched. */
+:where(
+  nav,
+  .vertical-navbar,
+  .mobile-bottom-nav,
+  .modal-content,
+  .VoteModal-content,
+  .InviteFriendsModal-container,
+  .GroupSidebar-sidebar-container,
+  .dropdown-container,
+  .dropdown-menu,
+  .suggestions-list-glass
+) ul,
+:where(
+  nav,
+  .vertical-navbar,
+  .mobile-bottom-nav,
+  .modal-content,
+  .VoteModal-content,
+  .InviteFriendsModal-container,
+  .GroupSidebar-sidebar-container,
+  .dropdown-container,
+  .dropdown-menu,
+  .suggestions-list-glass
+) li {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
 @media (max-width: 768px) {
   body {
     padding-bottom: calc(90px + env(safe-area-inset-bottom));

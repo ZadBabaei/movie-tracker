@@ -132,6 +132,7 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
                   <button
                     key={group._id}
                     className="group-select-item"
+                    data-testid="group-select-option"
                     onClick={() => handleGroupClick(group._id)}
                   >
                     {group.name}
@@ -162,6 +163,7 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
                   value={watchedDate}
                   onChange={(e) => setWatchedDate(e.target.value)}
                   className="group-select-input"
+                  data-testid="group-select-date"
                 />
               </div>
 
@@ -174,6 +176,7 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
                       className={`group-select-chip ${
                         watchedWhere === place ? "group-select-chip--active" : ""
                       }`}
+                      data-testid="group-select-location"
                       onClick={() =>
                         setWatchedWhere(watchedWhere === place ? "" : place)
                       }
@@ -228,6 +231,7 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
                             ? "group-select-member-chip--active"
                             : ""
                         }`}
+                        data-testid="group-select-member"
                         onClick={() => toggleMember(member._id)}
                       >
                         <div className="member-chip-avatar">
@@ -256,6 +260,7 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
                 </button>
                 <button
                   className="group-select-btn group-select-btn--done"
+                  data-testid="group-select-done"
                   onClick={handleDone}
                 >
                   Done

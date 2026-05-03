@@ -1,0 +1,22 @@
+Error in /api/chat/unread-info: JsonWebTokenError: invalid signature
+    at C:\Mehrzad\Programing\movie traker\server\node_modules\jsonwebtoken\verify.js:171:19
+    at getSecret (C:\Mehrzad\Programing\movie traker\server\node_modules\jsonwebtoken\verify.js:97:14)
+    at Object.module.exports [as verify] (C:\Mehrzad\Programing\movie traker\server\node_modules\jsonwebtoken\verify.js:101:10)
+    at decodeAuthHeader (C:\Mehrzad\Programing\movie traker\server\routes\chatRoutes.ts:28:14)
+    at C:\Mehrzad\Programing\movie traker\server\routes\chatRoutes.ts:258:21
+    at Layer.handle [as handle_request] (C:\Mehrzad\Programing\movie traker\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Mehrzad\Programing\movie traker\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Mehrzad\Programing\movie traker\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Mehrzad\Programing\movie traker\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Mehrzad\Programing\movie traker\server\node_modules\express\lib\router\index.js:284:15
+Error in /api/chat/unread-info: JsonWebTokenError: invalid signature
+    at C:\Mehrzad\Programing\movie traker\server\node_modules\jsonwebtoken\verify.js:171:19
+    at getSecret (C:\Mehrzad\Programing\movie traker\server\node_modules\jsonwebtoken\verify.js:97:14)
+    at Object.module.exports [as verify] (C:\Mehrzad\Programing\movie traker\server\node_modules\jsonwebtoken\verify.js:101:10)
+    at decodeAuthHeader (C:\Mehrzad\Programing\movie traker\server\routes\chatRoutes.ts:28:14)
+    at C:\Mehrzad\Programing\movie traker\server\routes\chatRoutes.ts:258:21
+    at Layer.handle [as handle_request] (C:\Mehrzad\Programing\movie traker\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Mehrzad\Programing\movie traker\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Mehrzad\Programing\movie traker\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Mehrzad\Programing\movie traker\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Mehrzad\Programing\movie traker\server\node_modules\express\lib\router\index.js:284:15

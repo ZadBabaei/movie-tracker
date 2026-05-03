@@ -13,6 +13,12 @@ export interface IWatchedMovie {
   watchedLocation?: string;
   watchedWith: Types.ObjectId[];
   watchedNotes?: string;
+  ratings?: {
+    userId: Types.ObjectId;
+    rating: number;
+    createdAt?: Date;
+    updatedAt?: Date;
+  }[];
 }
 
 export interface IGroup extends Document {
@@ -46,6 +52,14 @@ const groupSchema = new Schema<IGroup>(
         watchedLocation: { type: String, default: "" },
         watchedWith: [{ type: Schema.Types.ObjectId, ref: "User" }],
         watchedNotes: { type: String, default: "" },
+        ratings: [
+          {
+            userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+            rating: { type: Number, required: true, min: 1, max: 10 },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+          },
+        ],
       },
     ],
     currentPoll: { type: Schema.Types.ObjectId, ref: "Poll" },

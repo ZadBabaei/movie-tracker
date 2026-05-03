@@ -53,6 +53,14 @@ const groupSchema = new mongoose_1.Schema({
             watchedLocation: { type: String, default: "" },
             watchedWith: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "User" }],
             watchedNotes: { type: String, default: "" },
+            ratings: [
+                {
+                    userId: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },
+                    rating: { type: Number, required: true, min: 1, max: 10 },
+                    createdAt: { type: Date, default: Date.now },
+                    updatedAt: { type: Date, default: Date.now },
+                },
+            ],
         },
     ],
     currentPoll: { type: mongoose_1.Schema.Types.ObjectId, ref: "Poll" },

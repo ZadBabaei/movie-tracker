@@ -37,7 +37,14 @@ const mongoose_1 = __importStar(require("mongoose"));
 const userSchema = new mongoose_1.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
+    password: {
+        type: String,
+        required: function () {
+            return this.provider !== "google";
+        },
+    },
+    provider: { type: String, enum: ["local", "google"], default: "local" },
+    googleId: { type: String, unique: true, sparse: true },
     watchlist: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Movie", default: [] }],
     favorites: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Movie", default: [] }],
     favoriteGroups: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Group", default: [] }],

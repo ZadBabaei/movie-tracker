@@ -27,11 +27,22 @@ background: linear-gradient(to top, #17421d, #040a1c);
   margin-bottom: 3rem;
 }
 
-.navbar-menu {
+.navbar-menu,
+.navbar-list {
   list-style: none;
   padding: 0;
   margin: 0;
   width: 100%;
+}
+
+.navbar-list .navbar-item,
+.navbar-menu .navbar-item {
+  list-style: none;
+}
+
+.navbar-list .navbar-item::marker,
+.navbar-menu .navbar-item::marker {
+  content: "";
 }
 
 .navbar-item {

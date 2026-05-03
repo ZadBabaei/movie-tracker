@@ -373,7 +373,7 @@ const VoteModal: React.FC<VoteModalProps> = ({ groupId, onPollStatusChange }) =>
 
     return (
       <div className="VoteModal-overlay">
-        <div className="VoteModal-content results-cinematic">
+        <div className="VoteModal-content results-cinematic" data-testid="poll-results-modal">
           <button className="VoteModal-close-btn" onClick={closeVoteModal}>x</button>
 
           <div className="results-particles">

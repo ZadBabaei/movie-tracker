@@ -100,6 +100,11 @@ router.post("/:movieId/mark-watched", authMiddleware_1.authenticate, async (req,
             res.status(404).json({ msg: "Group not found" });
             return;
         }
+        const userId = req.user.id;
+        if (!group.members.some((memberId) => memberId.toString() === userId)) {
+            res.status(403).json({ msg: "Only group members can add watched movies." });
+            return;
+        }
         // Migrate old plain-ObjectId entries to subdocument format
         group.movies = group.movies.map((m) => {
             if (m.movieId)
@@ -112,21 +117,30 @@ router.post("/:movieId/mark-watched", authMiddleware_1.authenticate, async (req,
                 watchedLocation: "",
                 watchedWith: [],
                 watchedNotes: "",
+                ratings: [],
             };
         });
         // Add movie to group if not already there
         const alreadyInGroup = group.movies.some((m) => (m.movieId || m).toString() === movie._id.toString());
         if (!alreadyInGroup) {
             const parsedWatchedAt = watchedAt || watchedDate ? new Date(watchedAt || watchedDate) : new Date();
+            if (Number.isNaN(parsedWatchedAt.getTime())) {
+                res.status(400).json({ msg: "Invalid watched date." });
+                return;
+            }
             const locationPayload = watchedLocation || watchedWhere || "";
+            const watchedWithIds = Array.isArray(watchedWith) ? watchedWith : [];
+            const groupMemberIds = new Set(group.members.map((memberId) => memberId.toString()));
+            const validWatchedWith = watchedWithIds.filter((memberId) => groupMemberIds.has(memberId));
             group.movies.push({
                 movieId: movie._id,
                 watchedDate: parsedWatchedAt,
                 watchedAt: parsedWatchedAt,
                 watchedWhere: locationPayload,
                 watchedLocation: locationPayload,
-                watchedWith: watchedWith?.length ? watchedWith : [req.user.id],
+                watchedWith: validWatchedWith.length ? validWatchedWith : [userId],
                 watchedNotes: watchedNotes || "",
+                ratings: [],
             });
         }
         await group.save();

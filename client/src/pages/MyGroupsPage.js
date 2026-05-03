@@ -20,11 +20,20 @@ const MyGroupsPage = () => {
   const decoded = token ? jwtDecode(token) : null;
   const { favoriteGroups, fetchFavoriteGroups, toggleFavoriteGroup } = useGroupStore();
 
+  const dedupeMembers = (members = []) => {
+    const seen = new Set();
+    return members.filter((member) => {
+      if (!member?._id || seen.has(member._id)) return false;
+      seen.add(member._id);
+      return true;
+    });
+  };
+
   useEffect(() => {
     const fetchGroups = async () => {
       try {
         const data = await fetchMyGroups();
-        setGroups(data);
+        setGroups(data.map((group) => ({ ...group, members: dedupeMembers(group.members) })));
       } catch (err) {
         setError("Failed to load your groups.");
         toast.error("Unable to load groups.");

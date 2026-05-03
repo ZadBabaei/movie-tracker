@@ -78,6 +78,7 @@ export const useWatchlistStore = create<WatchlistState>((set) => ({
       }));
     } catch (err) {
       console.error("Failed to mark as watched:", err);
+      throw err;
     }
   },
 }));

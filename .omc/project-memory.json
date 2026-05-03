@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1774922202627,
-  "projectRoot": "C:\\Mehrzad\\Programing\\movie traker",
+  "lastScanned": 1777419599800,
+  "projectRoot": "c:\\Mehrzad\\Programing\\movie traker",
   "techStack": {
     "languages": [],
     "frameworks": [],
@@ -32,21 +32,34 @@
     "client": {
       "path": "client",
       "purpose": null,
-      "fileCount": 7,
-      "lastAccessed": 1774922202546,
+      "fileCount": 9,
+      "lastAccessed": 1777419599701,
       "keyFiles": [
+        "client.dev.err.log",
+        "client.dev.log",
         "config-overrides.js",
         "package-lock.json",
-        "package.json",
-        "README.md",
-        "tsconfig.json"
+        "package.json"
+      ]
+    },
+    "designRefrences": {
+      "path": "designRefrences",
+      "purpose": null,
+      "fileCount": 5,
+      "lastAccessed": 1777419599705,
+      "keyFiles": [
+        "auth-signin-reference.png",
+        "auth-signup-reference.png",
+        "auth-vector-reference.png",
+        "profile-mockup.html",
+        "profile-page-reference.png"
       ]
     },
     "Docs": {
       "path": "Docs",
       "purpose": "Documentation",
       "fileCount": 6,
-      "lastAccessed": 1774922202548,
+      "lastAccessed": 1777419599707,
       "keyFiles": [
         "Bug reports.md",
         "comment section.md",
@@ -58,21 +71,21 @@
     "server": {
       "path": "server",
       "purpose": null,
-      "fileCount": 8,
-      "lastAccessed": 1774922202549,
+      "fileCount": 10,
+      "lastAccessed": 1777419599708,
       "keyFiles": [
         "index.ts",
         "package-lock.json",
         "package.json",
-        "socket.ts",
-        "testMongo.js"
+        "server.dev.err.log",
+        "server.dev.log"
       ]
     },
     "client\\build": {
       "path": "client\\build",
       "purpose": "Build output",
       "fileCount": 10,
-      "lastAccessed": 1774922202551,
+      "lastAccessed": 1777419599709,
       "keyFiles": [
         "asset-manifest.json",
         "chat-box.png",
@@ -83,25 +96,24 @@
       "path": "client\\node_modules",
       "purpose": "Dependencies",
       "fileCount": 1,
-      "lastAccessed": 1774922202600,
+      "lastAccessed": 1777419599717,
       "keyFiles": []
     },
-    "client\\public": {
-      "path": "client\\public",
-      "purpose": "Public files",
-      "fileCount": 9,
-      "lastAccessed": 1774922202603,
+    "server\\dist": {
+      "path": "server\\dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 2,
+      "lastAccessed": 1777419599720,
       "keyFiles": [
-        "chat-box.png",
-        "default-avatar.png",
-        "favicon.ico"
+        "index.js",
+        "socket.js"
       ]
     },
     "server\\middleware": {
       "path": "server\\middleware",
       "purpose": "Middleware",
       "fileCount": 1,
-      "lastAccessed": 1774922202606,
+      "lastAccessed": 1777419599721,
       "keyFiles": [
         "authMiddleware.ts"
       ]
@@ -110,7 +122,7 @@
       "path": "server\\models",
       "purpose": "Data models",
       "fileCount": 6,
-      "lastAccessed": 1774922202608,
+      "lastAccessed": 1777419599722,
       "keyFiles": [
         "Comment.ts",
         "Groups.ts",
@@ -121,14 +133,14 @@
       "path": "server\\node_modules",
       "purpose": "Dependencies",
       "fileCount": 1,
-      "lastAccessed": 1774922202614,
+      "lastAccessed": 1777419599725,
       "keyFiles": []
     },
     "server\\routes": {
       "path": "server\\routes",
       "purpose": "Route handlers",
       "fileCount": 10,
-      "lastAccessed": 1774922202618,
+      "lastAccessed": 1777419599727,
       "keyFiles": [
         "assistantRoutes.ts",
         "authRoutes.ts",
@@ -151,8 +163,14 @@
     },
     {
       "path": "client\\src\\component\\VerticalNavbar.tsx",
-      "accessCount": 15,
-      "lastAccessed": 1774901947900,
+      "accessCount": 16,
+      "lastAccessed": 1777421454931,
+      "type": "file"
+    },
+    {
+      "path": "client\\src\\pages\\Watchlist.tsx",
+      "accessCount": 13,
+      "lastAccessed": 1777419973364,
       "type": "file"
     },
     {
@@ -165,12 +183,6 @@
       "path": "client\\src\\pages\\Signup.js",
       "accessCount": 11,
       "lastAccessed": 1774883033926,
-      "type": "file"
-    },
-    {
-      "path": "client\\src\\pages\\Watchlist.tsx",
-      "accessCount": 11,
-      "lastAccessed": 1774901724147,
       "type": "file"
     },
     {
@@ -205,8 +217,8 @@
     },
     {
       "path": "client\\src\\store\\useWatchlistStore.ts",
-      "accessCount": 5,
-      "lastAccessed": 1774901706832,
+      "accessCount": 6,
+      "lastAccessed": 1777419794017,
       "type": "file"
     },
     {
@@ -246,6 +258,18 @@
       "type": "file"
     },
     {
+      "path": "client\\src\\component\\FavoritesCarousel.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1777419795471,
+      "type": "file"
+    },
+    {
+      "path": "client\\package.json",
+      "accessCount": 3,
+      "lastAccessed": 1777420186486,
+      "type": "file"
+    },
+    {
       "path": "Docs\\poll-system-plan.md",
       "accessCount": 2,
       "lastAccessed": 1774830954177,
@@ -270,12 +294,6 @@
       "type": "file"
     },
     {
-      "path": "client\\src\\component\\FavoritesCarousel.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1774850848839,
-      "type": "file"
-    },
-    {
       "path": "client\\src\\component\\VoteModal.tsx",
       "accessCount": 2,
       "lastAccessed": 1774850854668,
@@ -285,12 +303,6 @@
       "path": "client\\src\\pages\\GroupChat.tsx",
       "accessCount": 2,
       "lastAccessed": 1774851174234,
-      "type": "file"
-    },
-    {
-      "path": "client\\package.json",
-      "accessCount": 2,
-      "lastAccessed": 1774900911603,
       "type": "file"
     },
     {
@@ -309,6 +321,12 @@
       "path": "client\\src\\hooks\\useSocket.ts",
       "accessCount": 2,
       "lastAccessed": 1774900990381,
+      "type": "file"
+    },
+    {
+      "path": "client\\src\\component\\SuggestionsCarousel.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1777419795846,
       "type": "file"
     },
     {
@@ -351,12 +369,6 @@
       "path": "client\\src\\component\\MovieCard.js",
       "accessCount": 1,
       "lastAccessed": 1774850682427,
-      "type": "file"
-    },
-    {
-      "path": "client\\src\\component\\SuggestionsCarousel.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1774850683767,
       "type": "file"
     },
     {

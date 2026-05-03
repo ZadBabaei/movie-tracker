@@ -7,9 +7,20 @@ const express_1 = __importDefault(require("express"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const mongoose_1 = __importDefault(require("mongoose"));
+const google_auth_library_1 = require("google-auth-library");
 const user_1 = __importDefault(require("../models/user"));
 const Groups_1 = __importDefault(require("../models/Groups"));
 const router = express_1.default.Router();
+const googleClient = new google_auth_library_1.OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const buildAuthToken = (user, rememberMe = false) => jsonwebtoken_1.default.sign({ id: user._id, name: user.name }, process.env.JWT_SECRET, { expiresIn: rememberMe ? "7d" : "24h" });
+const buildAuthUser = (user) => ({
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    avatar: user.avatar || "",
+    firstLogin: user.firstLogin ?? true,
+});
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 router.post("/register", async (req, res) => {
     try {
         const { name, email, password } = req.body;
@@ -23,7 +34,7 @@ router.post("/register", async (req, res) => {
             return;
         }
         const hashedPassword = await bcryptjs_1.default.hash(password, 10);
-        const newUser = new user_1.default({ name, email, password: hashedPassword });
+        const newUser = new user_1.default({ name, email, password: hashedPassword, provider: "local" });
         const savedUser = await newUser.save();
         res.json({ msg: "Signup successful", user: savedUser });
     }
@@ -40,26 +51,94 @@ router.post("/login", async (req, res) => {
             res.status(400).json({ msg: "Invalid credentials" });
             return;
         }
+        if (!user.password) {
+            res.status(400).json({ msg: "Please continue with Google for this account" });
+            return;
+        }
         const isMatch = await bcryptjs_1.default.compare(password, user.password);
         if (!isMatch) {
             res.status(400).json({ msg: "Invalid credentials" });
             return;
         }
-        const token = jsonwebtoken_1.default.sign({ id: user._id, name: user.name }, process.env.JWT_SECRET, { expiresIn: rememberMe ? "7d" : "24h" });
+        const token = buildAuthToken(user, rememberMe);
         res.json({
             token,
-            user: {
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                avatar: user.avatar || "",
-                firstLogin: user.firstLogin ?? true,
-            },
+            user: buildAuthUser(user),
         });
     }
     catch (error) {
         console.error("Error in login route:", error);
         res.status(500).json({ msg: "Server error" });
+    }
+});
+router.post("/google", async (req, res) => {
+    try {
+        const { credential } = req.body;
+        const googleClientId = process.env.GOOGLE_CLIENT_ID;
+        if (!googleClientId) {
+            res.status(500).json({ msg: "Google authentication is not configured" });
+            return;
+        }
+        if (!credential) {
+            res.status(400).json({ msg: "Missing Google credential" });
+            return;
+        }
+        const ticket = await googleClient.verifyIdToken({
+            idToken: credential,
+            audience: googleClientId,
+        });
+        const payload = ticket.getPayload();
+        if (!payload?.sub || !payload.email) {
+            res.status(401).json({ msg: "Invalid Google credential" });
+            return;
+        }
+        if (payload.email_verified === false) {
+            res.status(401).json({ msg: "Google email is not verified" });
+            return;
+        }
+        const googleId = payload.sub;
+        const email = payload.email.toLowerCase();
+        const name = payload.name || email.split("@")[0];
+        const picture = payload.picture || "";
+        let user = await user_1.default.findOne({
+            $or: [{ googleId }, { email: { $regex: `^${escapeRegex(email)}$`, $options: "i" } }],
+        });
+        if (!user) {
+            user = await user_1.default.create({
+                name,
+                email,
+                avatar: picture,
+                provider: "google",
+                googleId,
+            });
+        }
+        else {
+            let shouldSave = false;
+            if (!user.googleId) {
+                user.googleId = googleId;
+                shouldSave = true;
+            }
+            if (!user.provider) {
+                user.provider = user.password ? "local" : "google";
+                shouldSave = true;
+            }
+            if (!user.avatar && picture) {
+                user.avatar = picture;
+                shouldSave = true;
+            }
+            if (shouldSave) {
+                await user.save();
+            }
+        }
+        const token = buildAuthToken(user);
+        res.json({
+            token,
+            user: buildAuthUser(user),
+        });
+    }
+    catch (error) {
+        console.error("Error in Google auth route:", error);
+        res.status(401).json({ msg: "Google authentication failed" });
     }
 });
 router.get("/me", async (req, res) => {

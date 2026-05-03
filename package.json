@@ -1,0 +1,13 @@
+{
+  "name": "movie-tracker-e2e",
+  "private": true,
+  "scripts": {
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "e2e:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "mongodb": "^6.13.0"
+  }
+}

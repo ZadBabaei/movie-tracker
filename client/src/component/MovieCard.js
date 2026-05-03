@@ -195,6 +195,8 @@ const MovieCard = ({
       ref={cardRef}
       className={`MovieCard Group-movie-card ${overlayOpen ? "MovieCard--active" : ""}`}
       onClick={handleCardClick}
+      data-testid="movie-card"
+      data-movie-title={title}
     >
       <div className="MovieCard-posterWrap Group-poster-container">
         <img
@@ -222,7 +224,12 @@ const MovieCard = ({
                 </button>
               )}
               {watchedHandler && (
-                <button className="MovieCard-action" title="Watched" onClick={(e) => handleAction(e, watchedHandler)}>
+                <button
+                  className="MovieCard-action"
+                  title="Watched"
+                  data-testid="movie-action-watched"
+                  onClick={(e) => handleAction(e, watchedHandler)}
+                >
                   <FaEye />
                 </button>
               )}
@@ -241,7 +248,12 @@ const MovieCard = ({
                 </button>
               )}
               {onInfoClick && (
-                <button className="MovieCard-action" title="Details" onClick={(e) => handleAction(e, onInfoClick)}>
+                <button
+                  className="MovieCard-action"
+                  title="Details"
+                  data-testid="movie-action-details"
+                  onClick={(e) => handleAction(e, onInfoClick)}
+                >
                   <FaInfoCircle />
                 </button>
               )}

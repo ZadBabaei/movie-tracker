@@ -117,6 +117,12 @@ router.post("/:movieId/mark-watched", authenticate, async (req: Request, res: Re
       return;
     }
 
+    const userId = req.user!.id;
+    if (!group.members.some((memberId) => memberId.toString() === userId)) {
+      res.status(403).json({ msg: "Only group members can add watched movies." });
+      return;
+    }
+
     // Migrate old plain-ObjectId entries to subdocument format
     group.movies = group.movies.map((m: any) => {
       if (m.movieId) return m;
@@ -128,6 +134,7 @@ router.post("/:movieId/mark-watched", authenticate, async (req: Request, res: Re
         watchedLocation: "",
         watchedWith: [],
         watchedNotes: "",
+        ratings: [],
       };
     }) as any;
 
@@ -137,15 +144,25 @@ router.post("/:movieId/mark-watched", authenticate, async (req: Request, res: Re
     );
     if (!alreadyInGroup) {
       const parsedWatchedAt = watchedAt || watchedDate ? new Date(watchedAt || watchedDate) : new Date();
+      if (Number.isNaN(parsedWatchedAt.getTime())) {
+        res.status(400).json({ msg: "Invalid watched date." });
+        return;
+      }
+
       const locationPayload = watchedLocation || watchedWhere || "";
+      const watchedWithIds = Array.isArray(watchedWith) ? watchedWith : [];
+      const groupMemberIds = new Set(group.members.map((memberId) => memberId.toString()));
+      const validWatchedWith = watchedWithIds.filter((memberId: string) => groupMemberIds.has(memberId));
+
       group.movies.push({
         movieId: movie._id,
         watchedDate: parsedWatchedAt,
         watchedAt: parsedWatchedAt,
         watchedWhere: locationPayload,
         watchedLocation: locationPayload,
-        watchedWith: watchedWith?.length ? watchedWith : [req.user!.id],
+        watchedWith: validWatchedWith.length ? validWatchedWith : [userId],
         watchedNotes: watchedNotes || "",
+        ratings: [],
       } as any);
     }
     await group.save();

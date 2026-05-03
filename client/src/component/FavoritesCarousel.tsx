@@ -26,7 +26,7 @@ const FavoritesCarousel: React.FC<FavoritesCarouselProps> = ({ favorites, onRemo
   return (
     <div className="suggestions-carousel-wrapper favorites-carousel-wrapper">
       <h2 className="suggestions-title favorites-title">
-        <FaHeart className="favorites-heart-icon" /> My Favorites
+        <FaHeart className="favorites-heart-icon" /> Favorites
       </h2>
       <div className="suggestions-carousel">
         <button className="carousel-btn carousel-btn-prev" onClick={scrollPrev}>

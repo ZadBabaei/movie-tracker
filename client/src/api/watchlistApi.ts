@@ -34,9 +34,15 @@ export const markAsWatched = async (
     watchedWith?: string[];
   }
 ) => {
+  const payload = {
+    groupId,
+    ...metadata,
+    watchedAt: metadata?.watchedDate,
+    watchedLocation: metadata?.watchedWhere,
+  };
   const res = await axios.post(
     `/api/watchlist/${movieId}/mark-watched`,
-    { groupId, ...metadata },
+    payload,
     getAuthHeaders()
   );
   return res.data;

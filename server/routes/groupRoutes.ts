@@ -12,6 +12,54 @@ import { sendGroupInviteEmail } from "../utils/emailService";
 
 const router = express.Router();
 
+const dedupeGroupMembers = async (groupId: mongoose.Types.ObjectId | string) => {
+  const group = await Group.findById(groupId);
+  if (!group) return null;
+
+  const seen = new Set<string>();
+  const uniqueMembers = group.members.filter((memberId) => {
+    const id = memberId.toString();
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+
+  if (uniqueMembers.length !== group.members.length) {
+    group.members = uniqueMembers as any;
+    await group.save();
+  }
+
+  return group;
+};
+
+const getRatingSummary = (historyItem: any, currentUserId: string) => {
+  const ratings = Array.isArray(historyItem?.ratings) ? historyItem.ratings : [];
+  const validRatings = ratings
+    .map((entry: any) => ({
+      userId: entry.userId?._id?.toString?.() || entry.userId?.toString?.() || String(entry.userId || ""),
+      name: entry.userId?.name || "Group member",
+      avatar: entry.userId?.avatar || "",
+      rating: Number(entry.rating),
+    }))
+    .filter((entry: any) => Number.isFinite(entry.rating) && entry.rating >= 1 && entry.rating <= 10);
+
+  const ratingCount = validRatings.length;
+  const averageRating = ratingCount
+    ? Number((validRatings.reduce((sum: number, entry: any) => sum + entry.rating, 0) / ratingCount).toFixed(1))
+    : null;
+  const currentUserRating = validRatings.find((entry: any) => entry.userId === currentUserId)?.rating ?? null;
+
+  return { averageRating, ratingCount, currentUserRating, ratings: validRatings };
+};
+
+const withRatingSummaries = (groupObject: any, currentUserId: string) => ({
+  ...groupObject,
+  movies: (groupObject.movies || []).map((historyItem: any) => ({
+    ...historyItem,
+    ...getRatingSummary(historyItem, currentUserId),
+  })),
+});
+
 router.get("/mine", authenticate, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
@@ -140,18 +188,22 @@ router.post("/respond", authenticate, async (req: Request, res: Response) => {
     if (!Array.isArray(group.pendingInvitations)) group.pendingInvitations = [];
 
     if (response === "accept") {
-      const alreadyMember = group.members.some((m) => m.toString() === userId.toString());
-      if (!alreadyMember) {
-        group.members.push(userId);
-      }
+      await Group.updateOne(
+        { _id: group._id },
+        {
+          $addToSet: { members: userId },
+          $pull: { pendingInvitations: { userId } },
+        }
+      );
+    } else {
+      await Group.updateOne(
+        { _id: group._id },
+        { $pull: { pendingInvitations: { userId } } }
+      );
     }
 
-    group.pendingInvitations = group.pendingInvitations.filter(
-      (inv) => inv.userId.toString() !== userId.toString()
-    );
-
-    await group.save();
-    res.json({ msg: `You have ${response}ed the invitation.`, group });
+    const updatedGroup = await dedupeGroupMembers(group.id);
+    res.json({ msg: `You have ${response}ed the invitation.`, group: updatedGroup || group });
   } catch (error) {
     console.error("Error responding to invitation:", error);
     res.status(500).json({ msg: "Server error", error: (error as Error).message });
@@ -170,6 +222,17 @@ router.get("/:id", authenticate, async (req: Request, res: Response) => {
     }
 
     let needsSave = false;
+    const seenMembers = new Set<string>();
+    rawGroup.members = rawGroup.members.filter((memberId) => {
+      const id = memberId.toString();
+      if (seenMembers.has(id)) {
+        needsSave = true;
+        return false;
+      }
+      seenMembers.add(id);
+      return true;
+    }) as any;
+
     rawGroup.movies = rawGroup.movies.map((m: any) => {
       if (m.movieId) return m;
       needsSave = true;
@@ -181,6 +244,7 @@ router.get("/:id", authenticate, async (req: Request, res: Response) => {
         watchedLocation: "",
         watchedWith: [],
         watchedNotes: "",
+        ratings: [],
       };
     }) as any;
     if (needsSave) await rawGroup.save();
@@ -198,12 +262,16 @@ router.get("/:id", authenticate, async (req: Request, res: Response) => {
         select: "_id name avatar",
       })
       .populate({
+        path: "movies.ratings.userId",
+        select: "_id name avatar",
+      })
+      .populate({
         path: "currentPoll",
         populate: { path: "votes.userId", select: "name" },
       });
 
     const hasActivePoll = await group!.hasActivePoll();
-    res.json({ ...group!.toObject(), hasActivePoll });
+    res.json(withRatingSummaries({ ...group!.toObject(), hasActivePoll }, req.user!.id));
   } catch (error) {
     console.error("Error fetching group:", error);
     res.status(500).json({ msg: "Server error", error: (error as Error).message });
@@ -278,6 +346,7 @@ router.post("/:id/add-movie", authenticate, async (req: Request, res: Response) 
         watchedLocation: "",
         watchedWith: [],
         watchedNotes: "",
+        ratings: [],
       };
     }) as any;
 
@@ -293,6 +362,7 @@ router.post("/:id/add-movie", authenticate, async (req: Request, res: Response) 
         watchedLocation: locationPayload,
         watchedWith: watchedWithPayload,
         watchedNotes: notesPayload,
+        ratings: [],
       } as any);
     }
     await group.save();
@@ -301,6 +371,84 @@ router.post("/:id/add-movie", authenticate, async (req: Request, res: Response) 
     res.json({ msg: "Movie added", movie: existingMovie });
   } catch (error) {
     console.error("Error adding movie:", error);
+    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+  }
+});
+
+router.post("/:groupId/history/:historyItemId/rating", authenticate, async (req: Request, res: Response) => {
+  try {
+    const groupId = String(req.params.groupId);
+    const historyItemId = String(req.params.historyItemId);
+    const userId = req.user!.id;
+    const rating = Number(req.body?.rating);
+
+    if (!mongoose.Types.ObjectId.isValid(groupId) || !mongoose.Types.ObjectId.isValid(historyItemId)) {
+      res.status(400).json({ msg: "Invalid history item." });
+      return;
+    }
+
+    if (!Number.isInteger(rating) || rating < 1 || rating > 10) {
+      res.status(400).json({ msg: "Rating must be a whole number from 1 to 10." });
+      return;
+    }
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      res.status(404).json({ msg: "Group not found" });
+      return;
+    }
+
+    const isMember = group.members.some((memberId) => memberId.toString() === userId);
+    if (!isMember) {
+      res.status(403).json({ msg: "Only group members can rate watched movies." });
+      return;
+    }
+
+    const historyItem = (group.movies as any).id(historyItemId);
+    if (!historyItem) {
+      res.status(404).json({ msg: "History item not found." });
+      return;
+    }
+
+    if (!Array.isArray(historyItem.ratings)) historyItem.ratings = [];
+
+    const now = new Date();
+    const existingRating = historyItem.ratings.find(
+      (entry: any) => entry.userId?.toString() === userId
+    );
+
+    if (existingRating) {
+      existingRating.rating = rating;
+      existingRating.updatedAt = now;
+    } else {
+      historyItem.ratings.push({
+        userId: new mongoose.Types.ObjectId(userId),
+        rating,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    await group.save();
+    await group.populate({
+      path: "movies.ratings.userId",
+      select: "_id name avatar",
+    });
+
+    const updatedHistoryItem = (group.movies as any).id(historyItemId) || historyItem;
+    const summary = getRatingSummary(updatedHistoryItem, userId);
+    getIO().to(groupId).emit("group:history_rating_updated", {
+      historyItemId,
+      ...summary,
+    });
+
+    res.json({
+      msg: "Rating saved",
+      historyItemId,
+      ...summary,
+    });
+  } catch (error) {
+    console.error("Error rating history item:", error);
     res.status(500).json({ msg: "Server error", error: (error as Error).message });
   }
 });
@@ -496,24 +644,25 @@ router.post("/join-by-link/:token", async (req: Request, res: Response) => {
       return;
     }
 
-    const fullGroup = await Group.findById(group._id);
+    const fullGroup = await dedupeGroupMembers(group._id);
     if (!fullGroup) {
       res.status(404).json({ msg: "Group not found" });
       return;
     }
 
-    if (fullGroup.members.some((m) => m.toString() === user._id.toString())) {
-      res.json({ alreadyMember: true, groupId: fullGroup._id });
-      return;
+    const addResult = await Group.updateOne(
+      { _id: fullGroup._id },
+      { $addToSet: { members: user._id } }
+    );
+    const joined = addResult.modifiedCount > 0;
+
+    if (joined) {
+      link.uses += 1;
+      await link.save();
     }
 
-    fullGroup.members.push(user._id as any);
-    await fullGroup.save();
-
-    link.uses += 1;
-    await link.save();
-
-    res.json({ joined: true, groupId: fullGroup._id });
+    await dedupeGroupMembers(fullGroup.id);
+    res.json({ joined, alreadyMember: !joined, groupId: fullGroup._id });
   } catch (error) {
     console.error("Error joining by link:", error);
     res.status(500).json({ msg: "Server error", error: (error as Error).message });

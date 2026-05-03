@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { FaTimes } from "react-icons/fa";
+import apiClient from "../api/apiClient";
 import CommentSection from "./CommentSection";
 import "./MovieDetailModal.css";
 
@@ -75,10 +76,32 @@ const formatWatchedWith = (watchedWith) => {
     .join(", ");
 };
 
-const MovieDetailModal = ({ movie, onClose }) => {
+const formatGroupRating = (value) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? `${numericValue.toFixed(1)} / 10` : "N/A";
+};
+
+const getInitials = (name = "") =>
+  name
+    .split(" ")
+    .map((part) => part.charAt(0))
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "?";
+
+const MovieDetailModal = ({ movie, groupId = null, onRatingSaved = null, onClose }) => {
   const [details, setDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(true);
   const [imdbUrl, setImdbUrl] = useState("");
+  const [showRatingPanel, setShowRatingPanel] = useState(false);
+  const [selectedRating, setSelectedRating] = useState(movie.currentUserRating || 8);
+  const [averageRating, setAverageRating] = useState(movie.averageRating ?? null);
+  const [ratingCount, setRatingCount] = useState(movie.ratingCount || 0);
+  const [currentUserRating, setCurrentUserRating] = useState(movie.currentUserRating ?? null);
+  const [memberRatings, setMemberRatings] = useState(movie.ratings || []);
+  const [showAllRatings, setShowAllRatings] = useState(false);
+  const [savingRating, setSavingRating] = useState(false);
+  const [ratingError, setRatingError] = useState("");
 
   const poster = movie.poster_path || movie.poster;
   const tmdbId = getTmdbMovieId(movie);
@@ -87,6 +110,18 @@ const MovieDetailModal = ({ movie, onClose }) => {
   const watchedWith = formatWatchedWith(movie.watchedWith);
   const watchedNotes = movie.watchedNotes;
   const hasWatchMetadata = watchedDate || watchedLocation || watchedWith || watchedNotes;
+  const canRateHistoryItem = Boolean(groupId && movie.historyItemId);
+
+  useEffect(() => {
+    setAverageRating(movie.averageRating ?? null);
+    setRatingCount(movie.ratingCount || 0);
+    setCurrentUserRating(movie.currentUserRating ?? null);
+    setMemberRatings(movie.ratings || []);
+    setSelectedRating(movie.currentUserRating || 8);
+    setShowRatingPanel(false);
+    setShowAllRatings(false);
+    setRatingError("");
+  }, [movie]);
 
   useEffect(() => {
     if (!tmdbId) {
@@ -147,6 +182,48 @@ const MovieDetailModal = ({ movie, onClose }) => {
   const genres = details?.genres?.map((g) => g.name) || [];
   const runtime = details?.runtime;
   const rating = getDisplayRating(movie, details);
+  const groupRating = ratingCount > 0 ? formatGroupRating(averageRating) : "N/A";
+  const visibleMemberRatings = showAllRatings ? memberRatings : memberRatings.slice(0, 4);
+  const hasHiddenRatings = memberRatings.length > 4;
+  const rateButtonText = currentUserRating ? "Update my rating" : "Rate this movie";
+
+  const handleSubmitRating = async () => {
+    if (!canRateHistoryItem) return;
+
+    const ratingValue = Number(selectedRating);
+    if (!Number.isInteger(ratingValue) || ratingValue < 1 || ratingValue > 10) {
+      setRatingError("Select a rating from 1 to 10.");
+      return;
+    }
+
+    setSavingRating(true);
+    setRatingError("");
+    try {
+      const token = localStorage.getItem("token");
+      const res = await apiClient.post(
+        `/api/groups/${groupId}/history/${movie.historyItemId}/rating`,
+        { rating: ratingValue },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setAverageRating(res.data.averageRating ?? null);
+      setRatingCount(res.data.ratingCount || 0);
+      setCurrentUserRating(res.data.currentUserRating ?? ratingValue);
+      setSelectedRating(res.data.currentUserRating ?? ratingValue);
+      setMemberRatings(res.data.ratings || memberRatings);
+      setShowRatingPanel(false);
+      onRatingSaved?.(movie.historyItemId, {
+        averageRating: res.data.averageRating ?? null,
+        ratingCount: res.data.ratingCount || 0,
+        currentUserRating: res.data.currentUserRating ?? ratingValue,
+        ratings: res.data.ratings || memberRatings,
+      });
+    } catch (err) {
+      setRatingError(err.response?.data?.msg || "Failed to save rating.");
+    } finally {
+      setSavingRating(false);
+    }
+  };
 
   const mongoId = movie._id;
   const imdbRatingContent = (
@@ -190,6 +267,20 @@ const MovieDetailModal = ({ movie, onClose }) => {
               </a>
             ) : (
               <div className="mdm-rating">{imdbRatingContent}</div>
+            )}
+
+            {canRateHistoryItem && (
+              <div className="mdm-group-rating-row">
+                <div className="mdm-rating mdm-group-rating">
+                  <span className="mdm-group-badge">Group</span>
+                  <span className="mdm-rating-text">{groupRating}</span>
+                  {ratingCount > 0 && (
+                    <span className="mdm-rating-count">
+                      {ratingCount} {ratingCount === 1 ? "rating" : "ratings"}
+                    </span>
+                  )}
+                </div>
+              </div>
             )}
 
             {genres.length > 0 && (
@@ -252,6 +343,115 @@ const MovieDetailModal = ({ movie, onClose }) => {
               </span>
             )}
           </div>
+        )}
+
+        {canRateHistoryItem && (
+          <section className="mdm-group-ratings-section">
+            <div className="mdm-group-ratings-header">
+              <h3>Group Ratings</h3>
+            </div>
+
+            <div className="mdm-group-ratings-content">
+              <div className="mdm-member-ratings">
+                {memberRatings.length > 0 ? (
+                  <>
+                    <div className="mdm-member-rating-list">
+                      {visibleMemberRatings.map((entry) => (
+                        <div className="mdm-member-rating" key={entry.userId}>
+                          <span className="mdm-member-rating-avatar">
+                            {entry.avatar ? (
+                              <img src={entry.avatar} alt={entry.name} />
+                            ) : (
+                              getInitials(entry.name)
+                            )}
+                          </span>
+                          <span className="mdm-member-rating-name">{entry.name}</span>
+                          <strong>{entry.rating} / 10</strong>
+                        </div>
+                      ))}
+                    </div>
+
+                    {hasHiddenRatings && (
+                      <button
+                        type="button"
+                        className="mdm-ratings-toggle"
+                        onClick={() => setShowAllRatings((open) => !open)}
+                      >
+                        {showAllRatings ? "Show less" : "Show all ratings"}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <p className="mdm-no-ratings">No group ratings yet. Be the first.</p>
+                )}
+              </div>
+
+              <button
+                type="button"
+                className="mdm-rate-btn"
+                onClick={() => {
+                  setSelectedRating(currentUserRating || selectedRating || 8);
+                  setShowRatingPanel((open) => !open);
+                  setRatingError("");
+                }}
+              >
+                {rateButtonText}
+              </button>
+            </div>
+
+            {showRatingPanel && (
+              <div className="mdm-rating-panel">
+                <div className="mdm-rating-panel-header">
+                  <span>Your rating</span>
+                  {currentUserRating && (
+                    <strong>{currentUserRating} / 10</strong>
+                  )}
+                </div>
+
+                <div className="mdm-rating-options" role="radiogroup" aria-label="Movie rating">
+                  {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`mdm-rating-option ${
+                        Number(selectedRating) === value ? "mdm-rating-option--selected" : ""
+                      }`}
+                      onClick={() => {
+                        setSelectedRating(value);
+                        setRatingError("");
+                      }}
+                    >
+                      {value}
+                    </button>
+                  ))}
+                </div>
+
+                {ratingError && <p className="mdm-rating-error">{ratingError}</p>}
+
+                <div className="mdm-rating-actions">
+                  <button
+                    type="button"
+                    className="mdm-rating-cancel"
+                    onClick={() => {
+                      setShowRatingPanel(false);
+                      setRatingError("");
+                    }}
+                    disabled={savingRating}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="mdm-rating-submit"
+                    onClick={handleSubmitRating}
+                    disabled={savingRating}
+                  >
+                    {savingRating ? "Saving..." : currentUserRating ? "Update rating" : "Submit rating"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
         )}
 
         {mongoId && (

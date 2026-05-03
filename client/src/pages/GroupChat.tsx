@@ -157,6 +157,7 @@ const GroupChat: React.FC = () => {
                 <div
                   key={poll._id}
                   className="GroupChatPage-poll-card"
+                  data-testid="poll-history-card"
                   onClick={() => handlePollCardClick(poll._id)}
                 >
                   <div className="GroupChatPage-poll-card-info">

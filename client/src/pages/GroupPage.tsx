@@ -41,6 +41,15 @@ interface Movie {
   watchedWhere?: string;
   watchedWith?: WatchedWithMember[];
   watchedNotes?: string;
+  averageRating?: number | null;
+  ratingCount?: number;
+  currentUserRating?: number | null;
+  ratings?: {
+    userId: string;
+    name: string;
+    avatar?: string;
+    rating: number;
+  }[];
 }
 
 interface GroupData {
@@ -58,6 +67,15 @@ interface WatchDetailsForm {
 }
 
 const getTodayInputValue = () => new Date().toISOString().split("T")[0];
+
+const dedupeMembers = <T extends { _id: string }>(members: T[] = []) => {
+  const seen = new Set<string>();
+  return members.filter((member) => {
+    if (!member?._id || seen.has(member._id)) return false;
+    seen.add(member._id);
+    return true;
+  });
+};
 
 const getTmdbIdFromImdbID = (imdbID?: string) =>
   typeof imdbID === "string" && imdbID.startsWith("tmdb-")
@@ -88,6 +106,10 @@ const buildTimelineMovie = (entry: any): Movie | null => {
     watchedWhere: entry.watchedWhere || watchedLocation,
     watchedWith: entry.watchedWith || [],
     watchedNotes: entry.watchedNotes || "",
+    averageRating: entry.averageRating ?? null,
+    ratingCount: entry.ratingCount || 0,
+    currentUserRating: entry.currentUserRating ?? null,
+    ratings: entry.ratings || [],
   };
 };
 
@@ -126,7 +148,7 @@ const GroupPage: React.FC = () => {
     const res = await apiClient.get(`/api/groups/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    setGroup(res.data);
+    setGroup({ ...res.data, members: dedupeMembers(res.data.members || []) });
 
     const rawMovies = res.data.movies || [];
     const timeline = rawMovies
@@ -247,6 +269,30 @@ const GroupPage: React.FC = () => {
     }
   };
 
+  const handleHistoryRatingSaved = (
+    historyItemId: string,
+    ratingData: {
+      averageRating: number | null;
+      ratingCount: number;
+      currentUserRating: number | null;
+      ratings?: Movie["ratings"];
+    }
+  ) => {
+    const updateMovie = (movie: Movie) =>
+      movie.historyItemId === historyItemId
+        ? {
+            ...movie,
+            averageRating: ratingData.averageRating,
+            ratingCount: ratingData.ratingCount,
+            currentUserRating: ratingData.currentUserRating,
+            ratings: ratingData.ratings || movie.ratings || [],
+          }
+        : movie;
+
+    setTimelineMovies((prev) => prev.map(updateMovie));
+    setSelectedMovie((prev) => (prev ? updateMovie(prev) : prev));
+  };
+
   const handleRemoveMember = async (memberId: string) => {
     if (!window.confirm("Are you sure you want to remove this member?")) return;
     const tk = localStorage.getItem("token");
@@ -290,7 +336,7 @@ const GroupPage: React.FC = () => {
           <div className="group-member-card-container">
             <div className="group-member-cards-wrapper">
               {group.members.map((member) => (
-                <div key={member._id} className="member-card-glow">
+                <div key={member._id} className="member-card-glow" data-testid="group-member-card">
                   {isAdmin && member._id !== currentUserId && (
                     <button
                       className="member-remove-btn"
@@ -537,6 +583,8 @@ const GroupPage: React.FC = () => {
       {selectedMovie && (
         <MovieDetailModal
           movie={selectedMovie}
+          groupId={id}
+          onRatingSaved={handleHistoryRatingSaved}
           onClose={() => setSelectedMovie(null)}
         />
       )}

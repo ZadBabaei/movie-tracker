@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { validateInviteLink, joinByLink } from "../api/groupApi";
 import { toast } from "react-toastify";
@@ -16,9 +16,12 @@ const JoinByLink: React.FC = () => {
   const navigate = useNavigate();
   const [status, setStatus] = useState<Status>("loading");
   const [groupInfo, setGroupInfo] = useState<GroupInfo | null>(null);
+  const joinAttemptedRef = useRef(false);
   const isAuthenticated = !!localStorage.getItem("token");
 
   useEffect(() => {
+    joinAttemptedRef.current = false;
+
     if (!token) {
       setStatus("error");
       return;
@@ -46,6 +49,9 @@ const JoinByLink: React.FC = () => {
     };
 
     const handleJoin = async () => {
+      if (joinAttemptedRef.current) return;
+      joinAttemptedRef.current = true;
+
       try {
         const data = await joinByLink(token!);
         if (data.alreadyMember) {
@@ -58,6 +64,7 @@ const JoinByLink: React.FC = () => {
         }
       } catch (err: any) {
         if (err.response?.status === 401) {
+          joinAttemptedRef.current = false;
           setStatus("auth-required");
         } else if (err.response?.status === 410) {
           setStatus("expired");

@@ -2,10 +2,29 @@ import express, { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
+import { OAuth2Client } from "google-auth-library";
 import User from "../models/user";
 import Group from "../models/Groups";
 
 const router = express.Router();
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+const buildAuthToken = (user: any, rememberMe = false) =>
+  jwt.sign(
+    { id: user._id, name: user.name },
+    process.env.JWT_SECRET as string,
+    { expiresIn: rememberMe ? "7d" : "24h" }
+  );
+
+const buildAuthUser = (user: any) => ({
+  _id: user._id,
+  name: user.name,
+  email: user.email,
+  avatar: user.avatar || "",
+  firstLogin: user.firstLogin ?? true,
+});
+
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 router.post("/register", async (req: Request, res: Response) => {
   try {
@@ -22,7 +41,7 @@ router.post("/register", async (req: Request, res: Response) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ name, email, password: hashedPassword });
+    const newUser = new User({ name, email, password: hashedPassword, provider: "local" });
     const savedUser = await newUser.save();
 
     res.json({ msg: "Signup successful", user: savedUser });
@@ -41,31 +60,109 @@ router.post("/login", async (req: Request, res: Response) => {
       return;
     }
 
+    if (!user.password) {
+      res.status(400).json({ msg: "Please continue with Google for this account" });
+      return;
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       res.status(400).json({ msg: "Invalid credentials" });
       return;
     }
 
-    const token = jwt.sign(
-      { id: user._id, name: user.name },
-      process.env.JWT_SECRET as string,
-      { expiresIn: rememberMe ? "7d" : "24h" }
-    );
+    const token = buildAuthToken(user, rememberMe);
 
     res.json({
       token,
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        avatar: user.avatar || "",
-        firstLogin: user.firstLogin ?? true,
-      },
+      user: buildAuthUser(user),
     });
   } catch (error) {
     console.error("Error in login route:", error);
     res.status(500).json({ msg: "Server error" });
+  }
+});
+
+router.post("/google", async (req: Request, res: Response) => {
+  try {
+    const { credential } = req.body;
+    const googleClientId = process.env.GOOGLE_CLIENT_ID;
+
+    if (!googleClientId) {
+      res.status(500).json({ msg: "Google authentication is not configured" });
+      return;
+    }
+
+    if (!credential) {
+      res.status(400).json({ msg: "Missing Google credential" });
+      return;
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: googleClientId,
+    });
+    const payload = ticket.getPayload();
+
+    if (!payload?.sub || !payload.email) {
+      res.status(401).json({ msg: "Invalid Google credential" });
+      return;
+    }
+
+    if (payload.email_verified === false) {
+      res.status(401).json({ msg: "Google email is not verified" });
+      return;
+    }
+
+    const googleId = payload.sub;
+    const email = payload.email.toLowerCase();
+    const name = payload.name || email.split("@")[0];
+    const picture = payload.picture || "";
+
+    let user = await User.findOne({
+      $or: [{ googleId }, { email: { $regex: `^${escapeRegex(email)}$`, $options: "i" } }],
+    });
+
+    if (!user) {
+      user = await User.create({
+        name,
+        email,
+        avatar: picture,
+        provider: "google",
+        googleId,
+      });
+    } else {
+      let shouldSave = false;
+
+      if (!user.googleId) {
+        user.googleId = googleId;
+        shouldSave = true;
+      }
+
+      if (!user.provider) {
+        user.provider = user.password ? "local" : "google";
+        shouldSave = true;
+      }
+
+      if (!user.avatar && picture) {
+        user.avatar = picture;
+        shouldSave = true;
+      }
+
+      if (shouldSave) {
+        await user.save();
+      }
+    }
+
+    const token = buildAuthToken(user);
+
+    res.json({
+      token,
+      user: buildAuthUser(user),
+    });
+  } catch (error) {
+    console.error("Error in Google auth route:", error);
+    res.status(401).json({ msg: "Google authentication failed" });
   }
 });
 
