@@ -11,6 +11,13 @@ const emailService_1 = require("../utils/emailService");
 const router = express_1.default.Router();
 const allowedSeverities = new Set(["Low", "Medium", "High", "Critical"]);
 const normalizeText = (value) => String(value ?? "").trim();
+const requireBugReportsEnabled = (_req, res, next) => {
+    if (process.env.ENABLE_BUG_REPORTS !== "true") {
+        res.status(404).json({ msg: "Bug reports are not enabled." });
+        return;
+    }
+    next();
+};
 const getScreenshotReference = (bugReport) => {
     if (!bugReport.screenshotUrl)
         return "None";
@@ -72,7 +79,7 @@ const createGitHubIssue = async (bugReport) => {
     }
     return data.html_url;
 };
-router.post("/", authMiddleware_1.authenticate, async (req, res) => {
+router.post("/", requireBugReportsEnabled, authMiddleware_1.authenticate, async (req, res) => {
     try {
         const userId = req.user.id;
         const { title, description, stepsToReproduce, expectedResult, actualResult, affectedPage, severity, pageUrl, browserInfo, screenshotUrl, } = req.body;

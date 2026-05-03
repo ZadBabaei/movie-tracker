@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
+const mongoose_1 = __importDefault(require("mongoose"));
 const user_1 = __importDefault(require("../models/user"));
 const movie_1 = __importDefault(require("../models/movie"));
 const Groups_1 = __importDefault(require("../models/Groups"));
@@ -85,24 +86,42 @@ router.post("/:movieId/mark-watched", authMiddleware_1.authenticate, async (req,
             res.status(400).json({ msg: "groupId is required" });
             return;
         }
+        const groupIdValue = String(groupId);
+        const movieId = String(req.params.movieId);
+        if (!mongoose_1.default.Types.ObjectId.isValid(groupIdValue) || !mongoose_1.default.Types.ObjectId.isValid(movieId)) {
+            res.status(400).json({ msg: "Invalid group or movie id." });
+            return;
+        }
         const user = await user_1.default.findById(req.user.id);
         if (!user) {
             res.status(404).json({ msg: "User not found" });
             return;
         }
-        const movie = await movie_1.default.findById(req.params.movieId);
+        const movie = await movie_1.default.findById(movieId);
         if (!movie) {
             res.status(404).json({ msg: "Movie not found" });
             return;
         }
-        const group = await Groups_1.default.findById(groupId);
+        const group = await Groups_1.default.findById(groupIdValue);
         if (!group) {
             res.status(404).json({ msg: "Group not found" });
             return;
         }
         const userId = req.user.id;
-        if (!group.members.some((memberId) => memberId.toString() === userId)) {
+        const groupMemberIds = new Set(group.members.map((memberId) => memberId.toString()));
+        if (!groupMemberIds.has(userId)) {
             res.status(403).json({ msg: "Only group members can add watched movies." });
+            return;
+        }
+        const parsedWatchedAt = watchedAt || watchedDate ? new Date(watchedAt || watchedDate) : new Date();
+        if (Number.isNaN(parsedWatchedAt.getTime())) {
+            res.status(400).json({ msg: "Invalid watched date." });
+            return;
+        }
+        const watchedWithIds = Array.isArray(watchedWith) ? watchedWith : [];
+        const hasInvalidWatchedWith = watchedWithIds.some((memberId) => !mongoose_1.default.Types.ObjectId.isValid(memberId) || !groupMemberIds.has(memberId));
+        if (hasInvalidWatchedWith) {
+            res.status(400).json({ msg: "watchedWith can only include group members." });
             return;
         }
         // Migrate old plain-ObjectId entries to subdocument format
@@ -123,31 +142,23 @@ router.post("/:movieId/mark-watched", authMiddleware_1.authenticate, async (req,
         // Add movie to group if not already there
         const alreadyInGroup = group.movies.some((m) => (m.movieId || m).toString() === movie._id.toString());
         if (!alreadyInGroup) {
-            const parsedWatchedAt = watchedAt || watchedDate ? new Date(watchedAt || watchedDate) : new Date();
-            if (Number.isNaN(parsedWatchedAt.getTime())) {
-                res.status(400).json({ msg: "Invalid watched date." });
-                return;
-            }
-            const locationPayload = watchedLocation || watchedWhere || "";
-            const watchedWithIds = Array.isArray(watchedWith) ? watchedWith : [];
-            const groupMemberIds = new Set(group.members.map((memberId) => memberId.toString()));
-            const validWatchedWith = watchedWithIds.filter((memberId) => groupMemberIds.has(memberId));
+            const locationPayload = String(watchedLocation ?? watchedWhere ?? "").trim();
             group.movies.push({
                 movieId: movie._id,
                 watchedDate: parsedWatchedAt,
                 watchedAt: parsedWatchedAt,
                 watchedWhere: locationPayload,
                 watchedLocation: locationPayload,
-                watchedWith: validWatchedWith.length ? validWatchedWith : [userId],
-                watchedNotes: watchedNotes || "",
+                watchedWith: watchedWithIds.length ? watchedWithIds : [userId],
+                watchedNotes: String(watchedNotes ?? "").trim(),
                 ratings: [],
             });
         }
         await group.save();
         // Remove from user's watchlist
-        user.watchlist = user.watchlist.filter((id) => id.toString() !== req.params.movieId);
+        user.watchlist = user.watchlist.filter((id) => id.toString() !== movieId);
         await user.save();
-        (0, socket_1.getIO)().to(groupId).emit("group:movie_added", { movie });
+        (0, socket_1.getIO)().to(groupIdValue).emit("group:movie_added", { movie });
         res.json({ msg: "Movie marked as watched and added to group", movie });
     }
     catch (err) {

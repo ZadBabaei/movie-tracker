@@ -44,7 +44,7 @@ router.post("/register", async (req: Request, res: Response) => {
     const newUser = new User({ name, email, password: hashedPassword, provider: "local" });
     const savedUser = await newUser.save();
 
-    res.json({ msg: "Signup successful", user: savedUser });
+    res.json({ msg: "Signup successful", user: buildAuthUser(savedUser) });
   } catch (error) {
     console.error("Error in register route:", error);
     res.status(500).json({ msg: "Server error", error: (error as Error).message });

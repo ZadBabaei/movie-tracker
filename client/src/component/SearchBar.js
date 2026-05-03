@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./SearchBar.css";
 
@@ -10,39 +10,55 @@ const SearchBar = ({ onMovieSelect }) => {
   const apiKey = process.env.REACT_APP_TMDB_API_KEY; 
   const baseUrl = "https://api.themoviedb.org/3/search/movie";
 
-  const fetchMovies = async (q) => {
-    if (!q) return;
+  const fetchMovies = async (q, signal) => {
+    if (q.length <= 1) {
+      setResults([]);
+      return;
+    }
     try {
       setLoading(true);
-      console.log("API KEY:", apiKey);
-      console.log("BASE URL:", baseUrl);
 
       const res = await axios.get(
         `${baseUrl}?api_key=${apiKey}&language=en-US&include_adult=false&query=${encodeURIComponent(
           q
-        )}`
+        )}`,
+        { signal }
       );
-      console.log("TMDB response:", res.data); 
       setResults(res.data.results || []);
     } catch (error) {
+      if (axios.isCancel(error) || error.name === "CanceledError") return;
       console.error("API Error:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e) => {
-    const newQuery = e.target.value;
-    setQuery(newQuery);
-    if (newQuery.length > 1) {
-      fetchMovies(newQuery);
-    } else {
+  useEffect(() => {
+    const trimmedQuery = query.trim();
+    const controller = new AbortController();
+
+    if (trimmedQuery.length <= 1) {
       setResults([]);
+      setLoading(false);
+      return () => controller.abort();
     }
+
+    const timeoutId = setTimeout(() => {
+      fetchMovies(trimmedQuery, controller.signal);
+    }, 300);
+
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [query]);
+
+  const handleChange = (e) => {
+    setQuery(e.target.value);
   };
 
   const handleSearchClick = () => {
-    fetchMovies(query);
+    fetchMovies(query.trim());
   };
 
   const handleSelect = (movie) => {

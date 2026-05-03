@@ -2,10 +2,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getIO = exports.initIO = void 0;
 const socket_io_1 = require("socket.io");
+const corsConfig_1 = require("./utils/corsConfig");
 let io;
 const initIO = (httpServer) => {
     io = new socket_io_1.Server(httpServer, {
-        cors: { origin: "*" },
+        cors: { origin: (0, corsConfig_1.getAllowedOrigins)() },
     });
     io.on("connection", (socket) => {
         socket.on("join:group", (groupId) => {

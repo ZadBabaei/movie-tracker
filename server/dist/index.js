@@ -21,11 +21,12 @@ const profileRoutes_1 = __importDefault(require("./routes/profileRoutes"));
 const assistantRoutes_1 = __importDefault(require("./routes/assistantRoutes"));
 const commentRoutes_1 = __importDefault(require("./routes/commentRoutes"));
 const bugReportRoutes_1 = __importDefault(require("./routes/bugReportRoutes"));
+const corsConfig_1 = require("./utils/corsConfig");
 const app = (0, express_1.default)();
 const httpServer = http_1.default.createServer(app);
 const PORT = process.env.PORT || 5000;
 (0, socket_1.initIO)(httpServer);
-app.use((0, cors_1.default)());
+app.use((0, cors_1.default)(corsConfig_1.corsOptions));
 app.use(express_1.default.json({ limit: "3mb" }));
 app.get("/api/health", (_req, res) => {
     res.json({ ok: true });

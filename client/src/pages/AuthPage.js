@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -14,9 +13,9 @@ import {
 } from "react-icons/fa6";
 import { FaEyeSlash } from "react-icons/fa";
 import authVectorReference from "../assets/auth-vector-reference.png";
+import apiClient from "../api/apiClient";
 import "./AuthPage.css";
 
-const API_URL = process.env.REACT_APP_API_URL;
 const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
 
 function AuthPage({ initialMode = "signin" }) {
@@ -67,8 +66,8 @@ function AuthPage({ initialMode = "signin" }) {
   };
 
   const handleLogin = async () => {
-    const res = await axios.post(
-      `${API_URL}/api/auth/login`,
+    const res = await apiClient.post(
+      "/api/auth/login",
       { email, password, rememberMe },
       { headers: { "Content-Type": "application/json" } }
     );
@@ -87,13 +86,13 @@ function AuthPage({ initialMode = "signin" }) {
       return;
     }
 
-    await axios.post(`${API_URL}/api/auth/register`, {
+    await apiClient.post("/api/auth/register", {
       name,
       email,
       password,
     });
 
-    const loginRes = await axios.post(`${API_URL}/api/auth/login`, { email, password });
+    const loginRes = await apiClient.post("/api/auth/login", { email, password });
     localStorage.setItem("token", loginRes.data.token);
     redirectAfterAuth(loginRes.data.user);
   };
@@ -133,8 +132,8 @@ function AuthPage({ initialMode = "signin" }) {
     setSubmitting(true);
 
     try {
-      const res = await axios.post(
-        `${API_URL}/api/auth/google`,
+      const res = await apiClient.post(
+        "/api/auth/google",
         { credential: credentialResponse.credential },
         { headers: { "Content-Type": "application/json" } }
       );

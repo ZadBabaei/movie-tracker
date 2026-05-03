@@ -1,4 +1,4 @@
-import axios from "axios";
+import apiClient from "./apiClient";
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
@@ -6,7 +6,7 @@ const getAuthHeaders = () => {
 };
 
 export const fetchWatchlist = async () => {
-  const res = await axios.get("/api/watchlist", getAuthHeaders());
+  const res = await apiClient.get("/api/watchlist", getAuthHeaders());
   return res.data;
 };
 
@@ -16,12 +16,12 @@ export const addToWatchlist = async (movie: {
   poster_path?: string;
   vote_average?: number;
 }) => {
-  const res = await axios.post("/api/watchlist", { movie }, getAuthHeaders());
+  const res = await apiClient.post("/api/watchlist", { movie }, getAuthHeaders());
   return res.data;
 };
 
 export const removeFromWatchlist = async (movieId: string) => {
-  const res = await axios.delete(`/api/watchlist/${movieId}`, getAuthHeaders());
+  const res = await apiClient.delete(`/api/watchlist/${movieId}`, getAuthHeaders());
   return res.data;
 };
 
@@ -40,7 +40,7 @@ export const markAsWatched = async (
     watchedAt: metadata?.watchedDate,
     watchedLocation: metadata?.watchedWhere,
   };
-  const res = await axios.post(
+  const res = await apiClient.post(
     `/api/watchlist/${movieId}/mark-watched`,
     payload,
     getAuthHeaders()

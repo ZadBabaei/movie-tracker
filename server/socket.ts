@@ -1,11 +1,12 @@
 import { Server } from "socket.io";
 import { Server as HttpServer } from "http";
+import { getAllowedOrigins } from "./utils/corsConfig";
 
 let io: Server;
 
 export const initIO = (httpServer: HttpServer): Server => {
   io = new Server(httpServer, {
-    cors: { origin: "*" },
+    cors: { origin: getAllowedOrigins() },
   });
 
   io.on("connection", (socket) => {

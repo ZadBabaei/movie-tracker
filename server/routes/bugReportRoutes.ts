@@ -10,6 +10,15 @@ const allowedSeverities = new Set(["Low", "Medium", "High", "Critical"]);
 
 const normalizeText = (value: unknown) => String(value ?? "").trim();
 
+const requireBugReportsEnabled = (_req: Request, res: Response, next: express.NextFunction) => {
+  if (process.env.ENABLE_BUG_REPORTS !== "true") {
+    res.status(404).json({ msg: "Bug reports are not enabled." });
+    return;
+  }
+
+  next();
+};
+
 const getScreenshotReference = (bugReport: IBugReport) => {
   if (!bugReport.screenshotUrl) return "None";
   return bugReport.screenshotUrl.startsWith("data:")
@@ -88,7 +97,7 @@ const createGitHubIssue = async (bugReport: IBugReport) => {
   return data.html_url;
 };
 
-router.post("/", authenticate, async (req: Request, res: Response) => {
+router.post("/", requireBugReportsEnabled, authenticate, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
     const {

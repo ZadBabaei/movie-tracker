@@ -1,4 +1,5 @@
 import express, { Request, Response } from "express";
+import mongoose from "mongoose";
 import User from "../models/user";
 import Movie from "../models/movie";
 import Group from "../models/Groups";
@@ -98,6 +99,12 @@ router.post("/:movieId/mark-watched", authenticate, async (req: Request, res: Re
       res.status(400).json({ msg: "groupId is required" });
       return;
     }
+    const groupIdValue = String(groupId);
+    const movieId = String(req.params.movieId);
+    if (!mongoose.Types.ObjectId.isValid(groupIdValue) || !mongoose.Types.ObjectId.isValid(movieId)) {
+      res.status(400).json({ msg: "Invalid group or movie id." });
+      return;
+    }
 
     const user = await User.findById(req.user!.id);
     if (!user) {
@@ -105,21 +112,37 @@ router.post("/:movieId/mark-watched", authenticate, async (req: Request, res: Re
       return;
     }
 
-    const movie = await Movie.findById(req.params.movieId);
+    const movie = await Movie.findById(movieId);
     if (!movie) {
       res.status(404).json({ msg: "Movie not found" });
       return;
     }
 
-    const group = await Group.findById(groupId);
+    const group = await Group.findById(groupIdValue);
     if (!group) {
       res.status(404).json({ msg: "Group not found" });
       return;
     }
 
     const userId = req.user!.id;
-    if (!group.members.some((memberId) => memberId.toString() === userId)) {
+    const groupMemberIds = new Set(group.members.map((memberId) => memberId.toString()));
+    if (!groupMemberIds.has(userId)) {
       res.status(403).json({ msg: "Only group members can add watched movies." });
+      return;
+    }
+
+    const parsedWatchedAt = watchedAt || watchedDate ? new Date(watchedAt || watchedDate) : new Date();
+    if (Number.isNaN(parsedWatchedAt.getTime())) {
+      res.status(400).json({ msg: "Invalid watched date." });
+      return;
+    }
+
+    const watchedWithIds = Array.isArray(watchedWith) ? watchedWith : [];
+    const hasInvalidWatchedWith = watchedWithIds.some(
+      (memberId: string) => !mongoose.Types.ObjectId.isValid(memberId) || !groupMemberIds.has(memberId)
+    );
+    if (hasInvalidWatchedWith) {
+      res.status(400).json({ msg: "watchedWith can only include group members." });
       return;
     }
 
@@ -143,16 +166,7 @@ router.post("/:movieId/mark-watched", authenticate, async (req: Request, res: Re
       (m: any) => (m.movieId || m).toString() === movie._id.toString()
     );
     if (!alreadyInGroup) {
-      const parsedWatchedAt = watchedAt || watchedDate ? new Date(watchedAt || watchedDate) : new Date();
-      if (Number.isNaN(parsedWatchedAt.getTime())) {
-        res.status(400).json({ msg: "Invalid watched date." });
-        return;
-      }
-
-      const locationPayload = watchedLocation || watchedWhere || "";
-      const watchedWithIds = Array.isArray(watchedWith) ? watchedWith : [];
-      const groupMemberIds = new Set(group.members.map((memberId) => memberId.toString()));
-      const validWatchedWith = watchedWithIds.filter((memberId: string) => groupMemberIds.has(memberId));
+      const locationPayload = String(watchedLocation ?? watchedWhere ?? "").trim();
 
       group.movies.push({
         movieId: movie._id,
@@ -160,8 +174,8 @@ router.post("/:movieId/mark-watched", authenticate, async (req: Request, res: Re
         watchedAt: parsedWatchedAt,
         watchedWhere: locationPayload,
         watchedLocation: locationPayload,
-        watchedWith: validWatchedWith.length ? validWatchedWith : [userId],
-        watchedNotes: watchedNotes || "",
+        watchedWith: watchedWithIds.length ? watchedWithIds : [userId],
+        watchedNotes: String(watchedNotes ?? "").trim(),
         ratings: [],
       } as any);
     }
@@ -169,11 +183,11 @@ router.post("/:movieId/mark-watched", authenticate, async (req: Request, res: Re
 
     // Remove from user's watchlist
     user.watchlist = user.watchlist.filter(
-      (id) => id.toString() !== req.params.movieId
+      (id) => id.toString() !== movieId
     );
     await user.save();
 
-    getIO().to(groupId).emit("group:movie_added", { movie });
+    getIO().to(groupIdValue).emit("group:movie_added", { movie });
 
     res.json({ msg: "Movie marked as watched and added to group", movie });
   } catch (err) {
