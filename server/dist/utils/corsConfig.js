@@ -24,6 +24,15 @@ exports.corsOptions = {
             callback(null, true);
             return;
         }
-        callback(null, (0, exports.getAllowedOrigins)().includes(origin));
+        if ((0, exports.getAllowedOrigins)().includes(origin)) {
+            callback(null, true);
+            return;
+        }
+        const message = `CORS blocked origin: ${origin}`;
+        if (process.env.NODE_ENV === "development") {
+            callback(new Error(message));
+            return;
+        }
+        callback(null, false);
     },
 };

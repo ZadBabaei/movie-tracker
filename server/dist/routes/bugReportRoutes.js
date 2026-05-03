@@ -55,7 +55,7 @@ const createGitHubIssue = async (bugReport) => {
     if (!GITHUB_TOKEN || !GITHUB_REPO_OWNER || !GITHUB_REPO_NAME) {
         throw new Error("GitHub issue creation is enabled but GitHub env vars are incomplete.");
     }
-    const response = await fetch(`https://api.github.com/repos/${encodeURIComponent(GITHUB_REPO_OWNER)}/${encodeURIComponent(GITHUB_REPO_NAME)}/issues`, {
+    const postIssue = async (includeLabels) => fetch(`https://api.github.com/repos/${encodeURIComponent(GITHUB_REPO_OWNER)}/${encodeURIComponent(GITHUB_REPO_NAME)}/issues`, {
         method: "POST",
         headers: {
             Accept: "application/vnd.github+json",
@@ -67,9 +67,15 @@ const createGitHubIssue = async (bugReport) => {
         body: JSON.stringify({
             title: `[Bug][${bugReport.severity}] ${bugReport.title}`,
             body: buildGitHubIssueBody(bugReport),
-            labels: ["bug", `severity: ${bugReport.severity.toLowerCase()}`],
+            ...(includeLabels ? { labels: ["bug", `severity: ${bugReport.severity.toLowerCase()}`] } : {}),
         }),
     });
+    let response = await postIssue(true);
+    if (!response.ok) {
+        const firstError = await response.clone().json().catch(() => ({}));
+        console.error("GitHub issue creation with labels failed, retrying without labels:", firstError?.message || response.statusText);
+        response = await postIssue(false);
+    }
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
         throw new Error(data?.message || "GitHub issue creation failed.");
@@ -162,7 +168,7 @@ router.post("/", requireBugReportsEnabled, authMiddleware_1.authenticate, async 
         res.status(500).json({ msg: "Failed to submit bug report." });
     }
 });
-router.get("/my", authMiddleware_1.authenticate, async (req, res) => {
+router.get("/my", requireBugReportsEnabled, authMiddleware_1.authenticate, async (req, res) => {
     try {
         const reports = await BugReport_1.default.find({ userId: req.user.id })
             .sort({ createdAt: -1 })

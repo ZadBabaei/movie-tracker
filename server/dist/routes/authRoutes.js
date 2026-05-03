@@ -6,11 +6,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
-const mongoose_1 = __importDefault(require("mongoose"));
 const crypto_1 = __importDefault(require("crypto"));
 const google_auth_library_1 = require("google-auth-library");
 const user_1 = __importDefault(require("../models/user"));
-const Groups_1 = __importDefault(require("../models/Groups"));
 const emailService_1 = require("../utils/emailService");
 const avatar_1 = require("../utils/avatar");
 const router = express_1.default.Router();
@@ -25,15 +23,34 @@ const buildAuthUser = (user) => ({
 });
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const genericPasswordResetMessage = "If an account exists for that email, we sent a reset link.";
+const forgotPasswordAttempts = new Map();
+const FORGOT_PASSWORD_WINDOW_MS = 15 * 60 * 1000;
+const FORGOT_PASSWORD_MAX_ATTEMPTS = 5;
 const hashResetToken = (token) => crypto_1.default.createHash("sha256").update(token).digest("hex");
+const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
+const isForgotPasswordRateLimited = (email, ip) => {
+    const now = Date.now();
+    const key = `${email}:${ip || "unknown"}`;
+    const current = forgotPasswordAttempts.get(key);
+    if (!current || current.resetAt <= now) {
+        forgotPasswordAttempts.set(key, { count: 1, resetAt: now + FORGOT_PASSWORD_WINDOW_MS });
+        return false;
+    }
+    current.count += 1;
+    return current.count > FORGOT_PASSWORD_MAX_ATTEMPTS;
+};
 router.post("/register", async (req, res) => {
     try {
-        const { name, email, password, avatar } = req.body;
+        const { password, avatar } = req.body;
+        const name = String(req.body?.name || "").trim();
+        const email = normalizeEmail(req.body?.email);
         if (!name || !email || !password) {
             res.status(400).json({ msg: "Please fill in all fields" });
             return;
         }
-        const existing = await user_1.default.findOne({ email });
+        const existing = await user_1.default.findOne({
+            email: { $regex: `^${escapeRegex(email)}$`, $options: "i" },
+        });
         if (existing) {
             res.status(400).json({ msg: "Email already in use" });
             return;
@@ -56,8 +73,11 @@ router.post("/register", async (req, res) => {
 });
 router.post("/login", async (req, res) => {
     try {
-        const { email, password, rememberMe } = req.body;
-        const user = await user_1.default.findOne({ email });
+        const { password, rememberMe } = req.body;
+        const email = normalizeEmail(req.body?.email);
+        const user = await user_1.default.findOne({
+            email: { $regex: `^${escapeRegex(email)}$`, $options: "i" },
+        });
         if (!user) {
             res.status(400).json({ msg: "Invalid credentials" });
             return;
@@ -84,8 +104,12 @@ router.post("/login", async (req, res) => {
 });
 router.post("/forgot-password", async (req, res) => {
     try {
-        const email = String(req.body?.email || "").trim().toLowerCase();
+        const email = normalizeEmail(req.body?.email);
         if (!email) {
+            res.json({ msg: genericPasswordResetMessage });
+            return;
+        }
+        if (isForgotPasswordRateLimited(email, req.ip)) {
             res.json({ msg: genericPasswordResetMessage });
             return;
         }
@@ -170,7 +194,7 @@ router.post("/google", async (req, res) => {
             return;
         }
         const googleId = payload.sub;
-        const email = payload.email.toLowerCase();
+        const email = normalizeEmail(payload.email);
         const name = payload.name || email.split("@")[0];
         const picture = payload.picture || "";
         const avatar = picture || (0, avatar_1.getDefaultAvatarUrl)(name, email);
@@ -240,48 +264,6 @@ router.get("/me", async (req, res) => {
     catch (error) {
         console.error("Error in /me route:", error);
         res.status(500).json({ msg: "Server error" });
-    }
-});
-router.get("/groups", async (req, res) => {
-    try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            res.status(401).json({ msg: "Unauthorized: No token provided" });
-            return;
-        }
-        const token = authHeader.split(" ")[1];
-        const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
-        const userId = new mongoose_1.default.Types.ObjectId(decoded.id);
-        const userGroups = await Groups_1.default.find({ members: userId });
-        res.json(userGroups);
-    }
-    catch (error) {
-        console.error("Error fetching groups:", error);
-        res.status(500).json({ msg: "Server error", error: error.message });
-    }
-});
-router.post("/groups/create", async (req, res) => {
-    try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            res.status(401).json({ msg: "Unauthorized: No token provided" });
-            return;
-        }
-        const token = authHeader.split(" ")[1];
-        jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
-        const { name, members } = req.body;
-        if (!name || members.length === 0) {
-            res.status(400).json({ msg: "Group name and members are required" });
-            return;
-        }
-        const memberIds = members.map((id) => new mongoose_1.default.Types.ObjectId(id));
-        const newGroup = new Groups_1.default({ name, members: memberIds });
-        await newGroup.save();
-        res.json(newGroup);
-    }
-    catch (error) {
-        console.error("Error creating group:", error);
-        res.status(500).json({ msg: "Server error", error: error.message });
     }
 });
 router.get("/search", async (req, res) => {

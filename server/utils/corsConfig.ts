@@ -26,6 +26,17 @@ export const corsOptions: CorsOptions = {
       return;
     }
 
-    callback(null, getAllowedOrigins().includes(origin));
+    if (getAllowedOrigins().includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    const message = `CORS blocked origin: ${origin}`;
+    if (process.env.NODE_ENV === "development") {
+      callback(new Error(message));
+      return;
+    }
+
+    callback(null, false);
   },
 };

@@ -63,7 +63,7 @@ const createGitHubIssue = async (bugReport: IBugReport) => {
     throw new Error("GitHub issue creation is enabled but GitHub env vars are incomplete.");
   }
 
-  const response = await fetch(
+  const postIssue = async (includeLabels: boolean) => fetch(
     `https://api.github.com/repos/${encodeURIComponent(GITHUB_REPO_OWNER)}/${encodeURIComponent(GITHUB_REPO_NAME)}/issues`,
     {
       method: "POST",
@@ -77,10 +77,17 @@ const createGitHubIssue = async (bugReport: IBugReport) => {
       body: JSON.stringify({
         title: `[Bug][${bugReport.severity}] ${bugReport.title}`,
         body: buildGitHubIssueBody(bugReport),
-        labels: ["bug", `severity: ${bugReport.severity.toLowerCase()}`],
+        ...(includeLabels ? { labels: ["bug", `severity: ${bugReport.severity.toLowerCase()}`] } : {}),
       }),
     }
   );
+
+  let response = await postIssue(true);
+  if (!response.ok) {
+    const firstError = await response.clone().json().catch(() => ({})) as { message?: string };
+    console.error("GitHub issue creation with labels failed, retrying without labels:", firstError?.message || response.statusText);
+    response = await postIssue(false);
+  }
 
   const data = await response.json().catch(() => ({})) as {
     message?: string;
@@ -201,7 +208,7 @@ router.post("/", requireBugReportsEnabled, authenticate, async (req: Request, re
   }
 });
 
-router.get("/my", authenticate, async (req: Request, res: Response) => {
+router.get("/my", requireBugReportsEnabled, authenticate, async (req: Request, res: Response) => {
   try {
     const reports = await BugReport.find({ userId: req.user!.id })
       .sort({ createdAt: -1 })

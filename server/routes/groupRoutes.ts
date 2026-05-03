@@ -498,16 +498,42 @@ router.delete("/:groupId/history/:historyItemId", authenticate, async (req: Requ
 
 router.delete("/:groupId/remove-movie/:movieId", authenticate, async (req: Request, res: Response) => {
   try {
-    const { groupId, movieId } = req.params;
+    const groupId = String(req.params.groupId);
+    const movieId = String(req.params.movieId);
+    const requesterId = req.user!.id;
+
+    if (!mongoose.Types.ObjectId.isValid(groupId) || !mongoose.Types.ObjectId.isValid(movieId)) {
+      res.status(400).json({ msg: "Invalid group or movie id." });
+      return;
+    }
+
     const group = await Group.findById(groupId);
     if (!group) {
       res.status(404).json({ msg: "Group not found" });
       return;
     }
 
+    const isMember = group.members.some((memberId) => memberId.toString() === requesterId);
+    if (!isMember) {
+      res.status(403).json({ msg: "Only group members can remove watched movies." });
+      return;
+    }
+
+    if (group.creator.toString() !== requesterId) {
+      res.status(403).json({ msg: "Only the group admin can remove watched movies." });
+      return;
+    }
+
+    const beforeCount = group.movies.length;
     group.movies = group.movies.filter(
       (m: any) => (m.movieId || m).toString() !== movieId
     ) as any;
+
+    if (group.movies.length === beforeCount) {
+      res.status(404).json({ msg: "Movie not found in group history." });
+      return;
+    }
+
     await group.save();
     res.json({ msg: "Movie removed from group" });
   } catch (error) {
