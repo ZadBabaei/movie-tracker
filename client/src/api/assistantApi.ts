@@ -1,4 +1,5 @@
 import { ChatMessage } from "../store/useChatStore";
+import { apiUrl } from "./apiClient";
 
 const getAuthToken = () => localStorage.getItem("token");
 
@@ -14,7 +15,7 @@ export async function sendAssistantMessage(
 ): Promise<void> {
   const token = getAuthToken();
 
-  const response = await fetch("/api/assistant/chat", {
+  const response = await fetch(apiUrl("/api/assistant/chat"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

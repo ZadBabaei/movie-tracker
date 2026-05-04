@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import apiClient from "../api/apiClient";
 import "./Invitations.css";
 
 const Invitations = () => {
@@ -11,7 +11,7 @@ const Invitations = () => {
     const fetchInvitations = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get("http://localhost:5000/api/inbox", {
+        const res = await apiClient.get("/api/inbox", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setInvitations(res.data);
@@ -27,8 +27,8 @@ const Invitations = () => {
   const handleResponse = async (groupId, response) => {
     try {
       const token = localStorage.getItem("token");
-      await axios.post(
-        "http://localhost:5000/api/groups/respond",
+      await apiClient.post(
+        "/api/groups/respond",
         { groupId, response },
         { headers: { Authorization: `Bearer ${token}` } }
       );

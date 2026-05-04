@@ -39,6 +39,8 @@ const FORGOT_PASSWORD_MAX_ATTEMPTS = 5;
 const hashResetToken = (token: string) =>
   crypto.createHash("sha256").update(token).digest("hex");
 
+const isValidResetToken = (token: string) => /^[a-f0-9]{64}$/i.test(token);
+
 const normalizeEmail = (value: unknown) => String(value || "").trim().toLowerCase();
 
 const isForgotPasswordRateLimited = (email: string, ip?: string) => {
@@ -172,6 +174,11 @@ router.post("/reset-password/:token", async (req: Request, res: Response) => {
   try {
     const token = String(req.params.token || "");
     const password = String(req.body?.password || "");
+
+    if (!isValidResetToken(token)) {
+      res.status(400).json({ msg: "Reset link is invalid or has expired." });
+      return;
+    }
 
     if (password.length < 8) {
       res.status(400).json({ msg: "Password must be at least 8 characters." });

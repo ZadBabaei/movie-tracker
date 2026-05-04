@@ -1,13 +1,17 @@
 import { useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
+import { API_BASE_URL, LOCAL_API_BASE_URL } from "../api/apiClient";
 
-const SERVER_URL = process.env.REACT_APP_SERVER_URL || "http://localhost:5000";
+const SOCKET_URL =
+  process.env.REACT_APP_SOCKET_URL ||
+  API_BASE_URL ||
+  LOCAL_API_BASE_URL;
 
 let sharedSocket: Socket | null = null;
 
 const getSocket = (): Socket => {
   if (!sharedSocket) {
-    sharedSocket = io(SERVER_URL, { transports: ["websocket", "polling"] });
+    sharedSocket = io(SOCKET_URL, { transports: ["websocket", "polling"] });
   }
   return sharedSocket;
 };

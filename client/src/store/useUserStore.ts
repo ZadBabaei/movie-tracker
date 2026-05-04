@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import axios from "axios";
+import apiClient from "../api/apiClient";
 
 export interface UserProfile {
   _id: string;
@@ -64,7 +64,7 @@ export const useUserStore = create<UserState>((set) => ({
   fetchProfile: async () => {
     try {
       set({ loading: true });
-      const res = await axios.get("/api/profile", authHeader());
+      const res = await apiClient.get("/api/profile", authHeader());
       set({ profile: res.data, loading: false });
       return res.data;
     } catch {
@@ -76,7 +76,7 @@ export const useUserStore = create<UserState>((set) => ({
   fetchDashboard: async () => {
     try {
       set({ loading: true });
-      const res = await axios.get("/api/profile/dashboard", authHeader());
+      const res = await apiClient.get("/api/profile/dashboard", authHeader());
       set({
         profile: res.data.user,
         stats: res.data.stats,
@@ -91,14 +91,14 @@ export const useUserStore = create<UserState>((set) => ({
   },
 
   updateProfile: async (data) => {
-    const res = await axios.put("/api/profile", data, authHeader());
+    const res = await apiClient.put("/api/profile", data, authHeader());
     set({ profile: res.data });
   },
 
   uploadAvatar: async (file: File) => {
     const formData = new FormData();
     formData.append("avatar", file);
-    const res = await axios.post("/api/profile/avatar", formData, {
+    const res = await apiClient.post("/api/profile/avatar", formData, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("token")}`,
         "Content-Type": "multipart/form-data",
@@ -108,13 +108,13 @@ export const useUserStore = create<UserState>((set) => ({
   },
 
   removeAvatar: async () => {
-    const res = await axios.delete("/api/profile/avatar", authHeader());
+    const res = await apiClient.delete("/api/profile/avatar", authHeader());
     set({ profile: res.data.user });
   },
 
   fetchStats: async () => {
     try {
-      const res = await axios.get("/api/profile/stats", authHeader());
+      const res = await apiClient.get("/api/profile/stats", authHeader());
       set({ stats: res.data });
     } catch {
       set({ stats: null });
@@ -123,7 +123,7 @@ export const useUserStore = create<UserState>((set) => ({
 
   completeOnboarding: async () => {
     try {
-      const res = await axios.post("/api/profile/complete-onboarding", {}, authHeader());
+      const res = await apiClient.post("/api/profile/complete-onboarding", {}, authHeader());
       set({ profile: res.data.user });
     } catch (err) {
       console.error("Failed to complete onboarding:", err);

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { FaReply } from "react-icons/fa";
 import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
+import apiClient from "../api/apiClient";
 import "./CommentSection.css";
 
 const formatDate = (dateStr) => {
@@ -84,7 +84,7 @@ const CommentSection = ({ movieId }) => {
 
   const fetchComments = async () => {
     try {
-      const res = await axios.get(`/api/comments?movieId=${movieId}`, { headers });
+      const res = await apiClient.get(`/api/comments?movieId=${movieId}`, { headers });
       setComments(res.data);
     } catch (err) {
       console.error("Failed to fetch comments:", err);
@@ -100,7 +100,7 @@ const CommentSection = ({ movieId }) => {
     if (!newComment.trim() || loading) return;
     setLoading(true);
     try {
-      const res = await axios.post("/api/comments", { movieId, text: newComment.trim() }, { headers });
+      const res = await apiClient.post("/api/comments", { movieId, text: newComment.trim() }, { headers });
       setComments((prev) => [...prev, res.data]);
       setNewComment("");
     } catch (err) {
@@ -112,7 +112,7 @@ const CommentSection = ({ movieId }) => {
 
   const handleReply = async (parentId, text) => {
     try {
-      const res = await axios.post("/api/comments", { movieId, text, parentId }, { headers });
+      const res = await apiClient.post("/api/comments", { movieId, text, parentId }, { headers });
       setComments((prev) => [...prev, res.data]);
     } catch (err) {
       console.error("Failed to post reply:", err);

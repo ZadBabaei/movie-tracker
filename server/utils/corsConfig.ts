@@ -3,30 +3,41 @@ import { CorsOptions } from "cors";
 const fallbackOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:3000",
+  "https://movietracker.zadprogramming.com",
+  "https://movieTracker.zadprogramming.com",
 ];
+
+const normalizeOrigin = (origin: string) => {
+  try {
+    return new URL(origin).origin;
+  } catch {
+    return origin.replace(/\/+$/, "");
+  }
+};
 
 export const getAllowedOrigins = () => {
   const configuredOrigins = [
     process.env.CLIENT_URL,
     process.env.APP_URL,
     process.env.CORS_ORIGINS,
+    process.env.VERCEL_PREVIEW_ORIGINS,
   ]
     .filter(Boolean)
     .flatMap((value) => String(value).split(","))
-    .map((origin) => origin.trim())
+    .map((origin) => normalizeOrigin(origin.trim()))
     .filter(Boolean);
 
-  return configuredOrigins.length ? configuredOrigins : fallbackOrigins;
+  return Array.from(new Set([...fallbackOrigins.map(normalizeOrigin), ...configuredOrigins]));
+};
+
+export const isOriginAllowed = (origin?: string) => {
+  if (!origin) return true;
+  return getAllowedOrigins().includes(normalizeOrigin(origin));
 };
 
 export const corsOptions: CorsOptions = {
   origin(origin, callback) {
-    if (!origin) {
-      callback(null, true);
-      return;
-    }
-
-    if (getAllowedOrigins().includes(origin)) {
+    if (isOriginAllowed(origin)) {
       callback(null, true);
       return;
     }

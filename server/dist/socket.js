@@ -6,7 +6,11 @@ const corsConfig_1 = require("./utils/corsConfig");
 let io;
 const initIO = (httpServer) => {
     io = new socket_io_1.Server(httpServer, {
-        cors: { origin: (0, corsConfig_1.getAllowedOrigins)() },
+        cors: {
+            origin(origin, callback) {
+                callback(null, (0, corsConfig_1.isOriginAllowed)(origin));
+            },
+        },
     });
     io.on("connection", (socket) => {
         socket.on("join:group", (groupId) => {

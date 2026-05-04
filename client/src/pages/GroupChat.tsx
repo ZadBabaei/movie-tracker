@@ -3,8 +3,8 @@ import VerticalNavbar from "../component/VerticalNavbar";
 import Hero from "../component/Hero";
 import "./GroupChat.css";
 import VoteModal from "../component/VoteModal";
-import axios from "axios";
 import ChatBox from "../component/ChatBox";
+import apiClient from "../api/apiClient";
 import { useModalStore } from "../store/useModalStore";
 import { usePollStore } from "../store/usePollStore";
 import { useParams } from "react-router-dom";
@@ -32,7 +32,7 @@ const GroupChat: React.FC = () => {
     const fetchGroupDetails = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get(`/api/groups/${id}`, {
+        const res = await apiClient.get(`/api/groups/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setGroupName(res.data.name);

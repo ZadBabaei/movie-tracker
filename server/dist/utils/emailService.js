@@ -8,15 +8,21 @@ exports.sendPasswordResetEmail = sendPasswordResetEmail;
 exports.sendBugReportEmail = sendBugReportEmail;
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, APP_URL } = process.env;
-const transporter = nodemailer_1.default.createTransport({
-    host: SMTP_HOST || "smtp.gmail.com",
-    port: Number(SMTP_PORT) || 587,
-    secure: false,
-    auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS,
-    },
-});
+const getSmtpTransporter = () => {
+    if (!SMTP_USER || !SMTP_PASS) {
+        throw new Error("SMTP_USER and SMTP_PASS must be configured to send email");
+    }
+    const port = Number(SMTP_PORT) || 587;
+    return nodemailer_1.default.createTransport({
+        host: SMTP_HOST || "smtp.gmail.com",
+        port,
+        secure: port === 465,
+        auth: {
+            user: SMTP_USER,
+            pass: SMTP_PASS,
+        },
+    });
+};
 async function sendGroupInviteEmail(to, inviterName, groupName, inviteLink) {
     const html = `
     <div style="background:#1a1a2e;color:#e0e0e0;font-family:Arial,sans-serif;padding:40px 20px;text-align:center;">
@@ -39,7 +45,7 @@ async function sendGroupInviteEmail(to, inviterName, groupName, inviteLink) {
     </div>
   `;
     try {
-        await transporter.sendMail({
+        await getSmtpTransporter().sendMail({
             from: `"Movie Tracker" <${SMTP_USER}>`,
             to,
             subject: `${inviterName} invited you to "${groupName}" on Movie Tracker`,
@@ -54,6 +60,14 @@ async function sendGroupInviteEmail(to, inviterName, groupName, inviteLink) {
 }
 async function sendPasswordResetEmail(to, resetLink) {
     const escapedResetLink = escapeHtml(resetLink);
+    const text = [
+        "Reset your Movie Tracker password",
+        "",
+        "We received a request to reset your password.",
+        `Open this link to choose a new password: ${resetLink}`,
+        "",
+        "If you did not request this, you can ignore this email. Your password was not changed.",
+    ].join("\n");
     const html = `
     <div style="background:#040a1c;color:#e0e0e0;font-family:Arial,sans-serif;padding:40px 20px;text-align:center;">
       <div style="max-width:520px;margin:0 auto;background:#071425;border-radius:12px;padding:32px;border:1px solid #2ecc7140;">
@@ -71,10 +85,11 @@ async function sendPasswordResetEmail(to, resetLink) {
       </div>
     </div>
   `;
-    await transporter.sendMail({
+    await getSmtpTransporter().sendMail({
         from: `"Movie Tracker" <${SMTP_USER}>`,
         to,
         subject: "Reset your Movie Tracker password",
+        text,
         html,
     });
 }
@@ -119,7 +134,7 @@ async function sendBugReportEmail(to, bugReport) {
       </div>
     </div>
   `;
-    await transporter.sendMail({
+    await getSmtpTransporter().sendMail({
         from: `"Movie Tracker" <${SMTP_USER}>`,
         to,
         subject: `[Bug][${bugReport.severity}] ${bugReport.title}`,

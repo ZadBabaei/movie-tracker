@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import "./inbox.css";
 import { jwtDecode } from "jwt-decode";
 import VerticalNavbar from "../component/VerticalNavbar";
 import Hero from "../component/Hero";
+import apiClient from "../api/apiClient";
 
 const Inbox = () => {
   const [messages, setMessages] = useState([]);
@@ -13,7 +13,7 @@ const Inbox = () => {
   useEffect(() => {
     const fetchMessages = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/inbox", {
+        const res = await apiClient.get("/api/inbox", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -31,8 +31,8 @@ const Inbox = () => {
 
   const handleResponse = async (messageId, action) => {
     try {
-     await axios.post(
-       "http://localhost:5000/api/groups/respond",
+     await apiClient.post(
+       "/api/groups/respond",
        {
          groupId: messageId,
          response: action,

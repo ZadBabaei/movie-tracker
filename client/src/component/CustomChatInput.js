@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
-import axios from "axios";
 import { useChannelActionContext } from "stream-chat-react";
+import apiClient from "../api/apiClient";
 
 const EMOJIS = ["😀", "😂", "😍", "😎", "😭", "😅", "👏", "🔥", "❤️", "🍿", "🎬", "⭐"];
 const URL_REGEX = /https?:\/\/[^\s<>"']+/i;
@@ -55,7 +55,7 @@ const CustomChatInput = ({ replyTarget, onCancelReply }) => {
       if (firstUrl) {
         try {
           const token = localStorage.getItem("token");
-          const response = await axios.get("/api/chat/link-preview", {
+          const response = await apiClient.get("/api/chat/link-preview", {
             params: { url: firstUrl },
             headers: token ? { Authorization: `Bearer ${token}` } : undefined,
             timeout: 7000,

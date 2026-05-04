@@ -8,10 +8,10 @@ import {
 } from "stream-chat-react";
 import { StreamChat } from "stream-chat";
 import "stream-chat-react/dist/css/v2/index.css";
-import axios from "axios";
 import GroupChatSidbar from "./GroupChatSidbar";
 import CustomMessage from "./CustomMessage";
 import CustomChatInput from "./CustomChatInput";
+import apiClient from "../api/apiClient";
 import {
   getAvatarUrl,
   getGroupAvatarUrl,
@@ -54,7 +54,7 @@ const ChatBox = ({ groupId, groupName }) => {
         const token = localStorage.getItem("token");
         if (!token) return;
 
-        const res = await axios.post(
+        const res = await apiClient.post(
           "/api/chat/token",
           { groupId },
           {

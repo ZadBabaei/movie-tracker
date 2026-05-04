@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import quotes from "../data/Quotes";
 import "./Home.css";
 import VerticalNavbar from "../component/VerticalNavbar";
 import AnimatedMovie from "../component/AnimatedMovie";
+import apiClient from "../api/apiClient";
 
 function Home() {
   const [user, setUser] = useState(null);
@@ -24,7 +24,7 @@ useEffect(() => {
           return;
         }
 
-        const res = await axios.get("http://localhost:5000/api/auth/me", {
+        const res = await apiClient.get("/api/auth/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUser(res.data);

@@ -11,7 +11,6 @@ import {
   FaTimes,
   FaSlidersH,
 } from "react-icons/fa";
-import axios from "axios";
 import "./Watchlist.css";
 import Hero from "../component/Hero";
 import SearchBar from "../component/SearchBar";
@@ -25,6 +24,7 @@ import GroupSelectModal, { WatchMetadata } from "../component/GroupSelectModal";
 import { useWatchlistStore, WatchlistMovie } from "../store/useWatchlistStore";
 import { useGroupStore } from "../store/useGroupStore";
 import { toast } from "react-toastify";
+import apiClient from "../api/apiClient";
 
 type FilterMode = "all" | "top" | "recent";
 type SortMode = "date_desc" | "title_asc" | "rating_desc";
@@ -70,7 +70,7 @@ const Watchlist: React.FC = () => {
   const fetchFavorites = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("/api/watchlist/favorites", {
+      const res = await apiClient.get("/api/watchlist/favorites", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setFavorites(res.data);
@@ -84,7 +84,7 @@ const Watchlist: React.FC = () => {
     try {
       const token = localStorage.getItem("token");
       const movieId = movie._id;
-      const res = await axios.post(`/api/watchlist/favorites/${movieId}`, {}, {
+      const res = await apiClient.post(`/api/watchlist/favorites/${movieId}`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.data.favorited) {

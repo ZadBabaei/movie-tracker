@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import axios from "axios";
+import apiClient from "../api/apiClient";
 
 export interface PollMovie {
   id?: string;
@@ -145,7 +145,7 @@ export const usePollStore = create<PollState>((set, get) => ({
   createPoll: async (groupId: string): Promise<Poll> => {
     const token = localStorage.getItem("token");
     const { selectedMoviesForVote, pollName, pollDeadline } = get();
-    const res = await axios.post(
+    const res = await apiClient.post(
       "/api/polls/create",
       {
         groupId,
@@ -162,7 +162,7 @@ export const usePollStore = create<PollState>((set, get) => ({
   fetchCurrentPoll: async (groupId: string): Promise<Poll | null> => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get(`/api/polls/group/${groupId}/active`, {
+      const res = await apiClient.get(`/api/polls/group/${groupId}/active`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       set({ currentPoll: res.data });
@@ -175,7 +175,7 @@ export const usePollStore = create<PollState>((set, get) => ({
 
   completePoll: async (pollId: string): Promise<Poll> => {
     const token = localStorage.getItem("token");
-    const res = await axios.post(
+    const res = await apiClient.post(
       `/api/polls/${pollId}/complete`,
       {},
       { headers: { Authorization: `Bearer ${token}` } }
@@ -192,7 +192,7 @@ export const usePollStore = create<PollState>((set, get) => ({
 
   cancelPoll: async (pollId: string): Promise<void> => {
     const token = localStorage.getItem("token");
-    await axios.post(
+    await apiClient.post(
       `/api/polls/${pollId}/cancel`,
       {},
       { headers: { Authorization: `Bearer ${token}` } }
@@ -205,7 +205,7 @@ export const usePollStore = create<PollState>((set, get) => ({
     if (!currentPoll) return;
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.post(
+      const res = await apiClient.post(
         `/api/polls/${currentPoll._id}/add-movie`,
         { movie },
         { headers: { Authorization: `Bearer ${token}` } }
@@ -219,7 +219,7 @@ export const usePollStore = create<PollState>((set, get) => ({
   submitVote: async (pollId: string, rankings: PollRanking[]): Promise<void> => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.post(
+      const res = await apiClient.post(
         "/api/polls/vote",
         { pollId, rankings },
         { headers: { Authorization: `Bearer ${token}` } }
@@ -243,7 +243,7 @@ export const usePollStore = create<PollState>((set, get) => ({
   fetchPollHistory: async (groupId: string): Promise<void> => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get(`/api/polls/group/${groupId}/history`, {
+      const res = await apiClient.get(`/api/polls/group/${groupId}/history`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       set({ pollHistory: res.data });
@@ -256,7 +256,7 @@ export const usePollStore = create<PollState>((set, get) => ({
   fetchPollResults: async (pollId: string): Promise<void> => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get(`/api/polls/${pollId}/results`, {
+      const res = await apiClient.get(`/api/polls/${pollId}/results`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       set({ currentPoll: { ...res.data, status: res.data.status || "completed" } });
@@ -268,7 +268,7 @@ export const usePollStore = create<PollState>((set, get) => ({
   deletePoll: async (pollId: string): Promise<void> => {
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`/api/polls/${pollId}`, {
+      await apiClient.delete(`/api/polls/${pollId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const { pollHistory } = get();
