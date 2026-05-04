@@ -25,6 +25,27 @@ const corsConfig_1 = require("./utils/corsConfig");
 const app = (0, express_1.default)();
 const httpServer = http_1.default.createServer(app);
 const PORT = process.env.PORT || 5000;
+const getDatabaseName = (uri) => {
+    try {
+        const normalized = uri.replace(/^mongodb\+srv:/, "mongodb:");
+        const parsed = new URL(normalized);
+        return parsed.pathname.replace(/^\//, "").split("?")[0].toLowerCase();
+    }
+    catch {
+        return "";
+    }
+};
+const getMongoUri = () => {
+    if (process.env.NODE_ENV !== "test") {
+        return process.env.MONGODB_URI;
+    }
+    const uri = process.env.E2E_MONGODB_URI;
+    const dbName = uri ? getDatabaseName(uri) : "";
+    if (!uri || (!dbName.includes("e2e") && !dbName.includes("test"))) {
+        throw new Error(`NODE_ENV=test requires E2E_MONGODB_URI with an e2e/test database name. Got "${dbName || "(missing database name)"}".`);
+    }
+    return uri;
+};
 (0, socket_1.initIO)(httpServer);
 app.use((0, cors_1.default)(corsConfig_1.corsOptions));
 app.use(express_1.default.json({ limit: "3mb" }));
@@ -53,7 +74,7 @@ app.get("/", (_req, res) => {
     res.send("Hello from Movie Tracker Backend!");
 });
 mongoose_1.default
-    .connect(process.env.MONGODB_URI)
+    .connect(getMongoUri())
     .then(async () => {
     console.log("MongoDB Connected to:", mongoose_1.default.connection.db.databaseName);
     const collections = await mongoose_1.default.connection.db.listCollections().toArray();

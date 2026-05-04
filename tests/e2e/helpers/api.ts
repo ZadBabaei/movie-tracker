@@ -38,7 +38,18 @@ export const createTestUser = async (
   });
   expect(login.ok()).toBeTruthy();
   const body = await login.json();
-  return { token: body.token, user: body.user, password: input.password };
+  const completeOnboarding = await request.post(`${apiBaseURL()}/api/profile/complete-onboarding`, {
+    headers: authHeaders(body.token),
+    data: {},
+  });
+  expect(completeOnboarding.ok()).toBeTruthy();
+  const onboardingBody = await completeOnboarding.json();
+
+  return {
+    token: body.token,
+    user: { ...body.user, ...onboardingBody.user, firstLogin: false },
+    password: input.password,
+  };
 };
 
 export const createTestUsers = async (
@@ -61,11 +72,20 @@ export const loginByApi = async (
   return { token: body.token, user: body.user, password: input.password };
 };
 
+export const loginByUi = async (page: Page, input: Pick<TestUserInput, "email" | "password">) => {
+  await page.goto("/");
+  await page.getByPlaceholder("name@example.com").fill(input.email);
+  await page.getByPlaceholder("Password").fill(input.password);
+  await page.getByRole("button", { name: /^sign in$/i }).click();
+  await expect(page).toHaveURL(/\/(home|dashboard|profile|watchlist|my-groups)/);
+};
+
 export const seedBrowserAuth = async (page: Page, session: AuthSession) => {
   await page.addInitScript(({ token, user }) => {
+    const returningUser = { ...user, firstLogin: false };
     window.localStorage.setItem("token", token);
-    window.localStorage.setItem("user", JSON.stringify(user));
-    window.localStorage.setItem("userId", user._id);
+    window.localStorage.setItem("user", JSON.stringify(returningUser));
+    window.localStorage.setItem("userId", returningUser._id);
   }, session);
 };
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useScroll, useTransform, motion } from "framer-motion";
 import { FaTrashAlt } from "react-icons/fa";
-import { getAvatarUrl } from "../utils/avatar";
+import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
 import "./WatchTimeline.css";
 
 interface WatchedWithMember {
@@ -185,7 +185,11 @@ const WatchTimeline: React.FC<WatchTimelineProps> = ({
                             className="watch-timeline-avatar"
                             title={member.name}
                           >
-                            <img src={getAvatarUrl(member)} alt={member.name} />
+                            <img
+                              src={getAvatarUrl(member)}
+                              alt={member.name}
+                              onError={(event) => handleAvatarError(event, member)}
+                            />
                           </div>
                         ))}
                         {movie.watchedWith.length > 4 && (

@@ -25,13 +25,14 @@ test.describe("watchlist mark watched flow", () => {
 
     const movieCard = page.getByTestId("movie-card").filter({ hasText: testMovie.title });
     await expect(movieCard).toBeVisible();
-    await movieCard.click();
+    await movieCard.hover();
     await movieCard.getByTestId("movie-action-watched").click();
 
     await page.getByTestId("group-select-option").filter({ hasText: group.name }).click();
     await page.getByTestId("group-select-date").fill("2026-04-28");
-    await page.getByTestId("group-select-location").filter({ hasText: "Home" }).click();
+    await page.getByTestId("group-select-location-input").fill("Home");
     await page.getByRole("button", { name: /next/i }).click();
+    await expect(page.getByTestId("group-select-member")).toHaveCount(1);
     await page.getByTestId("group-select-done").click();
 
     await expect(movieCard).toHaveCount(0);

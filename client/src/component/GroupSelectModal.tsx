@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { FaTimes, FaArrowLeft, FaArrowRight } from "react-icons/fa";
 import apiClient from "../api/apiClient";
-import { getAvatarUrl } from "../utils/avatar";
+import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
 import "./GroupSelectModal.css";
 
 interface GroupOption {
@@ -46,6 +46,8 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
   const [watchedWhere, setWatchedWhere] = useState("");
   const [watchedWith, setWatchedWith] = useState<string[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
+  const [watchedWithError, setWatchedWithError] = useState("");
+  const [hasEditedWatchedWith, setHasEditedWatchedWith] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -55,13 +57,22 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
       setWatchedDate(new Date().toISOString().split("T")[0]);
       setWatchedWhere("");
       setWatchedWith([]);
+      setWatchedWithError("");
+      setHasEditedWatchedWith(false);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!selectedGroupId || hasEditedWatchedWith) return;
+    setWatchedWith(members.map((member) => member._id));
+  }, [members, selectedGroupId, hasEditedWatchedWith]);
 
   const handleGroupClick = async (groupId: string) => {
     setSelectedGroupId(groupId);
     setStep(2);
     setLoadingMembers(true);
+    setWatchedWithError("");
+    setHasEditedWatchedWith(false);
     try {
       const token = localStorage.getItem("token");
       const res = await apiClient.get(`/api/groups/${groupId}`, {
@@ -69,7 +80,6 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
       });
       const fetchedMembers: Member[] = res.data.members || [];
       setMembers(fetchedMembers);
-      // Pre-select all members by default
       setWatchedWith(fetchedMembers.map((m) => m._id));
     } catch {
       setMembers([]);
@@ -80,6 +90,8 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
   };
 
   const toggleMember = (memberId: string) => {
+    setHasEditedWatchedWith(true);
+    setWatchedWithError("");
     setWatchedWith((prev) =>
       prev.includes(memberId)
         ? prev.filter((id) => id !== memberId)
@@ -88,6 +100,11 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
   };
 
   const handleDone = () => {
+    if (watchedWith.length === 0) {
+      setWatchedWithError("Select at least one person who watched.");
+      return;
+    }
+
     onSelect(selectedGroupId, {
       watchedDate,
       watchedWhere,
@@ -226,7 +243,11 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
                         onClick={() => toggleMember(member._id)}
                       >
                         <div className="member-chip-avatar">
-                          <img src={getAvatarUrl(member)} alt={member.name} />
+                          <img
+                            src={getAvatarUrl(member)}
+                            alt={member.name}
+                            onError={(event) => handleAvatarError(event, member)}
+                          />
                         </div>
                         <span className="member-chip-name">{member.name}</span>
                         {watchedWith.includes(member._id) && (
@@ -235,6 +256,9 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
                       </button>
                     ))}
                   </div>
+                )}
+                {watchedWithError && (
+                  <p className="group-select-error">{watchedWithError}</p>
                 )}
               </div>
 

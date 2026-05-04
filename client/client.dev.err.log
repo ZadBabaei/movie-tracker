@@ -1,3 +1,14 @@
-(node:27256) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(node:18360) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
 (Use `node --trace-deprecation ...` to show where the warning was created)
-(node:27256) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(node:18360) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(node:18360) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+ERROR in src/pages/GroupChat.tsx:144:14
+TS2741: Property 'groupName' is missing in type '{ groupId: string; }' but required in type '{ groupId: any; groupName: any; }'.
+  [0m [90m 142 |[39m         [33m<[39m[33mdiv[39m className[33m=[39m[32m"GroupChatPage-left"[39m[33m>[39m
+   [90m 143 |[39m           [33m<[39m[33msection[39m className[33m=[39m[32m"GroupChatPage-section GroupChatPage-chat-section"[39m[33m>[39m
+  [31m[1m>[22m[39m[90m 144 |[39m             [33m<[39m[33mChatBox[39m groupId[33m=[39m{id[33m![39m} groupName[33m=[39m{groupName} [33m/[39m[33m>[39m
+   [90m     |[39m              [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+   [90m 145 |[39m           [33m<[39m[33m/[39m[33msection[39m[33m>[39m
+   [90m 146 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+   [90m 147 |[39m         [33m<[39m[33mdiv[39m className[33m=[39m[32m"GroupChatPage-search-section"[39m[33m>[39m[0m
+

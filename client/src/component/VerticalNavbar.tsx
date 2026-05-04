@@ -14,7 +14,7 @@ import { useModalStore } from "../store/useModalStore";
 import { useUserStore } from "../store/useUserStore";
 import { useGroupStore } from "../store/useGroupStore";
 import { useUnreadCounts } from "../hooks/useUnreadCounts";
-import { getAvatarUrl } from "../utils/avatar";
+import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
 import "./VerticalNavbar.css";
 import logo from "../assets/Logo PM.png";
 
@@ -167,7 +167,12 @@ const VerticalNavbar: React.FC = () => {
         </li>
         <li className="navbar-item">
           <a href="/profile" className="navbar-link navbar-link--profile">
-            <img src={getAvatarUrl(profile || {})} alt="" className="navbar-avatar" />
+            <img
+              src={getAvatarUrl(profile || {})}
+              alt=""
+              className="navbar-avatar"
+              onError={(event) => handleAvatarError(event, profile || {})}
+            />
             <span className="label">Profile</span>
           </a>
         </li>

@@ -9,6 +9,8 @@ import {
 } from "./helpers/api";
 import { createUserFactory } from "./helpers/factory";
 
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 test.describe("group membership", () => {
   test.beforeEach(async () => {
     await clearTestDatabase();
@@ -37,7 +39,11 @@ test.describe("group membership", () => {
     await expect(page.getByTestId("group-member-card")).toHaveCount(20);
 
     for (const session of sessions) {
-      await expect(page.getByTestId("group-member-card").filter({ hasText: session.user.name })).toHaveCount(1);
+      await expect(
+        page
+          .getByTestId("group-member-name")
+          .filter({ hasText: new RegExp(`^${escapeRegExp(session.user.name)}$`) })
+      ).toHaveCount(1);
     }
   });
 });

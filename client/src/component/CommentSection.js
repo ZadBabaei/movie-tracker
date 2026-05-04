@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { FaReply } from "react-icons/fa";
-import { getAvatarUrl } from "../utils/avatar";
+import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
 import "./CommentSection.css";
 
 const formatDate = (dateStr) => {
@@ -31,6 +31,13 @@ const CommentCard = ({ comment, onReply, depth = 0 }) => {
             id: comment.userId,
           })}
           alt={comment.username}
+          onError={(event) =>
+            handleAvatarError(event, {
+              name: comment.username,
+              avatar: comment.userAvatar,
+              id: comment.userId,
+            })
+          }
         />
       </div>
       <div className="comment-body">

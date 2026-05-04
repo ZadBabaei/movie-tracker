@@ -13,7 +13,7 @@ import { useGroupStore } from "../store/useGroupStore";
 import { jwtDecode } from "jwt-decode";
 import { FaTimes } from "react-icons/fa";
 import { toast } from "react-toastify";
-import { getAvatarUrl } from "../utils/avatar";
+import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
 
 interface Member {
   _id: string;
@@ -134,6 +134,7 @@ const GroupPage: React.FC = () => {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [deletingHistoryItem, setDeletingHistoryItem] = useState(false);
+  const [hasEditedWatchedWith, setHasEditedWatchedWith] = useState(false);
 
   const { openInviteFriendsModal } = useGroupStore();
 
@@ -160,12 +161,18 @@ const GroupPage: React.FC = () => {
 
   const handleMovieAdd = (movie: any) => {
     setPendingMovie(movie);
+    const defaultWatchedWith = group?.members?.map((member) => member._id) || [];
     setWatchDetails({
       watchedAt: getTodayInputValue(),
       watchedLocation: "",
-      watchedWith: currentUserId ? [currentUserId] : [],
+      watchedWith: defaultWatchedWith.length
+        ? defaultWatchedWith
+        : currentUserId
+          ? [currentUserId]
+          : [],
       watchedNotes: "",
     });
+    setHasEditedWatchedWith(false);
     setWatchDetailsError("");
   };
 
@@ -178,6 +185,7 @@ const GroupPage: React.FC = () => {
   };
 
   const toggleWatchedWith = (memberId: string) => {
+    setHasEditedWatchedWith(true);
     setWatchDetails((prev) => ({
       ...prev,
       watchedWith: prev.watchedWith.includes(memberId)
@@ -189,13 +197,27 @@ const GroupPage: React.FC = () => {
   const closeWatchDetailsModal = () => {
     if (savingWatchedMovie) return;
     setPendingMovie(null);
+    setHasEditedWatchedWith(false);
     setWatchDetailsError("");
   };
+
+  useEffect(() => {
+    if (!pendingMovie || hasEditedWatchedWith || !group?.members?.length) return;
+
+    setWatchDetails((prev) => ({
+      ...prev,
+      watchedWith: group.members.map((member) => member._id),
+    }));
+  }, [pendingMovie, hasEditedWatchedWith, group?.members]);
 
   const handleSaveWatchedMovie = async () => {
     if (!pendingMovie) return;
     if (!watchDetails.watchedAt) {
       setWatchDetailsError("Watched date is required.");
+      return;
+    }
+    if (watchDetails.watchedWith.length === 0) {
+      setWatchDetailsError("Select at least one person who watched.");
       return;
     }
 
@@ -352,10 +374,13 @@ const GroupPage: React.FC = () => {
                       src={getAvatarUrl(member)}
                       alt={member.name}
                       className="member-avatar"
+                      onError={(event) => handleAvatarError(event, member)}
                     />
                     <span className="status-dot offline"></span>
                   </div>
-                  <div className="member-name">{member.name}</div>
+                  <div className="member-name" data-testid="group-member-name">
+                    {member.name}
+                  </div>
                   {member._id === group.creator._id && (
                     <span className="badge">Admin</span>
                   )}
@@ -463,7 +488,11 @@ const GroupPage: React.FC = () => {
                       onClick={() => toggleWatchedWith(member._id)}
                     >
                       <span className="watched-details-member-avatar">
-                        <img src={getAvatarUrl(member)} alt={member.name} />
+                        <img
+                          src={getAvatarUrl(member)}
+                          alt={member.name}
+                          onError={(event) => handleAvatarError(event, member)}
+                        />
                       </span>
                       {member.name}
                     </button>

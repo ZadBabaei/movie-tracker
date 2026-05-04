@@ -27,6 +27,8 @@ const GroupChat: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (!id) return;
+
     const fetchGroupDetails = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -42,24 +44,24 @@ const GroupChat: React.FC = () => {
     };
 
     fetchGroupDetails();
-    fetchPollHistory(id!);
-  }, [id]);
+    fetchPollHistory(id);
+  }, [fetchPollHistory, id]);
 
   useEffect(() => {
     socket.on("poll:created", () => {
       setPollStatus("active");
-      fetchPollHistory(id!);
+      if (id) fetchPollHistory(id);
     });
     socket.on("poll:completed", () => {
       setPollStatus("completed");
-      fetchPollHistory(id!);
+      if (id) fetchPollHistory(id);
     });
     socket.on("poll:runoff", () => {
       setPollStatus("active");
     });
     socket.on("poll:cancelled", () => {
       setPollStatus("none");
-      fetchPollHistory(id!);
+      if (id) fetchPollHistory(id);
     });
 
     return () => {
@@ -68,7 +70,7 @@ const GroupChat: React.FC = () => {
       socket.off("poll:runoff");
       socket.off("poll:cancelled");
     };
-  }, [socket, id]);
+  }, [fetchPollHistory, socket, id]);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -92,7 +94,7 @@ const GroupChat: React.FC = () => {
   const handlePollStatusChange = (newStatus: string) => {
     setPollStatus(newStatus);
     if (newStatus === "completed" || newStatus === "none") {
-      fetchPollHistory(id!);
+      if (id) fetchPollHistory(id);
     }
   };
 
@@ -139,7 +141,7 @@ const GroupChat: React.FC = () => {
       <div className="GroupChatPage-layout">
         <div className="GroupChatPage-left">
           <section className="GroupChatPage-section GroupChatPage-chat-section">
-            <ChatBox groupId={id!} />
+            <ChatBox groupId={id!} groupName={groupName} />
           </section>
         </div>
         <div className="GroupChatPage-search-section">

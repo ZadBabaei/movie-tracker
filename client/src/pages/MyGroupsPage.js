@@ -9,7 +9,7 @@ import StarBorder from "@mui/icons-material/StarBorder";
 import { useGroupStore } from "../store/useGroupStore";
 import VerticalNavbar from "../component/VerticalNavbar";
 import Hero from "../component/Hero";
-import { getAvatarUrl } from "../utils/avatar";
+import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
 import "./MyGroupsPage.css";
 
 const MyGroupsPage = () => {
@@ -126,7 +126,11 @@ const MyGroupsPage = () => {
                             )}`}
                             data-tooltip={member.name}
                           >
-                            <img src={getAvatarUrl(member)} alt={member.name} />
+                            <img
+                              src={getAvatarUrl(member)}
+                              alt={member.name}
+                              onError={(event) => handleAvatarError(event, member)}
+                            />
                             <span className="full-name">{member.name}</span>
                           </div>
                         ))}
@@ -210,7 +214,11 @@ const MyGroupsPage = () => {
                           className={`avatar-circle color-${getColorClass(member.name)}`}
                           title={member.name || member.email || "Member"}
                         >
-                          <img src={getAvatarUrl(member)} alt={member.name || "Member"} />
+                          <img
+                            src={getAvatarUrl(member)}
+                            alt={member.name || "Member"}
+                            onError={(event) => handleAvatarError(event, member)}
+                          />
                         </div>
                       ))}
                       {(group.members?.length || 0) > 4 && (

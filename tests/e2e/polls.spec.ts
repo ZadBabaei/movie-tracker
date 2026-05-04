@@ -28,6 +28,8 @@ test.describe("poll results", () => {
     }
 
     const poll = await createPoll(request, owner.token, group._id, pollMovies, `${factory.runId} Pick a movie`);
+    expect(poll._id).toBeTruthy();
+
     await submitVote(request, sessions[0].token, poll._id, [
       { movieTmdbId: pollMovies[0].tmdbId, rank: 1 },
       { movieTmdbId: pollMovies[1].tmdbId, rank: 2 },
@@ -42,7 +44,16 @@ test.describe("poll results", () => {
     ]);
 
     await seedBrowserAuth(page, owner);
+    const historyResponsePromise = page.waitForResponse(
+      (response) =>
+        response.url().includes(`/api/polls/group/${group._id}/history`) &&
+        response.request().method() === "GET"
+    );
     await page.goto(`/group/${group._id}/chat`);
+    const historyResponse = await historyResponsePromise;
+    expect(historyResponse.ok()).toBeTruthy();
+    const history = await historyResponse.json();
+    expect(history.some((item: any) => item._id === poll._id)).toBeTruthy();
 
     const pollCard = page.getByTestId("poll-history-card").filter({ hasText: `${factory.runId} Pick a movie` });
     await expect(pollCard).toBeVisible();

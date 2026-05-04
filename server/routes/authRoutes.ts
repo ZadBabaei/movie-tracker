@@ -17,11 +17,16 @@ const buildAuthToken = (user: any, rememberMe = false) =>
     { expiresIn: rememberMe ? "7d" : "24h" }
   );
 
+const resolveAvatarUrl = (user: any) => {
+  const avatar = String(user?.avatar || "").trim();
+  return avatar || getDefaultAvatarUrl(user?.name, user?.email);
+};
+
 const buildAuthUser = (user: any) => ({
   _id: user._id,
   name: user.name,
   email: user.email,
-  avatar: user.avatar || "",
+  avatar: resolveAvatarUrl(user),
   firstLogin: user.firstLogin ?? true,
 });
 
@@ -198,7 +203,7 @@ router.post("/reset-password/:token", async (req: Request, res: Response) => {
 
 router.post("/google", async (req: Request, res: Response) => {
   try {
-    const { credential } = req.body;
+    const { credential, accessToken } = req.body;
     const googleClientId = process.env.GOOGLE_CLIENT_ID;
 
     if (!googleClientId) {
@@ -206,16 +211,49 @@ router.post("/google", async (req: Request, res: Response) => {
       return;
     }
 
-    if (!credential) {
+    if (!credential && !accessToken) {
       res.status(400).json({ msg: "Missing Google credential" });
       return;
     }
 
-    const ticket = await googleClient.verifyIdToken({
-      idToken: credential,
-      audience: googleClientId,
-    });
-    const payload = ticket.getPayload();
+    let payload: any;
+
+    if (credential) {
+      const ticket = await googleClient.verifyIdToken({
+        idToken: credential,
+        audience: googleClientId,
+      });
+      payload = ticket.getPayload();
+    } else {
+      const tokenInfoResponse = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`
+      );
+      const tokenInfo = await tokenInfoResponse.json().catch(() => ({})) as {
+        aud?: string;
+        sub?: string;
+        user_id?: string;
+      };
+
+      if (!tokenInfoResponse.ok || tokenInfo.aud !== googleClientId) {
+        res.status(401).json({ msg: "Invalid Google credential" });
+        return;
+      }
+
+      const userInfoResponse = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const userInfo = await userInfoResponse.json().catch(() => ({})) as any;
+
+      if (!userInfoResponse.ok) {
+        res.status(401).json({ msg: "Invalid Google credential" });
+        return;
+      }
+
+      payload = {
+        ...userInfo,
+        sub: userInfo.sub || tokenInfo.sub || tokenInfo.user_id,
+      };
+    }
 
     if (!payload?.sub || !payload.email) {
       res.status(401).json({ msg: "Invalid Google credential" });
@@ -230,8 +268,7 @@ router.post("/google", async (req: Request, res: Response) => {
     const googleId = payload.sub;
     const email = normalizeEmail(payload.email);
     const name = payload.name || email.split("@")[0];
-    const picture = payload.picture || "";
-    const avatar = picture || getDefaultAvatarUrl(name, email);
+    const picture = String(payload.picture || "").trim();
 
     let user = await User.findOne({
       $or: [{ googleId }, { email: { $regex: `^${escapeRegex(email)}$`, $options: "i" } }],
@@ -241,7 +278,7 @@ router.post("/google", async (req: Request, res: Response) => {
       user = await User.create({
         name,
         email,
-        avatar,
+        avatar: picture || getDefaultAvatarUrl(name, email),
         provider: "google",
         googleId,
       });
@@ -258,14 +295,14 @@ router.post("/google", async (req: Request, res: Response) => {
         shouldSave = true;
       }
 
-      if (!user.avatar) {
-        user.avatar = avatar;
-        shouldSave = true;
-      }
-
       if (shouldSave) {
         await user.save();
       }
+    }
+
+    if (!user.avatar || user.avatar.trim() === "") {
+      user.avatar = picture || getDefaultAvatarUrl(user.name, user.email);
+      await user.save();
     }
 
     const token = buildAuthToken(user);
@@ -300,7 +337,7 @@ router.get("/me", async (req: Request, res: Response) => {
       _id: user._id,
       name: user.name,
       email: user.email,
-      avatar: user.avatar || "",
+      avatar: resolveAvatarUrl(user),
       firstLogin: user.firstLogin ?? true,
     });
   } catch (error) {

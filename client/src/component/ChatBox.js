@@ -12,7 +12,12 @@ import axios from "axios";
 import GroupChatSidbar from "./GroupChatSidbar";
 import CustomMessage from "./CustomMessage";
 import CustomChatInput from "./CustomChatInput";
-import { getAvatarUrl } from "../utils/avatar";
+import {
+  getAvatarUrl,
+  getGroupAvatarUrl,
+  handleAvatarError,
+  handleGroupAvatarError,
+} from "../utils/avatar";
 import "./ChatBox.css";
 
 const getMemberId = (member) => (member?._id || member?.id || member)?.toString();
@@ -34,7 +39,7 @@ const normalizeMember = (member, currentUserId) => {
   };
 };
 
-const ChatBox = ({ groupId }) => {
+const ChatBox = ({ groupId, groupName }) => {
   const [chatClient, setChatClient] = useState(null);
   const [channel, setChannel] = useState(null);
   const [members, setMembers] = useState([]);
@@ -163,13 +168,23 @@ const CustomEmptyState = () => (
                       ←
                     </button>
 
-                    <img src={selectedMember.image} alt={selectedMember.name} />
+                    <img
+                      src={selectedMember.image}
+                      alt={selectedMember.name}
+                      onError={(event) => handleAvatarError(event, selectedMember)}
+                    />
                     <span>{selectedMember.name}</span>
                   </>
                 ) : (
                   <>
-                    <img src="/group-avatar.png" alt="Group" />
-                    <span>Movie Circle</span>
+                    <img
+                      src={getGroupAvatarUrl({ groupId, groupName })}
+                      alt={groupName || "Group"}
+                      onError={(event) =>
+                        handleGroupAvatarError(event, { groupId, groupName })
+                      }
+                    />
+                    <span>{groupName || "Movie Circle"}</span>
                   </>
                 )}
               </div>

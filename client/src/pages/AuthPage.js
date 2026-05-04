@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
+import { GoogleOAuthProvider, useGoogleLogin } from "@react-oauth/google";
 import { Link, useNavigate } from "react-router-dom";
 import {
   FaEnvelope,
@@ -17,6 +17,32 @@ import apiClient from "../api/apiClient";
 import "./AuthPage.css";
 
 const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+
+function GoogleAuthButton({ onSuccess, onError, disabled }) {
+  const login = useGoogleLogin({
+    flow: "implicit",
+    scope: "openid email profile",
+    onSuccess: (tokenResponse) => {
+      if (!tokenResponse?.access_token) {
+        onError();
+        return;
+      }
+      onSuccess(tokenResponse.access_token);
+    },
+    onError,
+  });
+
+  return (
+    <button
+      type="button"
+      onClick={() => login()}
+      disabled={disabled}
+      aria-label="Continue with Google"
+    >
+      <FaGoogle />
+    </button>
+  );
+}
 
 function AuthPage({ initialMode = "signin" }) {
   const navigate = useNavigate();
@@ -138,9 +164,9 @@ function AuthPage({ initialMode = "signin" }) {
     }
   };
 
-  const handleGoogleSuccess = async (credentialResponse) => {
-    if (!credentialResponse?.credential) {
-      setError("Google sign-in did not return a credential.");
+  const handleGoogleAccessToken = async (accessToken) => {
+    if (!accessToken) {
+      setError("Google sign-in did not return an access token.");
       return;
     }
 
@@ -150,7 +176,7 @@ function AuthPage({ initialMode = "signin" }) {
     try {
       const res = await apiClient.post(
         "/api/auth/google",
-        { credential: credentialResponse.credential },
+        { accessToken },
         { headers: { "Content-Type": "application/json" } }
       );
 
@@ -342,16 +368,11 @@ function AuthPage({ initialMode = "signin" }) {
 
           {!isForgotPassword && <div className="AuthPage-socials">
             {GOOGLE_CLIENT_ID ? (
-              <div className="AuthPage-socialGoogle" aria-label="Continue with Google">
-                <GoogleLogin
-                  onSuccess={handleGoogleSuccess}
-                  onError={handleGoogleError}
-                  type="icon"
-                  shape="rectangular"
-                  theme="filled_black"
-                  size="large"
-                />
-              </div>
+              <GoogleAuthButton
+                onSuccess={handleGoogleAccessToken}
+                onError={handleGoogleError}
+                disabled={submitting}
+              />
             ) : (
               <button type="button" onClick={showGoogleConfigError} aria-label="Continue with Google">
                 <FaGoogle />

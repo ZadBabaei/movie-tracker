@@ -577,6 +577,7 @@ const VoteModal: React.FC<VoteModalProps> = ({ groupId, onPollStatusChange }) =>
                           Priority
                           <select
                             className="VoteModal-rank-select"
+                            data-testid={`poll-rank-select-${movieId}`}
                             value={Number.isInteger(voteRankings[movieId]) ? voteRankings[movieId] : ""}
                             onChange={(e) => {
                               setValidationMessage("");
@@ -608,7 +609,12 @@ const VoteModal: React.FC<VoteModalProps> = ({ groupId, onPollStatusChange }) =>
 
           <div className="VoteModal-button-group" style={{ marginTop: 24 }}>
             {!hasSubmittedVote && (
-              <button className="VoteModal-submit-btn" onClick={handleSubmitVotes} disabled={submitDisabled}>
+              <button
+                className="VoteModal-submit-btn"
+                data-testid="poll-submit-vote"
+                onClick={handleSubmitVotes}
+                disabled={submitDisabled}
+              >
                 Submit Vote
               </button>
             )}

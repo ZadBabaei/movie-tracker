@@ -1,18 +1,4 @@
 import { MongoClient } from "mongodb";
-import { existsSync, readFileSync } from "node:fs";
-import path from "node:path";
-
-const readServerEnvValue = (key: string) => {
-  const envPath = path.resolve(process.cwd(), "server", ".env");
-  if (!existsSync(envPath)) return undefined;
-
-  const line = readFileSync(envPath, "utf8")
-    .split(/\r?\n/)
-    .find((entry) => entry.trim().startsWith(`${key}=`));
-  if (!line) return undefined;
-
-  return line.slice(line.indexOf("=") + 1).trim().replace(/^["']|["']$/g, "");
-};
 
 const getDatabaseName = (uri: string) => {
   try {
@@ -34,9 +20,11 @@ const assertSafeTestDatabase = (uri: string) => {
 };
 
 export const clearTestDatabase = async () => {
-  const uri = process.env.E2E_MONGODB_URI || process.env.MONGODB_URI || readServerEnvValue("MONGODB_URI");
+  const uri = process.env.E2E_MONGODB_URI;
   if (!uri) {
-    throw new Error("E2E_MONGODB_URI or MONGODB_URI is required for E2E database cleanup.");
+    throw new Error(
+      "E2E_MONGODB_URI is required. E2E tests refuse to use MONGODB_URI or server/.env."
+    );
   }
 
   assertSafeTestDatabase(uri);

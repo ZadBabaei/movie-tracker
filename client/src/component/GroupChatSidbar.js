@@ -1,6 +1,6 @@
 import React from "react";
 import "./GroupChatSidbar.css";
-import { getAvatarUrl } from "../utils/avatar";
+import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
 
 const GroupChatSidbar = ({ members, onSelectMember }) => {
   return (
@@ -20,6 +20,7 @@ const GroupChatSidbar = ({ members, onSelectMember }) => {
                 src={getAvatarUrl(member)}
                 alt={member.name || "User"}
                 className="GroupSidebar-avatar"
+                onError={(event) => handleAvatarError(event, member)}
               />
               <div className="GroupSidebar-name-status">
                 <span className="GroupSidebar-name">

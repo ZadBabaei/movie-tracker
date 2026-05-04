@@ -143,6 +143,13 @@
   font-size: 0.85rem;
 }
 
+.group-select-error {
+  margin: 8px 0 0;
+  color: #ff9a9a;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 .group-select-actions {
   display: flex;
   gap: 12px;

@@ -19,7 +19,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import VerticalNavbar from "../component/VerticalNavbar";
 import { useUserStore } from "../store/useUserStore";
-import { getAvatarUrl } from "../utils/avatar";
+import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
 import "./Profile.css";
 
 const Profile: React.FC = () => {
@@ -274,7 +274,12 @@ const Profile: React.FC = () => {
           <div className="Profile-hero-content">
             <div className="Profile-avatar-ring">
               <div className="Profile-avatar" onClick={handleAvatarClick}>
-                <img src={profileAvatarUrl} alt="Avatar" className="Profile-avatar-img" />
+                <img
+                  src={profileAvatarUrl}
+                  alt={profile.name}
+                  className="Profile-avatar-img"
+                  onError={(event) => handleAvatarError(event, profile)}
+                />
                 <div className="Profile-avatar-overlay">
                   {uploading ? <div className="Profile-avatar-spinner" /> : <FaCamera />}
                 </div>
@@ -429,7 +434,11 @@ const Profile: React.FC = () => {
 
             <div className="Profile-account-user">
               <div className="Profile-account-avatar-sm">
-                <img src={profileAvatarUrl} alt="" />
+                <img
+                  src={profileAvatarUrl}
+                  alt=""
+                  onError={(event) => handleAvatarError(event, profile)}
+                />
               </div>
               <div>
                 <span className="Profile-account-user-name">{profile.name}</span>

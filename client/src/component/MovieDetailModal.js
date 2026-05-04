@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { FaTimes } from "react-icons/fa";
 import apiClient from "../api/apiClient";
 import CommentSection from "./CommentSection";
-import { getAvatarUrl } from "../utils/avatar";
+import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
 import "./MovieDetailModal.css";
 
 const TMDB_KEY = process.env.REACT_APP_TMDB_API_KEY;
@@ -360,7 +360,11 @@ const MovieDetailModal = ({ movie, groupId = null, onRatingSaved = null, onClose
                       {visibleMemberRatings.map((entry) => (
                         <div className="mdm-member-rating" key={entry.userId}>
                           <span className="mdm-member-rating-avatar">
-                            <img src={getAvatarUrl(entry)} alt={entry.name} />
+                            <img
+                              src={getAvatarUrl(entry)}
+                              alt={entry.name}
+                              onError={(event) => handleAvatarError(event, entry)}
+                            />
                           </span>
                           <span className="mdm-member-rating-name">{entry.name}</span>
                           <strong>{entry.rating} / 10</strong>
