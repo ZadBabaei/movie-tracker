@@ -13,12 +13,12 @@ import {
 } from "react-icons/fa6";
 import { FaEyeSlash } from "react-icons/fa";
 import authVectorReference from "../assets/auth-vector-reference.png";
-import apiClient from "../api/apiClient";
+import apiClient, { API_BASE_URL } from "../api/apiClient";
 import "./AuthPage.css";
 
 const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
 
-function GoogleAuthButton({ onSuccess, onError, disabled }) {
+function GoogleAuthButton({ onSuccess, onError, onNonOAuthError, disabled }) {
   const login = useGoogleLogin({
     flow: "implicit",
     scope: "openid email profile",
@@ -30,12 +30,23 @@ function GoogleAuthButton({ onSuccess, onError, disabled }) {
       onSuccess(tokenResponse.access_token);
     },
     onError,
+    onNonOAuthError,
   });
 
   return (
     <button
       type="button"
-      onClick={() => login()}
+      onClick={() => {
+        console.log("Google button clicked");
+        console.log("Google client ID exists:", Boolean(GOOGLE_CLIENT_ID));
+        console.log(
+          "Google client ID preview:",
+          GOOGLE_CLIENT_ID ? `${GOOGLE_CLIENT_ID.slice(0, 8)}...` : "missing"
+        );
+        console.log("Current origin:", window.location.origin);
+        console.log("API base URL:", API_BASE_URL || "(same-origin /api fallback)");
+        login();
+      }}
       disabled={disabled}
       aria-label="Continue with Google"
     >
@@ -191,6 +202,22 @@ function AuthPage({ initialMode = "signin" }) {
 
   const handleGoogleError = () => {
     setError("Google authentication failed. Please try again.");
+  };
+
+  const handleGoogleNonOAuthError = (error) => {
+    console.error("Google non-OAuth error:", error);
+
+    if (error?.type === "popup_failed_to_open") {
+      setError("Google sign-in popup could not open. Please allow popups for this site and try again.");
+      return;
+    }
+
+    if (error?.type === "popup_closed") {
+      setError("Google sign-in popup was closed before sign-in completed.");
+      return;
+    }
+
+    setError("Google sign-in could not open. Please try again.");
   };
 
   const page = (
@@ -371,6 +398,7 @@ function AuthPage({ initialMode = "signin" }) {
               <GoogleAuthButton
                 onSuccess={handleGoogleAccessToken}
                 onError={handleGoogleError}
+                onNonOAuthError={handleGoogleNonOAuthError}
                 disabled={submitting}
               />
             ) : (
