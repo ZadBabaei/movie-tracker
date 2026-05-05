@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { IBugReport } from "../models/BugReport";
 
 const getEmailConfig = () => {
@@ -6,14 +7,28 @@ const getEmailConfig = () => {
   const port = Number(process.env.EMAIL_PORT || process.env.SMTP_PORT) || 587;
   const user = process.env.EMAIL_USER || process.env.SMTP_USER;
   const pass = process.env.EMAIL_PASS || process.env.SMTP_PASS;
-  const from = process.env.EMAIL_FROM || (user ? `Movie Tracker <${user}>` : undefined);
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const defaultFrom = resendApiKey
+    ? "Movie Tracker <onboarding@resend.dev>"
+    : user
+      ? `Movie Tracker <${user}>`
+      : undefined;
+  const from = process.env.EMAIL_FROM || defaultFrom;
 
-  return { host, port, user, pass, from };
+  return { host, port, user, pass, from, resendApiKey };
 };
 
 const getEmailDomain = (email: string) => {
   const domain = String(email || "").split("@")[1];
   return domain || "missing";
+};
+
+let resendClient: Resend | null = null;
+const getResendClient = (apiKey: string) => {
+  if (!resendClient) {
+    resendClient = new Resend(apiKey);
+  }
+  return resendClient;
 };
 
 const getSmtpTransporter = () => {
@@ -34,6 +49,38 @@ const getSmtpTransporter = () => {
   });
 };
 
+interface SendMailParams {
+  to: string;
+  subject: string;
+  text?: string;
+  html?: string;
+}
+
+const sendEmail = async ({ to, subject, text, html }: SendMailParams): Promise<void> => {
+  const { from, resendApiKey } = getEmailConfig();
+
+  if (!from) {
+    throw new Error("EMAIL_FROM is not configured");
+  }
+
+  if (resendApiKey) {
+    const { error } = await getResendClient(resendApiKey).emails.send({
+      from,
+      to,
+      subject,
+      ...(html ? { html } : {}),
+      ...(text ? { text } : {}),
+    } as Parameters<Resend["emails"]["send"]>[0]);
+
+    if (error) {
+      throw new Error(`Resend send failed: ${error.name} - ${error.message}`);
+    }
+    return;
+  }
+
+  await getSmtpTransporter().sendMail({ from, to, subject, text, html });
+};
+
 export async function sendGroupInviteEmail(
   to: string,
   inviterName: string,
@@ -43,7 +90,6 @@ export async function sendGroupInviteEmail(
   const escapedInviterName = escapeHtml(inviterName);
   const escapedGroupName = escapeHtml(groupName);
   const escapedInviteLink = escapeHtml(inviteLink);
-  const { from } = getEmailConfig();
   const text = [
     `${inviterName} invited you to join ${groupName} on Movie Tracker.`,
     "",
@@ -73,8 +119,7 @@ export async function sendGroupInviteEmail(
   `;
 
   try {
-    await getSmtpTransporter().sendMail({
-      from,
+    await sendEmail({
       to,
       subject: `${inviterName} invited you to "${groupName}" on Movie Tracker`,
       text,
@@ -119,8 +164,7 @@ export async function sendPasswordResetEmail(to: string, resetLink: string): Pro
     </div>
   `;
 
-  await getSmtpTransporter().sendMail({
-    from: getEmailConfig().from,
+  await sendEmail({
     to,
     subject: "Reset your Movie Tracker password",
     text,
@@ -173,8 +217,7 @@ export async function sendBugReportEmail(to: string, bugReport: IBugReport): Pro
     </div>
   `;
 
-  await getSmtpTransporter().sendMail({
-    from: getEmailConfig().from,
+  await sendEmail({
     to,
     subject: `[Bug][${bugReport.severity}] ${bugReport.title}`,
     html,

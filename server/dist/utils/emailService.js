@@ -7,17 +7,31 @@ exports.sendGroupInviteEmail = sendGroupInviteEmail;
 exports.sendPasswordResetEmail = sendPasswordResetEmail;
 exports.sendBugReportEmail = sendBugReportEmail;
 const nodemailer_1 = __importDefault(require("nodemailer"));
+const resend_1 = require("resend");
 const getEmailConfig = () => {
     const host = process.env.EMAIL_HOST || process.env.SMTP_HOST || "smtp.gmail.com";
     const port = Number(process.env.EMAIL_PORT || process.env.SMTP_PORT) || 587;
     const user = process.env.EMAIL_USER || process.env.SMTP_USER;
     const pass = process.env.EMAIL_PASS || process.env.SMTP_PASS;
-    const from = process.env.EMAIL_FROM || (user ? `Movie Tracker <${user}>` : undefined);
-    return { host, port, user, pass, from };
+    const resendApiKey = process.env.RESEND_API_KEY;
+    const defaultFrom = resendApiKey
+        ? "Movie Tracker <onboarding@resend.dev>"
+        : user
+            ? `Movie Tracker <${user}>`
+            : undefined;
+    const from = process.env.EMAIL_FROM || defaultFrom;
+    return { host, port, user, pass, from, resendApiKey };
 };
 const getEmailDomain = (email) => {
     const domain = String(email || "").split("@")[1];
     return domain || "missing";
+};
+let resendClient = null;
+const getResendClient = (apiKey) => {
+    if (!resendClient) {
+        resendClient = new resend_1.Resend(apiKey);
+    }
+    return resendClient;
 };
 const getSmtpTransporter = () => {
     const { host, port, user, pass } = getEmailConfig();
@@ -34,11 +48,30 @@ const getSmtpTransporter = () => {
         },
     });
 };
+const sendEmail = async ({ to, subject, text, html }) => {
+    const { from, resendApiKey } = getEmailConfig();
+    if (!from) {
+        throw new Error("EMAIL_FROM is not configured");
+    }
+    if (resendApiKey) {
+        const { error } = await getResendClient(resendApiKey).emails.send({
+            from,
+            to,
+            subject,
+            ...(html ? { html } : {}),
+            ...(text ? { text } : {}),
+        });
+        if (error) {
+            throw new Error(`Resend send failed: ${error.name} - ${error.message}`);
+        }
+        return;
+    }
+    await getSmtpTransporter().sendMail({ from, to, subject, text, html });
+};
 async function sendGroupInviteEmail(to, inviterName, groupName, inviteLink) {
     const escapedInviterName = escapeHtml(inviterName);
     const escapedGroupName = escapeHtml(groupName);
     const escapedInviteLink = escapeHtml(inviteLink);
-    const { from } = getEmailConfig();
     const text = [
         `${inviterName} invited you to join ${groupName} on Movie Tracker.`,
         "",
@@ -67,8 +100,7 @@ async function sendGroupInviteEmail(to, inviterName, groupName, inviteLink) {
     </div>
   `;
     try {
-        await getSmtpTransporter().sendMail({
-            from,
+        await sendEmail({
             to,
             subject: `${inviterName} invited you to "${groupName}" on Movie Tracker`,
             text,
@@ -112,8 +144,7 @@ async function sendPasswordResetEmail(to, resetLink) {
       </div>
     </div>
   `;
-    await getSmtpTransporter().sendMail({
-        from: getEmailConfig().from,
+    await sendEmail({
         to,
         subject: "Reset your Movie Tracker password",
         text,
@@ -161,8 +192,7 @@ async function sendBugReportEmail(to, bugReport) {
       </div>
     </div>
   `;
-    await getSmtpTransporter().sendMail({
-        from: getEmailConfig().from,
+    await sendEmail({
         to,
         subject: `[Bug][${bugReport.severity}] ${bugReport.title}`,
         html,
