@@ -33,6 +33,7 @@ const FORGOT_PASSWORD_MAX_ATTEMPTS = 5;
 const hashResetToken = (token) => crypto_1.default.createHash("sha256").update(token).digest("hex");
 const isValidResetToken = (token) => /^[a-f0-9]{64}$/i.test(token);
 const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
+const previewValue = (value) => value ? value.slice(0, 8) : "missing";
 const logGoogleAuthFailure = (reason, details = {}) => {
     console.error("Google auth failure:", {
         reason,
@@ -191,6 +192,14 @@ router.post("/google", async (req, res) => {
     try {
         const { credential, accessToken } = req.body;
         const googleClientId = process.env.GOOGLE_CLIENT_ID;
+        console.info("Google auth debug:", {
+            step: "request_received",
+            googleClientIdExists: Boolean(googleClientId),
+            googleClientIdPreview: previewValue(googleClientId),
+            hasAccessToken: Boolean(accessToken),
+            hasCredential: Boolean(credential),
+            origin: req.get("origin") || "missing",
+        });
         if (!googleClientId) {
             sendGoogleAuthFailure(res, 500, "missing_google_client_id", "Google authentication is not configured");
             return;
@@ -208,16 +217,28 @@ router.post("/google", async (req, res) => {
             payload = ticket.getPayload();
         }
         else {
-            console.info("Google auth access-token flow started:", {
+            console.info("Google auth debug:", {
+                step: "access_token_flow_started",
                 hasAccessToken: Boolean(accessToken),
-                hasGoogleClientId: Boolean(googleClientId),
+                googleClientIdExists: Boolean(googleClientId),
+                googleClientIdPreview: previewValue(googleClientId),
             });
             const tokenInfoResponse = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`);
             const tokenInfo = await tokenInfoResponse.json().catch(() => ({}));
+            console.info("Google auth debug:", {
+                step: "tokeninfo_response",
+                tokenInfoResponseOk: tokenInfoResponse.ok,
+                tokenInfoStatus: tokenInfoResponse.status,
+                tokenInfoAudiencePreview: previewValue(tokenInfo.aud),
+                tokenInfoAudienceMatchesClientId: tokenInfo.aud === googleClientId,
+                hasTokenInfoSubject: Boolean(tokenInfo.sub || tokenInfo.user_id),
+            });
             if (!tokenInfoResponse.ok) {
                 logGoogleAuthFailure("tokeninfo_request_failed", {
                     status: tokenInfoResponse.status,
                     hasAudience: Boolean(tokenInfo.aud),
+                    audiencePreview: previewValue(tokenInfo.aud),
+                    audienceMatchesClientId: tokenInfo.aud === googleClientId,
                     hasSubject: Boolean(tokenInfo.sub || tokenInfo.user_id),
                 });
                 res.status(401).json({ msg: "Invalid Google credential", reason: "tokeninfo_request_failed" });
@@ -226,6 +247,8 @@ router.post("/google", async (req, res) => {
             if (tokenInfo.aud !== googleClientId) {
                 logGoogleAuthFailure("tokeninfo_audience_mismatch", {
                     hasAudience: Boolean(tokenInfo.aud),
+                    audiencePreview: previewValue(tokenInfo.aud),
+                    googleClientIdPreview: previewValue(googleClientId),
                     expectedAudienceConfigured: Boolean(googleClientId),
                     hasSubject: Boolean(tokenInfo.sub || tokenInfo.user_id),
                 });
@@ -236,10 +259,18 @@ router.post("/google", async (req, res) => {
                 headers: { Authorization: `Bearer ${accessToken}` },
             });
             const userInfo = await userInfoResponse.json().catch(() => ({}));
+            console.info("Google auth debug:", {
+                step: "userinfo_response",
+                userInfoResponseOk: userInfoResponse.ok,
+                userInfoStatus: userInfoResponse.status,
+                hasUserInfoSubject: Boolean(userInfo.sub),
+                hasUserInfoEmail: Boolean(userInfo.email),
+            });
             if (!userInfoResponse.ok) {
                 logGoogleAuthFailure("userinfo_request_failed", {
                     status: userInfoResponse.status,
                     hasAudience: Boolean(tokenInfo.aud),
+                    audiencePreview: previewValue(tokenInfo.aud),
                     hasSubject: Boolean(tokenInfo.sub || tokenInfo.user_id),
                 });
                 res.status(401).json({ msg: "Invalid Google credential", reason: "userinfo_request_failed" });
@@ -250,6 +281,12 @@ router.post("/google", async (req, res) => {
                 sub: userInfo.sub || tokenInfo.sub || tokenInfo.user_id,
             };
         }
+        console.info("Google auth debug:", {
+            step: "payload_ready",
+            hasPayloadSubject: Boolean(payload?.sub),
+            hasPayloadEmail: Boolean(payload?.email),
+            emailVerified: payload?.email_verified !== false,
+        });
         if (!payload?.sub || !payload.email) {
             logGoogleAuthFailure("missing_google_profile_fields", {
                 hasSubject: Boolean(payload?.sub),
@@ -267,17 +304,49 @@ router.post("/google", async (req, res) => {
         const email = normalizeEmail(payload.email);
         const name = payload.name || email.split("@")[0];
         const picture = String(payload.picture || "").trim();
-        let user = await user_1.default.findOne({
-            $or: [{ googleId }, { email: { $regex: `^${escapeRegex(email)}$`, $options: "i" } }],
-        });
-        if (!user) {
-            user = await user_1.default.create({
-                name,
-                email,
-                avatar: picture || (0, avatar_1.getDefaultAvatarUrl)(name, email),
-                provider: "google",
-                googleId,
+        let user;
+        try {
+            user = await user_1.default.findOne({
+                $or: [{ googleId }, { email: { $regex: `^${escapeRegex(email)}$`, $options: "i" } }],
             });
+            console.info("Google auth debug:", {
+                step: "mongo_user_lookup",
+                lookupSucceeded: true,
+                userFound: Boolean(user),
+            });
+        }
+        catch (error) {
+            console.error("Google auth failure:", {
+                reason: "mongo_user_lookup_failed",
+                name: error.name,
+                message: error.message,
+            });
+            res.status(500).json({ msg: "Google authentication failed", reason: "mongo_user_lookup_failed" });
+            return;
+        }
+        if (!user) {
+            try {
+                user = await user_1.default.create({
+                    name,
+                    email,
+                    avatar: picture || (0, avatar_1.getDefaultAvatarUrl)(name, email),
+                    provider: "google",
+                    googleId,
+                });
+                console.info("Google auth debug:", {
+                    step: "mongo_user_create",
+                    createSucceeded: true,
+                });
+            }
+            catch (error) {
+                console.error("Google auth failure:", {
+                    reason: "mongo_user_create_failed",
+                    name: error.name,
+                    message: error.message,
+                });
+                res.status(500).json({ msg: "Google authentication failed", reason: "mongo_user_create_failed" });
+                return;
+            }
         }
         else {
             let shouldSave = false;
@@ -290,12 +359,42 @@ router.post("/google", async (req, res) => {
                 shouldSave = true;
             }
             if (shouldSave) {
-                await user.save();
+                try {
+                    await user.save();
+                    console.info("Google auth debug:", {
+                        step: "mongo_user_update",
+                        updateSucceeded: true,
+                    });
+                }
+                catch (error) {
+                    console.error("Google auth failure:", {
+                        reason: "mongo_user_update_failed",
+                        name: error.name,
+                        message: error.message,
+                    });
+                    res.status(500).json({ msg: "Google authentication failed", reason: "mongo_user_update_failed" });
+                    return;
+                }
             }
         }
         if (!user.avatar || user.avatar.trim() === "") {
             user.avatar = picture || (0, avatar_1.getDefaultAvatarUrl)(user.name, user.email);
-            await user.save();
+            try {
+                await user.save();
+                console.info("Google auth debug:", {
+                    step: "mongo_user_avatar_update",
+                    updateSucceeded: true,
+                });
+            }
+            catch (error) {
+                console.error("Google auth failure:", {
+                    reason: "mongo_user_avatar_update_failed",
+                    name: error.name,
+                    message: error.message,
+                });
+                res.status(500).json({ msg: "Google authentication failed", reason: "mongo_user_avatar_update_failed" });
+                return;
+            }
         }
         const token = buildAuthToken(user);
         res.json({
