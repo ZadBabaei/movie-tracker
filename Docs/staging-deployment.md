@@ -105,6 +105,14 @@ Create a Vercel project from the repository:
 
 Set `REACT_APP_API_BASE_URL` and `REACT_APP_SOCKET_URL` to the Render backend URL before building.
 
+The Vercel project uses `client/vercel.json` to send this header on every route:
+
+```text
+Cross-Origin-Opener-Policy: same-origin-allow-popups
+```
+
+This header is required for the current Google popup sign-in flow. If Vercel returns `401` for `/manifest.json` or other public assets, Deployment Protection is blocking unauthenticated public access. Disable Vercel Deployment Protection for public staging, or test through the stable custom domain once it is configured.
+
 ## Domain
 
 1. In Vercel, add `movieTracker.zadprogramming.com` to the frontend project domains.
@@ -117,6 +125,8 @@ CLIENT_URL=https://movieTracker.zadprogramming.com
 APP_URL=https://movieTracker.zadprogramming.com
 CORS_ORIGINS=https://movieTracker.zadprogramming.com,http://localhost:3000
 ```
+
+Use `https://movieTracker.zadprogramming.com` as the stable origin for Google OAuth testing. Random Vercel preview URLs change and should not be relied on for OAuth unless each exact preview URL is added to Google Cloud for that temporary test.
 
 ## Manual Deployment Checklist
 

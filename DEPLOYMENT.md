@@ -107,6 +107,14 @@ REACT_APP_TMDB_API_URL=https://api.themoviedb.org/3/search/movie
 
 Frontend backend calls use `REACT_APP_API_BASE_URL` through `client/src/api/apiClient.ts`. If `REACT_APP_API_BASE_URL` is empty during local development, HTTP calls fall back to same-origin `/api` paths, which work through the CRA proxy. Socket.io uses `REACT_APP_SOCKET_URL`, then `REACT_APP_API_BASE_URL`, then `http://127.0.0.1:5000`.
 
+The Vercel project uses `client/vercel.json` to send this header on every route:
+
+```text
+Cross-Origin-Opener-Policy: same-origin-allow-popups
+```
+
+This is required for the current Google popup flow. If `/manifest.json` or other public assets return `401` on Vercel, Deployment Protection is blocking public access. Disable Vercel Deployment Protection for public staging, or test through the custom domain after it is configured and publicly accessible.
+
 ## MongoDB Atlas Staging DB
 
 1. Create an Atlas M0 free cluster.
@@ -138,8 +146,9 @@ In Google Cloud Console, update the OAuth client used by staging:
 
 - Authorized JavaScript origins:
   - `https://movieTracker.zadprogramming.com`
-  - Vercel preview origins if previews need Google sign-in
   - `http://localhost:3000` for local development
+
+Use the stable custom domain for Google OAuth testing. Random Vercel preview URLs change per deployment and should not be treated as reliable OAuth origins unless you explicitly add each preview origin to Google Cloud for that specific test. Do not rely on random Vercel preview URLs for regular OAuth validation.
 
 The current frontend Google sign-in uses the implicit OAuth flow and sends the Google access token to `/api/auth/google`, so no redirect URI is required unless you change the auth flow later.
 
