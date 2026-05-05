@@ -12,6 +12,14 @@ import { sendGroupInviteEmail } from "../utils/emailService";
 
 const router = express.Router();
 
+const getAppUrl = () =>
+  (process.env.APP_URL || "http://localhost:3000").replace(/\/+$/, "");
+
+const getEmailDomain = (email: string) => {
+  const domain = String(email || "").split("@")[1];
+  return domain || "missing";
+};
+
 const dedupeGroupMembers = async (groupId: mongoose.Types.ObjectId | string) => {
   const group = await Group.findById(groupId);
   if (!group) return null;
@@ -602,9 +610,8 @@ router.post("/:id/invite-link", authenticate, async (req: Request, res: Response
     });
     await link.save();
 
-    const APP_URL = process.env.APP_URL || "http://localhost:3000";
     res.json({
-      url: `${APP_URL}/invite/${link.token}`,
+      url: `${getAppUrl()}/invite/${link.token}`,
       token: link.token,
       expiresAt: link.expiresAt,
     });
@@ -697,7 +704,13 @@ router.post("/join-by-link/:token", async (req: Request, res: Response) => {
 
 router.post("/invite-by-email", authenticate, async (req: Request, res: Response) => {
   try {
-    const { groupId, email, inviterName } = req.body;
+    const { groupId, inviterName } = req.body;
+    const email = String(req.body?.email || "").trim().toLowerCase();
+
+    if (!email) {
+      res.status(400).json({ msg: "Email is required." });
+      return;
+    }
 
     const group = await Group.findById(groupId);
     if (!group) {
@@ -724,7 +737,7 @@ router.post("/invite-by-email", authenticate, async (req: Request, res: Response
         inviterName,
       });
       await group.save();
-      res.json({ method: "in-app" });
+      res.json({ method: "in-app", msg: "In-app invitation sent." });
       return;
     }
 
@@ -735,14 +748,23 @@ router.post("/invite-by-email", authenticate, async (req: Request, res: Response
     });
     await link.save();
 
-    const APP_URL = process.env.APP_URL || "http://localhost:3000";
-    const inviteUrl = `${APP_URL}/invite/${link.token}`;
+    const inviteUrl = `${getAppUrl()}/invite/${link.token}`;
 
     try {
       await sendGroupInviteEmail(email, inviterName, group.name, inviteUrl);
-      res.json({ method: "email" });
-    } catch {
-      res.json({ method: "link-fallback", inviteUrl });
+      res.json({ method: "email", msg: "Email invitation sent.", inviteUrl, expiresAt: link.expiresAt });
+    } catch (error) {
+      console.error("Invite email delivery failed; returning manual link fallback:", {
+        recipientDomain: getEmailDomain(email),
+        name: (error as Error).name,
+        message: (error as Error).message,
+      });
+      res.json({
+        method: "link-fallback",
+        msg: "Email could not be sent. Use this invite link instead.",
+        inviteUrl,
+        expiresAt: link.expiresAt,
+      });
     }
   } catch (error) {
     console.error("Error inviting by email:", error);

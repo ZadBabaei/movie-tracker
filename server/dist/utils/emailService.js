@@ -7,35 +7,57 @@ exports.sendGroupInviteEmail = sendGroupInviteEmail;
 exports.sendPasswordResetEmail = sendPasswordResetEmail;
 exports.sendBugReportEmail = sendBugReportEmail;
 const nodemailer_1 = __importDefault(require("nodemailer"));
-const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, APP_URL } = process.env;
+const getEmailConfig = () => {
+    const host = process.env.EMAIL_HOST || process.env.SMTP_HOST || "smtp.gmail.com";
+    const port = Number(process.env.EMAIL_PORT || process.env.SMTP_PORT) || 587;
+    const user = process.env.EMAIL_USER || process.env.SMTP_USER;
+    const pass = process.env.EMAIL_PASS || process.env.SMTP_PASS;
+    const from = process.env.EMAIL_FROM || (user ? `Movie Tracker <${user}>` : undefined);
+    return { host, port, user, pass, from };
+};
+const getEmailDomain = (email) => {
+    const domain = String(email || "").split("@")[1];
+    return domain || "missing";
+};
 const getSmtpTransporter = () => {
-    if (!SMTP_USER || !SMTP_PASS) {
-        throw new Error("SMTP_USER and SMTP_PASS must be configured to send email");
+    const { host, port, user, pass } = getEmailConfig();
+    if (!user || !pass) {
+        throw new Error("EMAIL_USER/EMAIL_PASS or SMTP_USER/SMTP_PASS must be configured to send email");
     }
-    const port = Number(SMTP_PORT) || 587;
     return nodemailer_1.default.createTransport({
-        host: SMTP_HOST || "smtp.gmail.com",
+        host,
         port,
         secure: port === 465,
         auth: {
-            user: SMTP_USER,
-            pass: SMTP_PASS,
+            user,
+            pass,
         },
     });
 };
 async function sendGroupInviteEmail(to, inviterName, groupName, inviteLink) {
+    const escapedInviterName = escapeHtml(inviterName);
+    const escapedGroupName = escapeHtml(groupName);
+    const escapedInviteLink = escapeHtml(inviteLink);
+    const { from } = getEmailConfig();
+    const text = [
+        `${inviterName} invited you to join ${groupName} on Movie Tracker.`,
+        "",
+        `Open this invite link: ${inviteLink}`,
+        "",
+        "This invitation link will expire in 7 days.",
+    ].join("\n");
     const html = `
     <div style="background:#1a1a2e;color:#e0e0e0;font-family:Arial,sans-serif;padding:40px 20px;text-align:center;">
       <div style="max-width:480px;margin:0 auto;background:#16213e;border-radius:12px;padding:32px;border:1px solid #eab11433;">
         <h1 style="color:#eab114;margin:0 0 8px;">Movie Tracker</h1>
         <p style="color:#aaa;font-size:14px;margin:0 0 24px;">You've been invited!</p>
         <p style="font-size:16px;line-height:1.6;margin:0 0 8px;">
-          <strong style="color:#eab114;">${inviterName}</strong> invited you to join
+          <strong style="color:#eab114;">${escapedInviterName}</strong> invited you to join
         </p>
         <p style="font-size:20px;font-weight:bold;color:#fff;margin:0 0 24px;">
-          ${groupName}
+          ${escapedGroupName}
         </p>
-        <a href="${inviteLink}" style="display:inline-block;background:#eab114;color:#1a1a2e;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:16px;">
+        <a href="${escapedInviteLink}" style="display:inline-block;background:#eab114;color:#1a1a2e;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:16px;">
           Join Group
         </a>
         <p style="color:#666;font-size:12px;margin:24px 0 0;">
@@ -46,15 +68,20 @@ async function sendGroupInviteEmail(to, inviterName, groupName, inviteLink) {
   `;
     try {
         await getSmtpTransporter().sendMail({
-            from: `"Movie Tracker" <${SMTP_USER}>`,
+            from,
             to,
             subject: `${inviterName} invited you to "${groupName}" on Movie Tracker`,
+            text,
             html,
         });
-        console.log(`Invite email sent to ${to}`);
+        console.log("Invite email sent:", { recipientDomain: getEmailDomain(to) });
     }
     catch (error) {
-        console.error("Failed to send invite email:", error);
+        console.error("Failed to send invite email:", {
+            recipientDomain: getEmailDomain(to),
+            name: error.name,
+            message: error.message,
+        });
         throw error;
     }
 }
@@ -86,7 +113,7 @@ async function sendPasswordResetEmail(to, resetLink) {
     </div>
   `;
     await getSmtpTransporter().sendMail({
-        from: `"Movie Tracker" <${SMTP_USER}>`,
+        from: getEmailConfig().from,
         to,
         subject: "Reset your Movie Tracker password",
         text,
@@ -135,7 +162,7 @@ async function sendBugReportEmail(to, bugReport) {
     </div>
   `;
     await getSmtpTransporter().sendMail({
-        from: `"Movie Tracker" <${SMTP_USER}>`,
+        from: getEmailConfig().from,
         to,
         subject: `[Bug][${bugReport.severity}] ${bugReport.title}`,
         html,

@@ -14,6 +14,11 @@ const authMiddleware_1 = require("../middleware/authMiddleware");
 const socket_1 = require("../socket");
 const emailService_1 = require("../utils/emailService");
 const router = express_1.default.Router();
+const getAppUrl = () => (process.env.APP_URL || "http://localhost:3000").replace(/\/+$/, "");
+const getEmailDomain = (email) => {
+    const domain = String(email || "").split("@")[1];
+    return domain || "missing";
+};
 const dedupeGroupMembers = async (groupId) => {
     const group = await Groups_1.default.findById(groupId);
     if (!group)
@@ -517,9 +522,8 @@ router.post("/:id/invite-link", authMiddleware_1.authenticate, async (req, res) 
             createdBy: userId,
         });
         await link.save();
-        const APP_URL = process.env.APP_URL || "http://localhost:3000";
         res.json({
-            url: `${APP_URL}/invite/${link.token}`,
+            url: `${getAppUrl()}/invite/${link.token}`,
             token: link.token,
             expiresAt: link.expiresAt,
         });
@@ -599,7 +603,12 @@ router.post("/join-by-link/:token", async (req, res) => {
 });
 router.post("/invite-by-email", authMiddleware_1.authenticate, async (req, res) => {
     try {
-        const { groupId, email, inviterName } = req.body;
+        const { groupId, inviterName } = req.body;
+        const email = String(req.body?.email || "").trim().toLowerCase();
+        if (!email) {
+            res.status(400).json({ msg: "Email is required." });
+            return;
+        }
         const group = await Groups_1.default.findById(groupId);
         if (!group) {
             res.status(404).json({ msg: "Group not found" });
@@ -624,7 +633,7 @@ router.post("/invite-by-email", authMiddleware_1.authenticate, async (req, res) 
                 inviterName,
             });
             await group.save();
-            res.json({ method: "in-app" });
+            res.json({ method: "in-app", msg: "In-app invitation sent." });
             return;
         }
         // User not found — generate invite link and try to email it
@@ -633,14 +642,23 @@ router.post("/invite-by-email", authMiddleware_1.authenticate, async (req, res) 
             createdBy: req.user.id,
         });
         await link.save();
-        const APP_URL = process.env.APP_URL || "http://localhost:3000";
-        const inviteUrl = `${APP_URL}/invite/${link.token}`;
+        const inviteUrl = `${getAppUrl()}/invite/${link.token}`;
         try {
             await (0, emailService_1.sendGroupInviteEmail)(email, inviterName, group.name, inviteUrl);
-            res.json({ method: "email" });
+            res.json({ method: "email", msg: "Email invitation sent.", inviteUrl, expiresAt: link.expiresAt });
         }
-        catch {
-            res.json({ method: "link-fallback", inviteUrl });
+        catch (error) {
+            console.error("Invite email delivery failed; returning manual link fallback:", {
+                recipientDomain: getEmailDomain(email),
+                name: error.name,
+                message: error.message,
+            });
+            res.json({
+                method: "link-fallback",
+                msg: "Email could not be sent. Use this invite link instead.",
+                inviteUrl,
+                expiresAt: link.expiresAt,
+            });
         }
     }
     catch (error) {

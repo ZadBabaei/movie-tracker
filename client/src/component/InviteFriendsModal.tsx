@@ -25,6 +25,13 @@ interface InviteFriendsModalProps {
 
 type Tab = "email" | "link";
 
+const getInviteErrorMessage = (error: unknown, fallback: string) => {
+  const responseMessage = (error as any)?.response?.data?.msg;
+  return typeof responseMessage === "string" && responseMessage.trim()
+    ? responseMessage
+    : fallback;
+};
+
 const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({ isOpen, onClose, groupId }) => {
   const [activeTab, setActiveTab] = useState<Tab>("email");
   const [searchTerm, setSearchTerm] = useState("");
@@ -100,7 +107,7 @@ const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({ isOpen, onClose
       toast.success("User invited!");
     } catch (error) {
       console.error("Error inviting user:", error);
-      toast.error("Failed to send invitation.");
+      toast.error(getInviteErrorMessage(error, "Failed to send invitation."));
     }
   };
 
@@ -111,11 +118,20 @@ const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({ isOpen, onClose
 
     try {
       const decoded = jwtDecode<{ name: string }>(token);
-      await inviteByEmail(targetGroupId, email, decoded.name);
-      toast.success(`Invitation sent to ${email}!`);
+      const data = await inviteByEmail(targetGroupId, email, decoded.name);
+
+      if (data.method === "link-fallback" && data.inviteUrl) {
+        setInviteLink({ link: data.inviteUrl, expiresAt: data.expiresAt });
+        setActiveTab("link");
+        setCopied(false);
+        toast.warning(data.msg || "Email could not be sent. Use the generated invite link instead.");
+        return;
+      }
+
+      toast.success(data.msg || `Invitation sent to ${email}!`);
     } catch (error) {
       console.error("Error sending email invitation:", error);
-      toast.error("Failed to send email invitation.");
+      toast.error(getInviteErrorMessage(error, "Failed to send email invitation."));
     }
   };
 
@@ -128,7 +144,7 @@ const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({ isOpen, onClose
       setCopied(false);
     } catch (error) {
       console.error("Error generating invite link:", error);
-      toast.error("Failed to generate invite link.");
+      toast.error(getInviteErrorMessage(error, "Failed to generate invite link."));
     } finally {
       setIsGeneratingLink(false);
     }
