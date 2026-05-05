@@ -39,10 +39,6 @@ function GoogleAuthButton({ onSuccess, onError, onNonOAuthError, disabled }) {
       onClick={() => {
         console.log("Google button clicked");
         console.log("Google client ID exists:", Boolean(GOOGLE_CLIENT_ID));
-        console.log(
-          "Google client ID preview:",
-          GOOGLE_CLIENT_ID ? `${GOOGLE_CLIENT_ID.slice(0, 8)}...` : "missing"
-        );
         console.log("Current origin:", window.location.origin);
         console.log("API base URL:", API_BASE_URL || "(same-origin /api fallback)");
         login();

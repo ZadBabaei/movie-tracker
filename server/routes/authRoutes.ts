@@ -43,6 +43,26 @@ const isValidResetToken = (token: string) => /^[a-f0-9]{64}$/i.test(token);
 
 const normalizeEmail = (value: unknown) => String(value || "").trim().toLowerCase();
 
+const logGoogleAuthFailure = (
+  reason: string,
+  details: Record<string, unknown> = {}
+) => {
+  console.error("Google auth failure:", {
+    reason,
+    ...details,
+  });
+};
+
+const sendGoogleAuthFailure = (
+  res: Response,
+  status: number,
+  reason: string,
+  publicMessage = "Google authentication failed"
+) => {
+  logGoogleAuthFailure(reason);
+  res.status(status).json({ msg: publicMessage, reason });
+};
+
 const isForgotPasswordRateLimited = (email: string, ip?: string) => {
   const now = Date.now();
   const key = `${email}:${ip || "unknown"}`;
@@ -214,12 +234,12 @@ router.post("/google", async (req: Request, res: Response) => {
     const googleClientId = process.env.GOOGLE_CLIENT_ID;
 
     if (!googleClientId) {
-      res.status(500).json({ msg: "Google authentication is not configured" });
+      sendGoogleAuthFailure(res, 500, "missing_google_client_id", "Google authentication is not configured");
       return;
     }
 
     if (!credential && !accessToken) {
-      res.status(400).json({ msg: "Missing Google credential" });
+      sendGoogleAuthFailure(res, 400, "missing_google_credential", "Missing Google credential");
       return;
     }
 
@@ -232,6 +252,11 @@ router.post("/google", async (req: Request, res: Response) => {
       });
       payload = ticket.getPayload();
     } else {
+      console.info("Google auth access-token flow started:", {
+        hasAccessToken: Boolean(accessToken),
+        hasGoogleClientId: Boolean(googleClientId),
+      });
+
       const tokenInfoResponse = await fetch(
         `https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`
       );
@@ -241,8 +266,23 @@ router.post("/google", async (req: Request, res: Response) => {
         user_id?: string;
       };
 
-      if (!tokenInfoResponse.ok || tokenInfo.aud !== googleClientId) {
-        res.status(401).json({ msg: "Invalid Google credential" });
+      if (!tokenInfoResponse.ok) {
+        logGoogleAuthFailure("tokeninfo_request_failed", {
+          status: tokenInfoResponse.status,
+          hasAudience: Boolean(tokenInfo.aud),
+          hasSubject: Boolean(tokenInfo.sub || tokenInfo.user_id),
+        });
+        res.status(401).json({ msg: "Invalid Google credential", reason: "tokeninfo_request_failed" });
+        return;
+      }
+
+      if (tokenInfo.aud !== googleClientId) {
+        logGoogleAuthFailure("tokeninfo_audience_mismatch", {
+          hasAudience: Boolean(tokenInfo.aud),
+          expectedAudienceConfigured: Boolean(googleClientId),
+          hasSubject: Boolean(tokenInfo.sub || tokenInfo.user_id),
+        });
+        res.status(401).json({ msg: "Google credential audience mismatch", reason: "tokeninfo_audience_mismatch" });
         return;
       }
 
@@ -252,7 +292,12 @@ router.post("/google", async (req: Request, res: Response) => {
       const userInfo = await userInfoResponse.json().catch(() => ({})) as any;
 
       if (!userInfoResponse.ok) {
-        res.status(401).json({ msg: "Invalid Google credential" });
+        logGoogleAuthFailure("userinfo_request_failed", {
+          status: userInfoResponse.status,
+          hasAudience: Boolean(tokenInfo.aud),
+          hasSubject: Boolean(tokenInfo.sub || tokenInfo.user_id),
+        });
+        res.status(401).json({ msg: "Invalid Google credential", reason: "userinfo_request_failed" });
         return;
       }
 
@@ -263,12 +308,17 @@ router.post("/google", async (req: Request, res: Response) => {
     }
 
     if (!payload?.sub || !payload.email) {
-      res.status(401).json({ msg: "Invalid Google credential" });
+      logGoogleAuthFailure("missing_google_profile_fields", {
+        hasSubject: Boolean(payload?.sub),
+        hasEmail: Boolean(payload?.email),
+      });
+      res.status(401).json({ msg: "Invalid Google credential", reason: "missing_google_profile_fields" });
       return;
     }
 
     if (payload.email_verified === false) {
-      res.status(401).json({ msg: "Google email is not verified" });
+      logGoogleAuthFailure("google_email_not_verified");
+      res.status(401).json({ msg: "Google email is not verified", reason: "google_email_not_verified" });
       return;
     }
 
@@ -319,8 +369,11 @@ router.post("/google", async (req: Request, res: Response) => {
       user: buildAuthUser(user),
     });
   } catch (error) {
-    console.error("Error in Google auth route:", error);
-    res.status(401).json({ msg: "Google authentication failed" });
+    console.error("Error in Google auth route:", {
+      name: (error as Error).name,
+      message: (error as Error).message,
+    });
+    res.status(401).json({ msg: "Google authentication failed", reason: "google_auth_unhandled_error" });
   }
 });
 
