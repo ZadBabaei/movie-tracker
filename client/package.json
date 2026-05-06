@@ -68,5 +68,8 @@
     "html-webpack-plugin": "^5.6.3",
     "react-app-rewired": "^2.2.1",
     "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "linkifyjs": "^4.3.2"
   }
 }
