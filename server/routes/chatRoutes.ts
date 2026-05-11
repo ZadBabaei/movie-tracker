@@ -20,6 +20,17 @@ interface LinkPreview {
 const LINK_PREVIEW_TIMEOUT_MS = 5000;
 const MAX_PREVIEW_HTML_BYTES = 500000;
 
+const getStreamCredentials = () => {
+  const apiKey = process.env.STREAM_API_KEY?.trim();
+  const apiSecret = process.env.STREAM_API_SECRET?.trim();
+
+  if (!apiKey || !apiSecret) {
+    throw new Error("Stream Chat credentials are not configured.");
+  }
+
+  return { apiKey, apiSecret };
+};
+
 const decodeAuthHeader = (authHeader?: string) => {
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     throw new Error("Unauthorized: No token provided");
@@ -205,10 +216,8 @@ router.post("/token", async (req: Request, res: Response) => {
       .select("_id name email avatar")
       .lean();
 
-    const chatClient = StreamChat.getInstance(
-      process.env.STREAM_API_KEY as string,
-      process.env.STREAM_API_SECRET as string
-    );
+    const { apiKey, apiSecret } = getStreamCredentials();
+    const chatClient = StreamChat.getInstance(apiKey, apiSecret);
 
     const chatToken = chatClient.createToken(userId);
     await chatClient.upsertUser({ id: userId, name: userName });
@@ -224,7 +233,7 @@ router.post("/token", async (req: Request, res: Response) => {
 
     res.json({
       token: chatToken,
-      apiKey: process.env.STREAM_API_KEY,
+      apiKey,
       userId,
       name: userName,
       groupMembers,
@@ -258,17 +267,15 @@ router.get("/unread-info", async (req: Request, res: Response) => {
   try {
     const decoded = decodeAuthHeader(req.headers.authorization);
 
-    const chatClient = StreamChat.getInstance(
-      process.env.STREAM_API_KEY as string,
-      process.env.STREAM_API_SECRET as string
-    );
+    const { apiKey, apiSecret } = getStreamCredentials();
+    const chatClient = StreamChat.getInstance(apiKey, apiSecret);
 
     const chatToken = chatClient.createToken(decoded.id);
     await chatClient.upsertUser({ id: decoded.id, name: decoded.name });
 
     res.json({
       chatToken,
-      apiKey: process.env.STREAM_API_KEY,
+      apiKey,
       userId: decoded.id,
       name: decoded.name,
     });

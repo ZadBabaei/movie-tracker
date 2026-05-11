@@ -39,6 +39,26 @@ const normalizeMember = (member, currentUserId) => {
   };
 };
 
+const getChatSetupErrorMessage = (phase) => {
+  if (phase === "token") {
+    return "Could not reach the chat service. Please refresh or try again later.";
+  }
+
+  if (phase === "stream") {
+    return "Could not connect to the chat provider. Please try again later.";
+  }
+
+  return "Failed to load chat. Please try again later.";
+};
+
+const logChatSetupError = (phase, error) => {
+  console.error("Chat setup failed:", {
+    phase,
+    status: error?.response?.status,
+    message: error?.message,
+  });
+};
+
 const ChatBox = ({ groupId, groupName }) => {
   const [chatClient, setChatClient] = useState(null);
   const [channel, setChannel] = useState(null);
@@ -49,7 +69,12 @@ const ChatBox = ({ groupId, groupName }) => {
   const [replyTarget, setReplyTarget] = useState(null);
 
   useEffect(() => {
+    let disposed = false;
+    let activeClient = null;
+
     const initChat = async () => {
+      let phase = "token";
+
       try {
         const token = localStorage.getItem("token");
         if (!token) return;
@@ -64,6 +89,7 @@ const ChatBox = ({ groupId, groupName }) => {
           }
         );
 
+        phase = "stream";
         const {
           token: chatToken,
           apiKey,
@@ -72,7 +98,12 @@ const ChatBox = ({ groupId, groupName }) => {
           groupMembers,
         } = res.data;
 
+        if (!chatToken || !apiKey || !userId) {
+          throw new Error("Chat token response is missing required fields.");
+        }
+
         const client = new StreamChat(apiKey);
+        activeClient = client;
         await client.connectUser({ id: userId, name }, chatToken);
 
         const normalizedMembers = (groupMembers || [])
@@ -84,27 +115,32 @@ const ChatBox = ({ groupId, groupName }) => {
           members: normalizedMembers.map((member) => member.id),
         });
 
+        phase = "channel";
         await groupChannel.watch();
+
+        if (disposed) {
+          client.disconnectUser();
+          return;
+        }
 
         setChatClient(client);
         setChannel(groupChannel);
         setCurrentUserId(userId);
         setMembers(normalizedMembers);
       } catch (error) {
-        console.error("Stream Chat setup failed:", error);
-        setChatError("Failed to load chat. Please try again later.");
+        logChatSetupError(phase, error);
+        if (!disposed) {
+          setChatError(getChatSetupErrorMessage(phase));
+        }
       }
     };
 
     initChat();
 
-
-
-
     return () => {
-      if (chatClient) {
-        chatClient.disconnectUser();
-        setChatClient(null);
+      disposed = true;
+      if (activeClient) {
+        activeClient.disconnectUser();
       }
     };
   }, [groupId]);

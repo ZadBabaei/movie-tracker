@@ -14,6 +14,14 @@ const router = express_1.default.Router();
 const linkPreviewCache = new Map();
 const LINK_PREVIEW_TIMEOUT_MS = 5000;
 const MAX_PREVIEW_HTML_BYTES = 500000;
+const getStreamCredentials = () => {
+    const apiKey = process.env.STREAM_API_KEY?.trim();
+    const apiSecret = process.env.STREAM_API_SECRET?.trim();
+    if (!apiKey || !apiSecret) {
+        throw new Error("Stream Chat credentials are not configured.");
+    }
+    return { apiKey, apiSecret };
+};
 const decodeAuthHeader = (authHeader) => {
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
         throw new Error("Unauthorized: No token provided");
@@ -162,7 +170,8 @@ router.post("/token", async (req, res) => {
         const groupMembers = await user_1.default.find({ _id: { $in: group.members } })
             .select("_id name email avatar")
             .lean();
-        const chatClient = stream_chat_1.StreamChat.getInstance(process.env.STREAM_API_KEY, process.env.STREAM_API_SECRET);
+        const { apiKey, apiSecret } = getStreamCredentials();
+        const chatClient = stream_chat_1.StreamChat.getInstance(apiKey, apiSecret);
         const chatToken = chatClient.createToken(userId);
         await chatClient.upsertUser({ id: userId, name: userName });
         // Upsert all group members so Stream Chat knows about them before channel creation
@@ -173,7 +182,7 @@ router.post("/token", async (req, res) => {
         })));
         res.json({
             token: chatToken,
-            apiKey: process.env.STREAM_API_KEY,
+            apiKey,
             userId,
             name: userName,
             groupMembers,
@@ -204,12 +213,13 @@ router.get("/link-preview", async (req, res) => {
 router.get("/unread-info", async (req, res) => {
     try {
         const decoded = decodeAuthHeader(req.headers.authorization);
-        const chatClient = stream_chat_1.StreamChat.getInstance(process.env.STREAM_API_KEY, process.env.STREAM_API_SECRET);
+        const { apiKey, apiSecret } = getStreamCredentials();
+        const chatClient = stream_chat_1.StreamChat.getInstance(apiKey, apiSecret);
         const chatToken = chatClient.createToken(decoded.id);
         await chatClient.upsertUser({ id: decoded.id, name: decoded.name });
         res.json({
             chatToken,
-            apiKey: process.env.STREAM_API_KEY,
+            apiKey,
             userId: decoded.id,
             name: decoded.name,
         });
