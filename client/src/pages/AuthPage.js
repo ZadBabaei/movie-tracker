@@ -72,6 +72,13 @@ function AuthPage({ initialMode = "signin" }) {
     setError(null);
   }, [initialMode]);
 
+  useEffect(() => {
+    document.body.classList.add("auth-route");
+    return () => {
+      document.body.classList.remove("auth-route");
+    };
+  }, []);
+
   const isSignup = mode === "signup";
   const isForgotPassword = mode === "forgot-password";
   const genericResetMessage = "If an account exists for that email, we sent a reset link.";
