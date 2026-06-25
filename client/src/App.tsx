@@ -14,7 +14,7 @@ import GroupsModal from "./component/GroupsModal";
 import GroupNameModal from "./component/GroupNameModal";
 import InviteFriendsModal from "./component/InviteFriendsModal";
 import OnboardingModal from "./component/OnboardingModal";
-import ChatWidget from "./component/ChatWidget/ChatWidget";
+
 import ToastWrapper from "./component/ToastWrapper";
 import GroupChat from "./pages/GroupChat";
 import JoinByLink from "./pages/JoinByLink";
@@ -125,9 +125,6 @@ function App({ isAuthenticated, isAuthPage }: AppProps) {
       {showOnboarding && (
         <OnboardingModal onComplete={() => setShowOnboarding(false)} />
       )}
-
-      {/* AI Movie Assistant — floating chat widget */}
-      {showModals && <ChatWidget />}
 
       <ToastWrapper />
     </>
