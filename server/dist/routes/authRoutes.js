@@ -13,7 +13,7 @@ const emailService_1 = require("../utils/emailService");
 const avatar_1 = require("../utils/avatar");
 const router = express_1.default.Router();
 const googleClient = new google_auth_library_1.OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-const buildAuthToken = (user, rememberMe = false) => jsonwebtoken_1.default.sign({ id: user._id, name: user.name }, process.env.JWT_SECRET, { expiresIn: rememberMe ? "7d" : "24h" });
+const buildAuthToken = (user) => jsonwebtoken_1.default.sign({ id: user._id, name: user.name }, process.env.JWT_SECRET, { expiresIn: "30d" });
 const resolveAvatarUrl = (user) => {
     const avatar = String(user?.avatar || "").trim();
     return avatar || (0, avatar_1.getDefaultAvatarUrl)(user?.name, user?.email);
@@ -89,7 +89,7 @@ router.post("/register", async (req, res) => {
 });
 router.post("/login", async (req, res) => {
     try {
-        const { password, rememberMe } = req.body;
+        const { password } = req.body;
         const email = normalizeEmail(req.body?.email);
         const user = await user_1.default.findOne({
             email: { $regex: `^${escapeRegex(email)}$`, $options: "i" },
@@ -107,7 +107,7 @@ router.post("/login", async (req, res) => {
             res.status(400).json({ msg: "Invalid credentials" });
             return;
         }
-        const token = buildAuthToken(user, rememberMe);
+        const token = buildAuthToken(user);
         res.json({
             token,
             user: buildAuthUser(user),

@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
+import { StreamChat } from "stream-chat";
 import Group from "../models/Groups";
 import Movie from "../models/movie";
 
@@ -9,8 +10,26 @@ import InvitationLink from "../models/InvitationLink";
 import { authenticate } from "../middleware/authMiddleware";
 import { getIO } from "../socket";
 import { sendGroupInviteEmail } from "../utils/emailService";
+import { getDefaultAvatarUrl } from "../utils/avatar";
 
 const router = express.Router();
+
+const upsertUserToStream = async (user: { _id: any; name?: string; email?: string; avatar?: string }) => {
+  const apiKey = process.env.STREAM_API_KEY?.trim();
+  const apiSecret = process.env.STREAM_API_SECRET?.trim();
+  if (!apiKey || !apiSecret) return;
+
+  try {
+    const chatClient = StreamChat.getInstance(apiKey, apiSecret);
+    await chatClient.upsertUser({
+      id: user._id.toString(),
+      name: user.name || user.email || "Unknown user",
+      image: user.avatar || getDefaultAvatarUrl(user.name, user.email),
+    });
+  } catch (err) {
+    console.error("Failed to upsert user to Stream Chat:", err);
+  }
+};
 
 const getAppUrl = () =>
   (process.env.APP_URL || "http://localhost:3000").replace(/\/+$/, "");
@@ -203,6 +222,8 @@ router.post("/respond", authenticate, async (req: Request, res: Response) => {
           $pull: { pendingInvitations: { userId } },
         }
       );
+      const acceptingUser = await User.findById(userId).lean();
+      if (acceptingUser) await upsertUserToStream(acceptingUser);
     } else {
       await Group.updateOne(
         { _id: group._id },
@@ -692,6 +713,7 @@ router.post("/join-by-link/:token", async (req: Request, res: Response) => {
     if (joined) {
       link.uses += 1;
       await link.save();
+      await upsertUserToStream(user);
     }
 
     await dedupeGroupMembers(fullGroup.id);

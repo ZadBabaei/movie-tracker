@@ -223,13 +223,21 @@ router.post("/token", async (req: Request, res: Response) => {
     await chatClient.upsertUser({ id: userId, name: userName });
 
     // Upsert all group members so Stream Chat knows about them before channel creation
-    await chatClient.upsertUsers(
-      groupMembers.map((m) => ({
-        id: (m._id as any).toString(),
-        name: m.name || m.email || "Unknown user",
-        image: m.avatar || getDefaultAvatarUrl(m.name, m.email),
-      }))
-    );
+    const memberPayloads = groupMembers.map((m) => ({
+      id: (m._id as any).toString(),
+      name: m.name || m.email || "Unknown user",
+      image: m.avatar || getDefaultAvatarUrl(m.name, m.email),
+    }));
+    await chatClient.upsertUsers(memberPayloads);
+
+    // Ensure the Stream channel exists and has all current group members
+    const allMemberIds = memberPayloads.map((m) => m.id);
+    const channel = chatClient.channel("messaging", `group-${groupId}`, {
+      members: allMemberIds,
+      created_by_id: userId,
+    } as Record<string, unknown>);
+    await channel.create();
+    await channel.addMembers(allMemberIds);
 
     res.json({
       token: chatToken,

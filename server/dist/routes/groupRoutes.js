@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const stream_chat_1 = require("stream-chat");
 const Groups_1 = __importDefault(require("../models/Groups"));
 const movie_1 = __importDefault(require("../models/movie"));
 const user_1 = __importDefault(require("../models/user"));
@@ -13,7 +14,25 @@ const InvitationLink_1 = __importDefault(require("../models/InvitationLink"));
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const socket_1 = require("../socket");
 const emailService_1 = require("../utils/emailService");
+const avatar_1 = require("../utils/avatar");
 const router = express_1.default.Router();
+const upsertUserToStream = async (user) => {
+    const apiKey = process.env.STREAM_API_KEY?.trim();
+    const apiSecret = process.env.STREAM_API_SECRET?.trim();
+    if (!apiKey || !apiSecret)
+        return;
+    try {
+        const chatClient = stream_chat_1.StreamChat.getInstance(apiKey, apiSecret);
+        await chatClient.upsertUser({
+            id: user._id.toString(),
+            name: user.name || user.email || "Unknown user",
+            image: user.avatar || (0, avatar_1.getDefaultAvatarUrl)(user.name, user.email),
+        });
+    }
+    catch (err) {
+        console.error("Failed to upsert user to Stream Chat:", err);
+    }
+};
 const getAppUrl = () => (process.env.APP_URL || "http://localhost:3000").replace(/\/+$/, "");
 const getEmailDomain = (email) => {
     const domain = String(email || "").split("@")[1];
@@ -175,6 +194,9 @@ router.post("/respond", authMiddleware_1.authenticate, async (req, res) => {
                 $addToSet: { members: userId },
                 $pull: { pendingInvitations: { userId } },
             });
+            const acceptingUser = await user_1.default.findById(userId).lean();
+            if (acceptingUser)
+                await upsertUserToStream(acceptingUser);
         }
         else {
             await Groups_1.default.updateOne({ _id: group._id }, { $pull: { pendingInvitations: { userId } } });
@@ -592,6 +614,7 @@ router.post("/join-by-link/:token", async (req, res) => {
         if (joined) {
             link.uses += 1;
             await link.save();
+            await upsertUserToStream(user);
         }
         await dedupeGroupMembers(fullGroup.id);
         res.json({ joined, alreadyMember: !joined, groupId: fullGroup._id });

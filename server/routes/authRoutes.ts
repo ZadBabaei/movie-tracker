@@ -10,11 +10,11 @@ import { getDefaultAvatarUrl } from "../utils/avatar";
 const router = express.Router();
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-const buildAuthToken = (user: any, rememberMe = false) =>
+const buildAuthToken = (user: any) =>
   jwt.sign(
     { id: user._id, name: user.name },
     process.env.JWT_SECRET as string,
-    { expiresIn: rememberMe ? "7d" : "24h" }
+    { expiresIn: "30d" }
   );
 
 const resolveAvatarUrl = (user: any) => {
@@ -115,7 +115,7 @@ router.post("/register", async (req: Request, res: Response) => {
 
 router.post("/login", async (req: Request, res: Response) => {
   try {
-    const { password, rememberMe } = req.body;
+    const { password } = req.body;
     const email = normalizeEmail(req.body?.email);
     const user = await User.findOne({
       email: { $regex: `^${escapeRegex(email)}$`, $options: "i" },
@@ -136,7 +136,7 @@ router.post("/login", async (req: Request, res: Response) => {
       return;
     }
 
-    const token = buildAuthToken(user, rememberMe);
+    const token = buildAuthToken(user);
 
     res.json({
       token,
