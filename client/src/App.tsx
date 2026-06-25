@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
@@ -81,8 +81,8 @@ function App({ isAuthenticated, isAuthPage }: AppProps) {
     <>
       <Routes>
         {/* Public Routes */}
-        <Route path="/" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
+        <Route path="/" element={isAuthenticated ? <Navigate to="/home" replace /> : <Login />} />
+        <Route path="/signup" element={isAuthenticated ? <Navigate to="/home" replace /> : <Signup />} />
         <Route path="/invite/:token" element={<JoinByLink />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/terms" element={<Terms />} />
