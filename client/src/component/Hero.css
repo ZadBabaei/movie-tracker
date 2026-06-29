@@ -72,7 +72,7 @@ body,
   font-weight: 800;
   color: #fff;
   margin: 0;
-  font-family: "Poppins", sans-serif;
+  font-family: var(--font-sans);
   letter-spacing: 1px;
 line-height: 50px;
 }
@@ -82,7 +82,7 @@ line-height: 50px;
   color: #cccccc;
   margin-top: 12px;
   font-weight: 400;
-  font-family: "Poppins", sans-serif;
+  font-family: var(--font-sans);
 }
 
 
@@ -103,7 +103,7 @@ line-height: 50px;
 
 .main-heading {
   font-size: 64px;
-  font-family: 'Bebas Neue', 'Poppins', sans-serif;
+  font-family: var(--font-sans);
   letter-spacing: 3px;
   margin: 0;
   line-height: 1.1;
@@ -114,7 +114,7 @@ line-height: 50px;
   font-size: 20px;
   font-weight: 300;
   margin-top: 10px;
-  font-family: 'Poppins', sans-serif;
+  font-family: var(--font-sans);
   line-height: 1.5;
   opacity: 0.85;
   color: #ccc;

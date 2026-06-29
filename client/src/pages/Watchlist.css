@@ -27,7 +27,7 @@
   min-height: 100vh;
   overflow-x: hidden;
   color: var(--wl-text);
-  font-family: "Poppins", sans-serif;
+  font-family: var(--font-sans);
   position: relative;
 }
 

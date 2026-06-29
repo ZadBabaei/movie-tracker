@@ -8,7 +8,7 @@
   display: flex;
   flex-direction: column;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
-  font-family: "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
   z-index: 1;
 }
 

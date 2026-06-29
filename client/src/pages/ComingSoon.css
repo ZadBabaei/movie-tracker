@@ -19,7 +19,7 @@
   min-height: 100vh;
   overflow-x: hidden;
   color: var(--cs-text);
-  font-family: "Poppins", sans-serif;
+  font-family: var(--font-sans);
   background: linear-gradient(to top, var(--cs-bg-emerald), var(--cs-bg-deep));
   position: relative;
 }

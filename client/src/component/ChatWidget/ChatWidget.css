@@ -43,7 +43,7 @@
   overflow: hidden;
   z-index: 10000;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
 }
 
 /* ===== Header ===== */

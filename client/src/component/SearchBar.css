@@ -28,7 +28,7 @@
   background: transparent;
   color: white;
   outline: none;
-  font-family: "Poppins", sans-serif;
+  font-family: var(--font-sans);
 }
 
 .search-btn-glass {

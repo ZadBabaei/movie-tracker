@@ -1,7 +1,7 @@
 .watch-timeline-container {
   width: 100%;
   max-width: 1200px;
-  font-family: "Inter", "Poppins", sans-serif;
+  font-family: var(--font-sans);
   padding: 0 16px;
 }
 
