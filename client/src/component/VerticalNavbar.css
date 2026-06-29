@@ -11,7 +11,7 @@ background: linear-gradient(to top, #17421d, #040a1c);
   padding: 1rem 0;
   width: 70px;
   height: calc(100vh - 2rem);
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -84,15 +84,16 @@ background: linear-gradient(to top, #17421d, #040a1c);
   top: 50%;
 
   transform: translateY(-50%) translateX(-50px);
-  background-color: white;
-  padding: 1rem 1rem;
-  border-radius: 20px;
+  background-color: rgba(10, 18, 30, 0.95);
+  padding: 0.7rem 1rem;
+  border-radius: 10px;
   white-space: nowrap;
-  color: #406ff3;
+  color: #e2e8f0;
   opacity: 0;
   pointer-events: none;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .navbar-link:hover,
@@ -205,12 +206,12 @@ background: linear-gradient(to top, #17421d, #040a1c);
 .navbar-hover-pill {
   min-width: 0;
   max-width: 150px;
-  padding: 1rem 1rem;
-  border: 0;
-  border-radius: 20px;
-  background: #ffffff;
-  color: #406ff3;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 0.7rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(10, 18, 30, 0.95);
+  color: #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -225,8 +226,8 @@ background: linear-gradient(to top, #17421d, #040a1c);
 }
 
 .navbar-hover-pill:hover {
-  background: #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: rgba(16, 26, 40, 0.98);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
 .navbar-hover-pill--primary {

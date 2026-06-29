@@ -8,10 +8,9 @@
 }
 
 .joinbylink-content {
-  background: rgba(20, 20, 30, 0.95);
-  backdrop-filter: blur(18px);
-  border: 1px solid rgba(234, 177, 20, 0.15);
-  border-radius: 20px;
+  background: rgba(16, 18, 26, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
   padding: 48px 40px;
   max-width: 460px;
   width: 100%;
@@ -27,7 +26,7 @@
 .joinbylink-title {
   font-size: 24px;
   font-weight: 700;
-  color: #eab114;
+  color: #e2e8f0;
   margin-bottom: 12px;
 }
 
@@ -39,35 +38,35 @@
 }
 
 .joinbylink-text strong {
-  color: #eab114;
+  color: #2ecc71;
 }
 
 .joinbylink-btn {
   display: inline-block;
   padding: 12px 32px;
-  background: #eab114;
-  color: #0d1117;
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+  color: #052211;
   border: none;
   border-radius: 10px;
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s, transform 0.15s;
+  transition: filter 0.2s, transform 0.15s;
 }
 
 .joinbylink-btn:hover {
-  background: #f0c52c;
+  filter: brightness(1.05);
   transform: translateY(-1px);
 }
 
 .joinbylink-btn-secondary {
   background: transparent;
-  color: #eab114;
-  border: 2px solid #eab114;
+  color: #2ecc71;
+  border: 2px solid #2ecc71;
 }
 
 .joinbylink-btn-secondary:hover {
-  background: rgba(234, 177, 20, 0.1);
+  background: rgba(46, 204, 113, 0.1);
 }
 
 .joinbylink-btn-group {
@@ -79,8 +78,8 @@
 .joinbylink-spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid rgba(234, 177, 20, 0.2);
-  border-top-color: #eab114;
+  border: 4px solid rgba(46, 204, 113, 0.2);
+  border-top-color: #2ecc71;
   border-radius: 50%;
   margin: 0 auto;
   animation: joinbylink-spin 0.8s linear infinite;

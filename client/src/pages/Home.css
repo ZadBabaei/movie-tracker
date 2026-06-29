@@ -1,5 +1,5 @@
 body {
-  background-color: aliceblue;
+  background-color: #0d0d0d;
 }
 
 
@@ -32,8 +32,8 @@ body {
   max-width: 600px;
   padding: 20px 30px;
   background: rgba(0, 0, 0, 0.5);
-  border-left: 10px solid #ff9800;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+  border-left: 6px solid #2ecc71;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   border-radius: 12px;
   animation: fadeInSlideUp 1s ease forwards;
 }

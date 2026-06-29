@@ -38,28 +38,11 @@ body.auth-route #root {
 }
 
 .AuthPage::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
-  background-size: 34px 34px;
-  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.75), transparent 86%);
+  display: none;
 }
 
 .AuthPage::after {
-  content: "";
-  position: absolute;
-  width: 520px;
-  height: 520px;
-  right: -160px;
-  top: -140px;
-  border-radius: 50%;
-  background: rgba(46, 204, 113, 0.14);
-  filter: blur(90px);
-  pointer-events: none;
+  display: none;
 }
 
 .AuthPage-shell {
@@ -102,7 +85,7 @@ body.auth-route #root {
   justify-content: center;
   color: #05140c;
   background: linear-gradient(135deg, #2ecc71, #27ae60);
-  box-shadow: 0 0 28px rgba(46, 204, 113, 0.38);
+  box-shadow: 0 2px 8px rgba(46, 204, 113, 0.25);
 }
 
 .AuthPage-copy h1 {
@@ -129,27 +112,13 @@ body.auth-route #root {
   margin-top: clamp(24px, 4vh, 36px);
   position: relative;
   border-radius: 22px;
-  background:
-    radial-gradient(circle at 50% 40%, rgba(46, 204, 113, 0.18), transparent 58%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.025));
-  box-shadow:
-    0 30px 80px rgba(0, 0, 0, 0.42),
-    0 0 55px rgba(46, 204, 113, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
   overflow: hidden;
 }
 
 .AuthPage-cinema::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 28px 28px;
-  opacity: 0.28;
-  mix-blend-mode: screen;
+  display: none;
 }
 
 .AuthPage-heroImage {
@@ -186,11 +155,11 @@ body.auth-route #root {
   max-height: calc(100vh - 48px);
   justify-self: end;
   padding: clamp(24px, 3.4vh, 30px);
-  border-radius: 24px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.045));
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(22px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(16px);
 }
 
 .AuthPage-toggle {
@@ -362,16 +331,16 @@ body.auth-route #root {
   background: linear-gradient(135deg, #2ecc71, #27ae60);
   font: inherit;
   font-size: 14px;
-  font-weight: 900;
+  font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 16px 30px rgba(46, 204, 113, 0.22);
+  box-shadow: 0 4px 14px rgba(46, 204, 113, 0.2);
   transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
 
 .AuthPage-submit:hover:not(:disabled) {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   filter: brightness(1.05);
-  box-shadow: 0 22px 38px rgba(46, 204, 113, 0.3);
+  box-shadow: 0 6px 18px rgba(46, 204, 113, 0.25);
 }
 
 .AuthPage-submit:disabled {
