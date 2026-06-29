@@ -7,7 +7,6 @@ const Hero = ({
   height = "60vh",
   variant = "group",
 }) => {
-  console.log("Variant:", variant);
   return (
     <div className="hero-navbar" style={{ height }}>
       <div
