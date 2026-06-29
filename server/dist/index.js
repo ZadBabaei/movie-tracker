@@ -21,6 +21,7 @@ const profileRoutes_1 = __importDefault(require("./routes/profileRoutes"));
 const assistantRoutes_1 = __importDefault(require("./routes/assistantRoutes"));
 const commentRoutes_1 = __importDefault(require("./routes/commentRoutes"));
 const bugReportRoutes_1 = __importDefault(require("./routes/bugReportRoutes"));
+const comingSoonRoutes_1 = __importDefault(require("./routes/comingSoonRoutes"));
 const corsConfig_1 = require("./utils/corsConfig");
 const app = (0, express_1.default)();
 const httpServer = http_1.default.createServer(app);
@@ -63,6 +64,7 @@ app.use("/api/profile", profileRoutes_1.default);
 app.use("/api/assistant", assistantRoutes_1.default);
 app.use("/api/comments", commentRoutes_1.default);
 app.use("/api/bug-reports", bugReportRoutes_1.default);
+app.use("/api/coming-soon", comingSoonRoutes_1.default);
 app.use((err, req, res, next) => {
     console.error("Global error handler:", err);
     res.status(500).json({

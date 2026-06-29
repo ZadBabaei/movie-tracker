@@ -6,6 +6,7 @@ import {
   FaEnvelope,
   FaInfoCircle,
   FaThList,
+  FaCalendarAlt,
   FaSignOutAlt,
   FaComments,
   FaEllipsisH,
@@ -119,6 +120,12 @@ const VerticalNavbar: React.FC = () => {
           <a href="/watchlist" className="navbar-link">
             <span className="icon"><FaThList /></span>
             <span className="label">Watchlist</span>
+          </a>
+        </li>
+        <li className="navbar-item">
+          <a href="/coming-soon" className="navbar-link">
+            <span className="icon"><FaCalendarAlt /></span>
+            <span className="label">Coming Soon</span>
           </a>
         </li>
         <li className="navbar-item">
@@ -236,7 +243,7 @@ const VerticalNavbar: React.FC = () => {
       <div className="mobile-more-wrap">
         <button
           type="button"
-          className={`mobile-nav-item ${isMoreOpen ? "active" : ""}`}
+          className={`mobile-nav-item ${isMoreOpen || isActive(["/profile", "/inbox", "/about", "/coming-soon"]) ? "active" : ""}`}
           onClick={() => setIsMoreOpen((open) => !open)}
           aria-expanded={isMoreOpen}
           aria-haspopup="menu"
@@ -248,6 +255,9 @@ const VerticalNavbar: React.FC = () => {
           <div className="mobile-more-menu" role="menu">
             <button type="button" onClick={() => navigate("/profile")} role="menuitem">
               Profile
+            </button>
+            <button type="button" onClick={() => navigate("/coming-soon")} role="menuitem">
+              Coming Soon
             </button>
             <button type="button" onClick={() => navigate("/inbox")} role="menuitem">
               Inbox

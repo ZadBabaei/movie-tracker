@@ -8,6 +8,7 @@ import Inbox from "./pages/inbox";
 import GroupPage from "./pages/GroupPage";
 import MyGroupsPage from "./pages/MyGroupsPage";
 import Watchlist from "./pages/Watchlist";
+import ComingSoon from "./pages/ComingSoon";
 import Profile from "./pages/Profile";
 import About from "./pages/About";
 import GroupsModal from "./component/GroupsModal";
@@ -96,6 +97,7 @@ function App({ isAuthenticated, isAuthPage }: AppProps) {
           <Route path="/group/:id/chat" element={<GroupChat />} />
           <Route path="/my-groups" element={<MyGroupsPage />} />
           <Route path="/watchlist" element={<Watchlist />} />
+          <Route path="/coming-soon" element={<ComingSoon />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/about" element={<About />} />
         </Route>

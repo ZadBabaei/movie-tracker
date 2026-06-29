@@ -18,6 +18,7 @@ import profileRoutes from "./routes/profileRoutes";
 import assistantRoutes from "./routes/assistantRoutes";
 import commentRoutes from "./routes/commentRoutes";
 import bugReportRoutes from "./routes/bugReportRoutes";
+import comingSoonRoutes from "./routes/comingSoonRoutes";
 import { corsOptions } from "./utils/corsConfig";
 
 const app = express();
@@ -70,6 +71,7 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/assistant", assistantRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/bug-reports", bugReportRoutes);
+app.use("/api/coming-soon", comingSoonRoutes);
 
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error("Global error handler:", err);
