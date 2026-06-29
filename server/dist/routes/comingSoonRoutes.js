@@ -12,10 +12,25 @@ const SUPPORTED_TYPES = new Set([
     "streaming",
 ]);
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const WATCHMODE_BASE_URL = "https://api.watchmode.com/v1";
+const WATCHMODE_ENRICH_LIMIT = 24;
 const cache = new Map();
+const imdbLookupCache = new Map();
+const watchmodeDetailsCache = new Map();
+let watchmodeProvidersCache = null;
 const formatDate = (date) => date.toISOString().slice(0, 10);
+const formatWatchmodeDate = (date) => date.toISOString().slice(0, 10).replace(/-/g, "");
 const buildTmdbUrl = (path, params) => {
     const url = new URL(`https://api.themoviedb.org/3${path}`);
+    Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== "") {
+            url.searchParams.set(key, String(value));
+        }
+    });
+    return url.toString();
+};
+const buildWatchmodeUrl = (path, params) => {
+    const url = new URL(`${WATCHMODE_BASE_URL}${path}`);
     Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== "") {
             url.searchParams.set(key, String(value));
@@ -31,6 +46,18 @@ const fetchTmdb = async (url) => {
     }
     return response.json();
 };
+const fetchWatchmode = async (url, apiKey) => {
+    const response = await fetch(url, {
+        headers: {
+            "X-API-Key": apiKey,
+        },
+    });
+    if (!response.ok) {
+        const body = await response.text();
+        throw new Error(`Watchmode ${response.status}: ${body}`);
+    }
+    return response.json();
+};
 const normalizeMovie = (movie, type) => ({
     id: movie.id,
     imdbID: `tmdb-${movie.id}`,
@@ -42,6 +69,146 @@ const normalizeMovie = (movie, type) => ({
     vote_average: Number(movie.vote_average || 0),
     type,
 });
+const getWatchmodeSourceTypes = (type) => {
+    if (type === "streaming")
+        return ["sub", "free"];
+    if (type === "digital")
+        return ["rent", "buy"];
+    return ["sub", "rent", "buy", "free"];
+};
+const getWatchmodeType = (sourceTypes, requestedType) => {
+    if (requestedType === "streaming" || requestedType === "digital")
+        return requestedType;
+    if (sourceTypes.some((sourceType) => sourceType === "sub" || sourceType === "free")) {
+        return "streaming";
+    }
+    if (sourceTypes.some((sourceType) => sourceType === "rent" || sourceType === "buy")) {
+        return "digital";
+    }
+    return "all";
+};
+const getUniqueStrings = (values) => Array.from(new Set(values.filter((value) => Boolean(value))));
+const getPrimaryWebUrl = (sources) => sources.find((source) => typeof source.web_url === "string" && source.web_url.startsWith("http"))
+    ?.web_url;
+const getWatchmodeProviders = async (apiKey, region) => {
+    if (watchmodeProvidersCache && watchmodeProvidersCache.expiresAt > Date.now()) {
+        return watchmodeProvidersCache.data;
+    }
+    const providers = await fetchWatchmode(buildWatchmodeUrl("/sources", { regions: region }), apiKey);
+    const providerMap = new Map();
+    providers.forEach((provider) => {
+        if (provider.id) {
+            providerMap.set(provider.id, provider);
+        }
+    });
+    watchmodeProvidersCache = {
+        expiresAt: Date.now() + CACHE_TTL_MS,
+        data: providerMap,
+    };
+    return providerMap;
+};
+const getWatchmodeDetails = async (apiKey, watchmodeId, region) => {
+    const cached = watchmodeDetailsCache.get(watchmodeId);
+    if (cached && cached.expiresAt > Date.now()) {
+        return cached.data;
+    }
+    const details = await fetchWatchmode(buildWatchmodeUrl(`/title/${watchmodeId}/details`, {
+        append_to_response: "sources",
+        regions: region,
+    }), apiKey);
+    watchmodeDetailsCache.set(watchmodeId, {
+        expiresAt: Date.now() + CACHE_TTL_MS,
+        data: details,
+    });
+    return details;
+};
+const normalizeWatchmodeMovie = (base, details, fallbackSources, requestedType, allowedSourceTypes, releaseDate) => {
+    const allSources = [...(details?.sources || []), ...fallbackSources];
+    const sources = allSources.filter((source) => allowedSourceTypes.includes(source.type));
+    if (sources.length === 0) {
+        return null;
+    }
+    const sourceNames = getUniqueStrings(sources.map((source) => source.name));
+    const sourceTypes = getUniqueStrings(sources.map((source) => source.type));
+    const watchmodeId = base.id;
+    const tmdbId = details?.tmdb_id || ("tmdb_id" in base ? base.tmdb_id || undefined : undefined);
+    const imdbId = details?.imdb_id || ("imdb_id" in base ? base.imdb_id || undefined : undefined);
+    const title = details?.title || base.title || "Untitled movie";
+    return {
+        id: tmdbId || watchmodeId,
+        imdbID: imdbId || `watchmode-${watchmodeId}`,
+        title,
+        overview: details?.plot_overview || "",
+        poster_path: details?.posterLarge || details?.posterMedium || details?.poster || "",
+        backdrop_path: details?.backdrop || "",
+        release_date: releaseDate || details?.release_date || "",
+        vote_average: Number(details?.user_rating || 0),
+        type: getWatchmodeType(sourceTypes, requestedType),
+        watchmodeId,
+        tmdbId,
+        imdbId: imdbId || undefined,
+        sources,
+        sourceNames,
+        sourceTypes,
+        webUrl: getPrimaryWebUrl(sources),
+    };
+};
+const fetchWatchmodeComingSoon = async (apiKey, region, days, type) => {
+    const today = new Date();
+    const endDate = new Date(today);
+    endDate.setUTCDate(endDate.getUTCDate() + days);
+    const start = formatWatchmodeDate(today);
+    const end = formatWatchmodeDate(endDate);
+    const allowedSourceTypes = getWatchmodeSourceTypes(type);
+    const providers = await getWatchmodeProviders(apiKey, region);
+    let normalizedMovies = [];
+    try {
+        const releaseDates = await fetchWatchmode(buildWatchmodeUrl("/title-release-dates", {
+            start_date: start,
+            end_date: end,
+            regions: region,
+        }), apiKey);
+        const movieReleases = releaseDates
+            .filter((release) => release.title_type === "movie")
+            .filter((release) => release.type === "streaming_movie_release")
+            .filter((release) => release.provider_id)
+            .slice(0, WATCHMODE_ENRICH_LIMIT);
+        const movies = await Promise.all(movieReleases.map(async (release) => {
+            const provider = release.provider_id ? providers.get(release.provider_id) : undefined;
+            const fallbackSources = provider
+                ? [
+                    {
+                        source_id: release.provider_id || undefined,
+                        name: provider.name,
+                        type: provider.type === "purchase" ? "buy" : provider.type,
+                        region,
+                    },
+                ]
+                : [];
+            const details = await getWatchmodeDetails(apiKey, release.id, region).catch(() => null);
+            return normalizeWatchmodeMovie(release, details, fallbackSources, type, allowedSourceTypes, release.release_date);
+        }));
+        normalizedMovies = movies.filter((movie) => Boolean(movie));
+    }
+    catch (error) {
+        console.warn("Watchmode release-date lookup failed; falling back to title list:", error);
+    }
+    if (normalizedMovies.length > 0) {
+        return normalizedMovies;
+    }
+    const listResponse = await fetchWatchmode(buildWatchmodeUrl("/list-titles", {
+        types: "movie",
+        regions: region,
+        source_types: allowedSourceTypes.join(","),
+        sort_by: "popularity_desc",
+        limit: WATCHMODE_ENRICH_LIMIT,
+    }), apiKey);
+    const fallbackMovies = await Promise.all((listResponse.titles || []).slice(0, WATCHMODE_ENRICH_LIMIT).map(async (title) => {
+        const details = await getWatchmodeDetails(apiKey, title.id, region).catch(() => null);
+        return normalizeWatchmodeMovie(title, details, [], type, allowedSourceTypes);
+    }));
+    return fallbackMovies.filter((movie) => Boolean(movie));
+};
 const getStreamingProviderIds = async (apiKey, region) => {
     const url = buildTmdbUrl("/watch/providers/movie", {
         api_key: apiKey,
@@ -100,13 +267,56 @@ const discoverMovies = async (apiKey, region, days, type) => {
     });
     return Array.from(deduped.values());
 };
-router.get("/", async (req, res) => {
+router.get("/:tmdbId/imdb", async (req, res) => {
     const apiKey = process.env.TMDB_API_KEY;
     if (!apiKey) {
         res.status(500).json({ msg: "TMDb API key is not configured on the server." });
         return;
     }
-    const region = String(req.query.region || "CA").trim().toUpperCase() || "CA";
+    const tmdbId = Number(req.params.tmdbId);
+    if (!Number.isInteger(tmdbId) || tmdbId <= 0) {
+        res.status(400).json({ msg: "A valid TMDb movie ID is required." });
+        return;
+    }
+    const cached = imdbLookupCache.get(tmdbId);
+    if (cached && cached.expiresAt > Date.now()) {
+        if (cached.data) {
+            res.json(cached.data);
+            return;
+        }
+        res.status(404).json({ msg: "IMDb page is not available for this movie yet." });
+        return;
+    }
+    try {
+        const data = await fetchTmdb(buildTmdbUrl(`/movie/${tmdbId}/external_ids`, { api_key: apiKey }));
+        const imdbId = data.imdb_id || "";
+        const imdbLookup = imdbId.startsWith("tt")
+            ? {
+                imdbId,
+                imdbUrl: `https://www.imdb.com/title/${imdbId}/`,
+            }
+            : null;
+        imdbLookupCache.set(tmdbId, {
+            expiresAt: Date.now() + CACHE_TTL_MS,
+            data: imdbLookup,
+        });
+        if (!imdbLookup) {
+            res.status(404).json({ msg: "IMDb page is not available for this movie yet." });
+            return;
+        }
+        res.json(imdbLookup);
+    }
+    catch (error) {
+        console.error("Failed to fetch IMDb ID from TMDb:", error);
+        res.status(502).json({
+            msg: "Failed to fetch IMDb ID from TMDb.",
+        });
+    }
+});
+router.get("/", async (req, res) => {
+    const region = String(req.query.region || process.env.WATCHMODE_REGION || "CA")
+        .trim()
+        .toUpperCase() || "CA";
     const parsedDays = Number(req.query.days || 30);
     const days = Number.isFinite(parsedDays)
         ? Math.min(Math.max(Math.round(parsedDays), 1), 90)
@@ -120,7 +330,26 @@ router.get("/", async (req, res) => {
         return;
     }
     try {
-        const movies = await discoverMovies(apiKey, region, days, type);
+        if (type === "physical") {
+            const tmdbApiKey = process.env.TMDB_API_KEY;
+            if (!tmdbApiKey) {
+                res.status(500).json({ msg: "TMDb API key is not configured on the server." });
+                return;
+            }
+            const movies = await discoverMovies(tmdbApiKey, region, days, type);
+            cache.set(cacheKey, {
+                expiresAt: Date.now() + CACHE_TTL_MS,
+                data: movies,
+            });
+            res.json(movies);
+            return;
+        }
+        const watchmodeApiKey = process.env.WATCHMODE_API_KEY;
+        if (!watchmodeApiKey) {
+            res.status(500).json({ msg: "Watchmode API key is not configured on the server." });
+            return;
+        }
+        const movies = await fetchWatchmodeComingSoon(watchmodeApiKey, region, days, type);
         cache.set(cacheKey, {
             expiresAt: Date.now() + CACHE_TTL_MS,
             data: movies,
@@ -128,9 +357,9 @@ router.get("/", async (req, res) => {
         res.json(movies);
     }
     catch (error) {
-        console.error("Failed to fetch coming soon movies from TMDb:", error);
+        console.error("Failed to fetch coming soon movies from Watchmode:", error);
         res.status(502).json({
-            msg: "Failed to fetch coming soon movies from TMDb.",
+            msg: "Failed to fetch coming soon movies from Watchmode.",
         });
     }
 });

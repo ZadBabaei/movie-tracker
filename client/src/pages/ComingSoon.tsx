@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import type { AxiosError } from "axios";
 import {
   FaBroadcastTower,
   FaCalendarAlt,
@@ -28,6 +29,28 @@ type ComingSoonMovie = {
   release_date: string;
   vote_average: number;
   type: ComingSoonType;
+  watchmodeId?: number;
+  tmdbId?: number;
+  imdbId?: string;
+  sources?: {
+    source_id?: number;
+    name?: string;
+    type?: string;
+    region?: string;
+    web_url?: string | null;
+  }[];
+  sourceNames?: string[];
+  sourceTypes?: string[];
+  webUrl?: string;
+};
+
+type ImdbLookupResponse = {
+  imdbId: string;
+  imdbUrl: string;
+};
+
+type ApiErrorResponse = {
+  msg?: string;
 };
 
 const FILTERS: {
@@ -48,8 +71,12 @@ const REGIONS = [
   { value: "AU", label: "Australia" },
 ];
 
-const getPosterUrl = (path: string) =>
-  path ? `https://image.tmdb.org/t/p/w500${path}` : "/default-avatar.png";
+const getPosterUrl = (path: string) => {
+  if (!path) return "/default-avatar.png";
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  if (path.startsWith("/")) return `https://image.tmdb.org/t/p/w500${path}`;
+  return "/default-avatar.png";
+};
 
 const formatDate = (value: string) => {
   if (!value) return "Date TBA";
@@ -66,8 +93,11 @@ const getTypeLabel = (type: ComingSoonType) => {
   if (type === "digital") return "Digital";
   if (type === "physical") return "DVD / Physical";
   if (type === "streaming") return "Streaming";
-  return "Coming Soon";
+  return "Available Soon";
 };
+
+const getSourceSummary = (movie: ComingSoonMovie) =>
+  (movie.sourceNames || []).slice(0, 3).join(", ");
 
 const ComingSoon: React.FC = () => {
   const [movies, setMovies] = useState<ComingSoonMovie[]>([]);
@@ -109,13 +139,64 @@ const ComingSoon: React.FC = () => {
     fetchComingSoon();
   }, [fetchComingSoon]);
 
+  const handleOpenImdb = async (movie: ComingSoonMovie) => {
+    const knownImdbId = movie.imdbId || (movie.imdbID?.startsWith("tt") ? movie.imdbID : "");
+    if (knownImdbId) {
+      window.open(`https://www.imdb.com/title/${knownImdbId}/`, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    const tmdbId = movie.tmdbId || (!movie.watchmodeId ? movie.id : undefined);
+    if (!tmdbId) {
+      toast.error("IMDb page is not available for this movie yet.");
+      return;
+    }
+
+    const imdbWindow = window.open("", "_blank");
+    if (!imdbWindow) {
+      toast.error("Please allow pop-ups to open IMDb pages.");
+      return;
+    }
+    imdbWindow.opener = null;
+
+    try {
+      const response = await apiClient.get<ImdbLookupResponse>(
+        `/api/coming-soon/${tmdbId}/imdb`
+      );
+
+      if (!response.data.imdbUrl) {
+        imdbWindow.close();
+        toast.error("IMDb page is not available for this movie yet.");
+        return;
+      }
+
+      imdbWindow.location.href = response.data.imdbUrl;
+    } catch (err: unknown) {
+      imdbWindow.close();
+      const error = err as AxiosError<ApiErrorResponse>;
+      const message =
+        error.response?.data?.msg || "Unable to open IMDb page for this movie.";
+      toast.error(message);
+    }
+  };
+
+  const handleCardKeyDown = (
+    event: React.KeyboardEvent<HTMLElement>,
+    movie: ComingSoonMovie
+  ) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handleOpenImdb(movie);
+    }
+  };
+
   const handleAddToWatchlist = async (movie: ComingSoonMovie) => {
     if (addingIds.has(movie.id)) return;
 
     setAddingIds((current) => new Set(current).add(movie.id));
     try {
       await addToWatchlist({
-        imdbID: `tmdb-${movie.id}`,
+        imdbID: movie.imdbID || `tmdb-${movie.id}`,
         title: movie.title,
         poster_path: movie.poster_path,
         vote_average: movie.vote_average || 0,
@@ -140,7 +221,7 @@ const ComingSoon: React.FC = () => {
         backgroundImage="https://image.tmdb.org/t/p/original/5YZbUmjbMa3ClvSW1Wj3D6XGolb.jpg"
         variant="group"
         heroText="Coming Soon"
-        heroTextSub="Movies arriving in the next 30 days."
+        heroTextSub="Movies arriving on streaming, rent, buy, and digital platforms."
       />
 
       <main className="coming-soon-main">
@@ -150,8 +231,8 @@ const ComingSoon: React.FC = () => {
               <span className="cs-eyebrow">Release discovery</span>
               <h2>Plan the next additions to your watchlist</h2>
               <p>
-                Browse upcoming theatrical, digital, physical, and
-                provider-related releases by region.
+                Browse Canada provider availability for streaming, rental, buy,
+                and digital movie releases.
               </p>
             </div>
 
@@ -227,15 +308,19 @@ const ComingSoon: React.FC = () => {
             </p>
           </section>
         ) : (
-          <section className="cs-grid" role="list">
+          <section className="cs-grid">
             {movies.map((movie, index) => (
               <article
-                key={movie.id}
+                key={`${movie.watchmodeId || movie.id}-${movie.type}`}
                 className="cs-movie-card"
-                role="listitem"
+                role="button"
+                tabIndex={0}
+                aria-label={`Open ${movie.title} on IMDb`}
+                onClick={() => handleOpenImdb(movie)}
+                onKeyDown={(event) => handleCardKeyDown(event, movie)}
                 style={{
-                  ["--cs-stagger" as any]: `${Math.min(index, 14) * 35}ms`,
-                }}
+                  "--cs-stagger": `${Math.min(index, 14) * 35}ms`,
+                } as React.CSSProperties & Record<"--cs-stagger", string>}
               >
                 <div className="cs-poster-wrap">
                   <img
@@ -261,10 +346,21 @@ const ComingSoon: React.FC = () => {
                   </div>
                   <h3 title={movie.title}>{movie.title}</h3>
                   <p>{movie.overview || "No overview is available yet."}</p>
+                  {getSourceSummary(movie) && (
+                    <div className="cs-source-row" title={movie.sourceNames?.join(", ")}>
+                      {getSourceSummary(movie)}
+                    </div>
+                  )}
                   <button
                     type="button"
                     className="cs-add-button"
-                    onClick={() => handleAddToWatchlist(movie)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleAddToWatchlist(movie);
+                    }}
+                    onKeyDown={(event) => {
+                      event.stopPropagation();
+                    }}
                     disabled={addingIds.has(movie.id)}
                   >
                     <FaPlus />
