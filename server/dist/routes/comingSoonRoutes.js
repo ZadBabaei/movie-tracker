@@ -12,6 +12,7 @@ const SUPPORTED_TYPES = new Set([
     "streaming",
 ]);
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const CACHE_VERSION = "release-window-v1";
 const WATCHMODE_BASE_URL = "https://api.watchmode.com/v1";
 const WATCHMODE_ENRICH_LIMIT = 24;
 const cache = new Map();
@@ -20,6 +21,7 @@ const watchmodeDetailsCache = new Map();
 let watchmodeProvidersCache = null;
 const formatDate = (date) => date.toISOString().slice(0, 10);
 const formatWatchmodeDate = (date) => date.toISOString().slice(0, 10).replace(/-/g, "");
+const RELEASE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const buildTmdbUrl = (path, params) => {
     const url = new URL(`https://api.themoviedb.org/3${path}`);
     Object.entries(params).forEach(([key, value]) => {
@@ -46,6 +48,34 @@ const fetchTmdb = async (url) => {
     }
     return response.json();
 };
+const getReleaseWindow = (days) => {
+    const today = new Date();
+    const maxDate = new Date(today);
+    maxDate.setUTCDate(maxDate.getUTCDate() + days);
+    return {
+        todayKey: formatDate(today),
+        maxDateKey: formatDate(maxDate),
+    };
+};
+const isWithinReleaseWindow = (releaseDate, days) => {
+    if (!releaseDate || !RELEASE_DATE_PATTERN.test(releaseDate))
+        return false;
+    const parsedDate = new Date(`${releaseDate}T00:00:00.000Z`);
+    if (Number.isNaN(parsedDate.getTime()) || formatDate(parsedDate) !== releaseDate) {
+        return false;
+    }
+    const { todayKey, maxDateKey } = getReleaseWindow(days);
+    return releaseDate >= todayKey && releaseDate <= maxDateKey;
+};
+const filterComingSoonReleaseWindow = (movies, days) => movies
+    // Coming Soon must only return dated releases from today through the requested future window.
+    .filter((movie) => isWithinReleaseWindow(movie.release_date, days))
+    .sort((a, b) => {
+    const dateCompare = a.release_date.localeCompare(b.release_date);
+    if (dateCompare !== 0)
+        return dateCompare;
+    return Number(b.vote_average || 0) - Number(a.vote_average || 0);
+});
 const fetchWatchmode = async (url, apiKey) => {
     const response = await fetch(url, {
         headers: {
@@ -194,7 +224,7 @@ const fetchWatchmodeComingSoon = async (apiKey, region, days, type) => {
         console.warn("Watchmode release-date lookup failed; falling back to title list:", error);
     }
     if (normalizedMovies.length > 0) {
-        return normalizedMovies;
+        return filterComingSoonReleaseWindow(normalizedMovies, days);
     }
     const listResponse = await fetchWatchmode(buildWatchmodeUrl("/list-titles", {
         types: "movie",
@@ -207,7 +237,7 @@ const fetchWatchmodeComingSoon = async (apiKey, region, days, type) => {
         const details = await getWatchmodeDetails(apiKey, title.id, region).catch(() => null);
         return normalizeWatchmodeMovie(title, details, [], type, allowedSourceTypes);
     }));
-    return fallbackMovies.filter((movie) => Boolean(movie));
+    return filterComingSoonReleaseWindow(fallbackMovies.filter((movie) => Boolean(movie)), days);
 };
 const getStreamingProviderIds = async (apiKey, region) => {
     const url = buildTmdbUrl("/watch/providers/movie", {
@@ -265,7 +295,7 @@ const discoverMovies = async (apiKey, region, days, type) => {
             deduped.set(movie.id, normalizeMovie(movie, type));
         }
     });
-    return Array.from(deduped.values());
+    return filterComingSoonReleaseWindow(Array.from(deduped.values()), days);
 };
 router.get("/:tmdbId/imdb", async (req, res) => {
     const apiKey = process.env.TMDB_API_KEY;
@@ -323,7 +353,7 @@ router.get("/", async (req, res) => {
         : 30;
     const requestedType = String(req.query.type || "all").toLowerCase();
     const type = SUPPORTED_TYPES.has(requestedType) ? requestedType : "all";
-    const cacheKey = `${region}:${days}:${type}`;
+    const cacheKey = `${CACHE_VERSION}:${region}:${days}:${type}`;
     const cached = cache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
         res.json(cached.data);
@@ -336,7 +366,7 @@ router.get("/", async (req, res) => {
                 res.status(500).json({ msg: "TMDb API key is not configured on the server." });
                 return;
             }
-            const movies = await discoverMovies(tmdbApiKey, region, days, type);
+            const movies = filterComingSoonReleaseWindow(await discoverMovies(tmdbApiKey, region, days, type), days);
             cache.set(cacheKey, {
                 expiresAt: Date.now() + CACHE_TTL_MS,
                 data: movies,
@@ -349,7 +379,7 @@ router.get("/", async (req, res) => {
             res.status(500).json({ msg: "Watchmode API key is not configured on the server." });
             return;
         }
-        const movies = await fetchWatchmodeComingSoon(watchmodeApiKey, region, days, type);
+        const movies = filterComingSoonReleaseWindow(await fetchWatchmodeComingSoon(watchmodeApiKey, region, days, type), days);
         cache.set(cacheKey, {
             expiresAt: Date.now() + CACHE_TTL_MS,
             data: movies,

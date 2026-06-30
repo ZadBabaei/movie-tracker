@@ -113,6 +113,7 @@ const SUPPORTED_TYPES = new Set<ComingSoonType>([
   "streaming",
 ]);
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const CACHE_VERSION = "release-window-v1";
 const WATCHMODE_BASE_URL = "https://api.watchmode.com/v1";
 const WATCHMODE_ENRICH_LIMIT = 24;
 const cache = new Map<string, CacheEntry>();
@@ -122,6 +123,7 @@ let watchmodeProvidersCache: { expiresAt: number; data: Map<number, WatchmodePro
 
 const formatDate = (date: Date) => date.toISOString().slice(0, 10);
 const formatWatchmodeDate = (date: Date) => date.toISOString().slice(0, 10).replace(/-/g, "");
+const RELEASE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 const buildTmdbUrl = (path: string, params: Record<string, string | number | undefined>) => {
   const url = new URL(`https://api.themoviedb.org/3${path}`);
@@ -151,6 +153,38 @@ const fetchTmdb = async <T>(url: string): Promise<T> => {
   }
   return response.json() as Promise<T>;
 };
+
+const getReleaseWindow = (days: number) => {
+  const today = new Date();
+  const maxDate = new Date(today);
+  maxDate.setUTCDate(maxDate.getUTCDate() + days);
+
+  return {
+    todayKey: formatDate(today),
+    maxDateKey: formatDate(maxDate),
+  };
+};
+
+const isWithinReleaseWindow = (releaseDate: string | undefined, days: number) => {
+  if (!releaseDate || !RELEASE_DATE_PATTERN.test(releaseDate)) return false;
+  const parsedDate = new Date(`${releaseDate}T00:00:00.000Z`);
+  if (Number.isNaN(parsedDate.getTime()) || formatDate(parsedDate) !== releaseDate) {
+    return false;
+  }
+
+  const { todayKey, maxDateKey } = getReleaseWindow(days);
+  return releaseDate >= todayKey && releaseDate <= maxDateKey;
+};
+
+const filterComingSoonReleaseWindow = (movies: ComingSoonMovie[], days: number) =>
+  movies
+    // Coming Soon must only return dated releases from today through the requested future window.
+    .filter((movie) => isWithinReleaseWindow(movie.release_date, days))
+    .sort((a, b) => {
+      const dateCompare = a.release_date.localeCompare(b.release_date);
+      if (dateCompare !== 0) return dateCompare;
+      return Number(b.vote_average || 0) - Number(a.vote_average || 0);
+    });
 
 const fetchWatchmode = async <T>(url: string, apiKey: string): Promise<T> => {
   const response = await fetch(url, {
@@ -360,7 +394,7 @@ const fetchWatchmodeComingSoon = async (
   }
 
   if (normalizedMovies.length > 0) {
-    return normalizedMovies;
+    return filterComingSoonReleaseWindow(normalizedMovies, days);
   }
 
   const listResponse = await fetchWatchmode<{ titles?: WatchmodeTitleListItem[] }>(
@@ -381,7 +415,10 @@ const fetchWatchmodeComingSoon = async (
     })
   );
 
-  return fallbackMovies.filter((movie): movie is ComingSoonMovie => Boolean(movie));
+  return filterComingSoonReleaseWindow(
+    fallbackMovies.filter((movie): movie is ComingSoonMovie => Boolean(movie)),
+    days
+  );
 };
 
 const getStreamingProviderIds = async (apiKey: string, region: string) => {
@@ -459,7 +496,7 @@ const discoverMovies = async (
       }
     });
 
-  return Array.from(deduped.values());
+  return filterComingSoonReleaseWindow(Array.from(deduped.values()), days);
 };
 
 router.get("/:tmdbId/imdb", async (req: Request, res: Response) => {
@@ -527,7 +564,7 @@ router.get("/", async (req: Request, res: Response) => {
     : 30;
   const requestedType = String(req.query.type || "all").toLowerCase() as ComingSoonType;
   const type = SUPPORTED_TYPES.has(requestedType) ? requestedType : "all";
-  const cacheKey = `${region}:${days}:${type}`;
+  const cacheKey = `${CACHE_VERSION}:${region}:${days}:${type}`;
   const cached = cache.get(cacheKey);
 
   if (cached && cached.expiresAt > Date.now()) {
@@ -543,7 +580,10 @@ router.get("/", async (req: Request, res: Response) => {
         return;
       }
 
-      const movies = await discoverMovies(tmdbApiKey, region, days, type);
+      const movies = filterComingSoonReleaseWindow(
+        await discoverMovies(tmdbApiKey, region, days, type),
+        days
+      );
       cache.set(cacheKey, {
         expiresAt: Date.now() + CACHE_TTL_MS,
         data: movies,
@@ -558,7 +598,10 @@ router.get("/", async (req: Request, res: Response) => {
       return;
     }
 
-    const movies = await fetchWatchmodeComingSoon(watchmodeApiKey, region, days, type);
+    const movies = filterComingSoonReleaseWindow(
+      await fetchWatchmodeComingSoon(watchmodeApiKey, region, days, type),
+      days
+    );
     cache.set(cacheKey, {
       expiresAt: Date.now() + CACHE_TTL_MS,
       data: movies,

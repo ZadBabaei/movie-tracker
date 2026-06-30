@@ -71,6 +71,29 @@ const REGIONS = [
   { value: "AU", label: "Australia" },
 ];
 
+const RELEASE_WINDOW_DAYS = 30;
+const RELEASE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+const toDateKey = (date = new Date()) => date.toISOString().slice(0, 10);
+
+const addDaysKey = (days: number) => {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() + days);
+  return toDateKey(date);
+};
+
+const isWithinReleaseWindow = (releaseDate: string | undefined, days: number) => {
+  if (!releaseDate || !RELEASE_DATE_PATTERN.test(releaseDate)) return false;
+  const parsedDate = new Date(`${releaseDate}T00:00:00.000Z`);
+  if (Number.isNaN(parsedDate.getTime()) || toDateKey(parsedDate) !== releaseDate) {
+    return false;
+  }
+
+  const todayKey = toDateKey();
+  const maxDateKey = addDaysKey(days);
+  return releaseDate >= todayKey && releaseDate <= maxDateKey;
+};
+
 const getPosterUrl = (path: string) => {
   if (!path) return "/default-avatar.png";
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
@@ -111,6 +134,17 @@ const ComingSoon: React.FC = () => {
     () => FILTERS.find((filter) => filter.id === selectedType) || FILTERS[0],
     [selectedType]
   );
+  const visibleMovies = useMemo(
+    () =>
+      movies
+        .filter((movie) => isWithinReleaseWindow(movie.release_date, RELEASE_WINDOW_DAYS))
+        .sort((a, b) => {
+          const dateCompare = a.release_date.localeCompare(b.release_date);
+          if (dateCompare !== 0) return dateCompare;
+          return Number(b.vote_average || 0) - Number(a.vote_average || 0);
+        }),
+    [movies]
+  );
 
   const fetchComingSoon = useCallback(async () => {
     setLoading(true);
@@ -120,7 +154,7 @@ const ComingSoon: React.FC = () => {
       const response = await apiClient.get<ComingSoonMovie[]>("/api/coming-soon", {
         params: {
           region,
-          days: 30,
+          days: RELEASE_WINDOW_DAYS,
           type: selectedType,
         },
       });
@@ -278,7 +312,7 @@ const ComingSoon: React.FC = () => {
             <strong>
               {loading
                 ? "Loading titles"
-                : `${movies.length} ${movies.length === 1 ? "movie" : "movies"}`}
+                : `${visibleMovies.length} ${visibleMovies.length === 1 ? "movie" : "movies"}`}
             </strong>
           </div>
         </section>
@@ -298,18 +332,18 @@ const ComingSoon: React.FC = () => {
               Try again
             </button>
           </section>
-        ) : movies.length === 0 ? (
+        ) : visibleMovies.length === 0 ? (
           <section className="cs-state-card">
             <FaCalendarAlt />
             <h3>No matching releases found</h3>
             <p>
-              TMDb did not return any {selectedFilter.label.toLowerCase()} titles
-              for {region} in the next 30 days. Try another filter or region.
+              No releases found in the next {RELEASE_WINDOW_DAYS} days for this
+              region and filter.
             </p>
           </section>
         ) : (
           <section className="cs-grid">
-            {movies.map((movie, index) => (
+            {visibleMovies.map((movie, index) => (
               <article
                 key={`${movie.watchmodeId || movie.id}-${movie.type}`}
                 className="cs-movie-card"
