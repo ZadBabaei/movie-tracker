@@ -15,6 +15,18 @@ type TmdbMovie = {
   vote_average?: number;
 };
 
+type TmdbReleaseDateEntry = {
+  type?: number;
+  release_date?: string;
+};
+
+type TmdbReleaseDatesResponse = {
+  results?: {
+    iso_3166_1?: string;
+    release_dates?: TmdbReleaseDateEntry[];
+  }[];
+};
+
 type WatchmodeSourceType = "sub" | "rent" | "buy" | "free" | "tve";
 
 type WatchmodeSource = {
@@ -113,17 +125,27 @@ const SUPPORTED_TYPES = new Set<ComingSoonType>([
   "streaming",
 ]);
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
-const CACHE_VERSION = "release-window-v1";
+const CACHE_VERSION = "release-event-window-v2";
 const WATCHMODE_BASE_URL = "https://api.watchmode.com/v1";
 const WATCHMODE_ENRICH_LIMIT = 24;
 const cache = new Map<string, CacheEntry>();
 const imdbLookupCache = new Map<number, ImdbLookupCacheEntry>();
 const watchmodeDetailsCache = new Map<number, { expiresAt: number; data: WatchmodeTitleDetails }>();
+const tmdbReleaseDatesCache = new Map<number, { expiresAt: number; data: TmdbReleaseDatesResponse }>();
 let watchmodeProvidersCache: { expiresAt: number; data: Map<number, WatchmodeProvider> } | null = null;
 
 const formatDate = (date: Date) => date.toISOString().slice(0, 10);
 const formatWatchmodeDate = (date: Date) => date.toISOString().slice(0, 10).replace(/-/g, "");
 const RELEASE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+const normalizeReleaseDateKey = (value: string | undefined | null) => {
+  if (!value) return "";
+  if (/^\d{8}$/.test(value)) {
+    return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`;
+  }
+  const dateKey = value.slice(0, 10);
+  return RELEASE_DATE_PATTERN.test(dateKey) ? dateKey : "";
+};
 
 const buildTmdbUrl = (path: string, params: Record<string, string | number | undefined>) => {
   const url = new URL(`https://api.themoviedb.org/3${path}`);
@@ -178,13 +200,19 @@ const isWithinReleaseWindow = (releaseDate: string | undefined, days: number) =>
 
 const filterComingSoonReleaseWindow = (movies: ComingSoonMovie[], days: number) =>
   movies
-    // Coming Soon must only return dated releases from today through the requested future window.
+    // Coming Soon must only return dated release events from today through the requested future window.
     .filter((movie) => isWithinReleaseWindow(movie.release_date, days))
     .sort((a, b) => {
       const dateCompare = a.release_date.localeCompare(b.release_date);
       if (dateCompare !== 0) return dateCompare;
       return Number(b.vote_average || 0) - Number(a.vote_average || 0);
     });
+
+const logComingSoonDebug = (details: Record<string, unknown>) => {
+  if (process.env.NODE_ENV !== "production") {
+    console.info("[coming-soon]", details);
+  }
+};
 
 const fetchWatchmode = async <T>(url: string, apiKey: string): Promise<T> => {
   const response = await fetch(url, {
@@ -203,7 +231,8 @@ const fetchWatchmode = async <T>(url: string, apiKey: string): Promise<T> => {
 
 const normalizeMovie = (
   movie: TmdbMovie,
-  type: ComingSoonType
+  type: ComingSoonType,
+  releaseDate?: string
 ): ComingSoonMovie => ({
   id: movie.id,
   imdbID: `tmdb-${movie.id}`,
@@ -211,7 +240,7 @@ const normalizeMovie = (
   overview: movie.overview || "",
   poster_path: movie.poster_path || "",
   backdrop_path: movie.backdrop_path || "",
-  release_date: movie.release_date || "",
+  release_date: releaseDate || movie.release_date || "",
   vote_average: Number(movie.vote_average || 0),
   type,
 });
@@ -296,9 +325,11 @@ const normalizeWatchmodeMovie = (
   releaseDate?: string
 ): ComingSoonMovie | null => {
   const allSources = [...(details?.sources || []), ...fallbackSources];
-  const sources = allSources.filter((source) =>
+  const isReleaseEvent = "release_date" in base;
+  const filteredSources = allSources.filter((source) =>
     allowedSourceTypes.includes(source.type as WatchmodeSourceType)
   );
+  const sources = isReleaseEvent ? allSources : filteredSources;
 
   if (sources.length === 0) {
     return null;
@@ -318,9 +349,11 @@ const normalizeWatchmodeMovie = (
     overview: details?.plot_overview || "",
     poster_path: details?.posterLarge || details?.posterMedium || details?.poster || "",
     backdrop_path: details?.backdrop || "",
-    release_date: releaseDate || details?.release_date || "",
+    release_date: normalizeReleaseDateKey(releaseDate),
     vote_average: Number(details?.user_rating || 0),
-    type: getWatchmodeType(sourceTypes, requestedType),
+    type: requestedType === "streaming" || isReleaseEvent
+      ? "streaming"
+      : getWatchmodeType(sourceTypes, requestedType),
     watchmodeId,
     tmdbId,
     imdbId: imdbId || undefined,
@@ -345,80 +378,58 @@ const fetchWatchmodeComingSoon = async (
   const allowedSourceTypes = getWatchmodeSourceTypes(type);
   const providers = await getWatchmodeProviders(apiKey, region);
 
-  let normalizedMovies: ComingSoonMovie[] = [];
-
-  try {
-    const releaseDates = await fetchWatchmode<WatchmodeReleaseDate[]>(
-      buildWatchmodeUrl("/title-release-dates", {
-        start_date: start,
-        end_date: end,
-        regions: region,
-      }),
-      apiKey
-    );
-
-    const movieReleases = releaseDates
-      .filter((release) => release.title_type === "movie")
-      .filter((release) => release.type === "streaming_movie_release")
-      .filter((release) => release.provider_id)
-      .slice(0, WATCHMODE_ENRICH_LIMIT);
-
-    const movies = await Promise.all(
-      movieReleases.map(async (release) => {
-        const provider = release.provider_id ? providers.get(release.provider_id) : undefined;
-        const fallbackSources: WatchmodeSource[] = provider
-          ? [
-              {
-                source_id: release.provider_id || undefined,
-                name: provider.name,
-                type: provider.type === "purchase" ? "buy" : provider.type,
-                region,
-              },
-            ]
-          : [];
-        const details = await getWatchmodeDetails(apiKey, release.id, region).catch(() => null);
-        return normalizeWatchmodeMovie(
-          release,
-          details,
-          fallbackSources,
-          type,
-          allowedSourceTypes,
-          release.release_date
-        );
-      })
-    );
-
-    normalizedMovies = movies.filter((movie): movie is ComingSoonMovie => Boolean(movie));
-  } catch (error) {
-    console.warn("Watchmode release-date lookup failed; falling back to title list:", error);
-  }
-
-  if (normalizedMovies.length > 0) {
-    return filterComingSoonReleaseWindow(normalizedMovies, days);
-  }
-
-  const listResponse = await fetchWatchmode<{ titles?: WatchmodeTitleListItem[] }>(
-    buildWatchmodeUrl("/list-titles", {
-      types: "movie",
+  const releaseDates = await fetchWatchmode<WatchmodeReleaseDate[]>(
+    buildWatchmodeUrl("/title-release-dates", {
+      start_date: start,
+      end_date: end,
       regions: region,
-      source_types: allowedSourceTypes.join(","),
-      sort_by: "popularity_desc",
-      limit: WATCHMODE_ENRICH_LIMIT,
     }),
     apiKey
   );
 
-  const fallbackMovies = await Promise.all(
-    (listResponse.titles || []).slice(0, WATCHMODE_ENRICH_LIMIT).map(async (title) => {
-      const details = await getWatchmodeDetails(apiKey, title.id, region).catch(() => null);
-      return normalizeWatchmodeMovie(title, details, [], type, allowedSourceTypes);
+  const movieReleases = releaseDates
+    .filter((release) => release.title_type === "movie")
+    .filter((release) => release.type === "streaming_movie_release")
+    .filter((release) => release.provider_id)
+    .slice(0, WATCHMODE_ENRICH_LIMIT);
+
+  const movies = await Promise.all(
+    movieReleases.map(async (release) => {
+      const provider = release.provider_id ? providers.get(release.provider_id) : undefined;
+      const fallbackSources: WatchmodeSource[] = [
+        {
+          source_id: release.provider_id || undefined,
+          name: provider?.name,
+          type: provider?.type === "purchase" ? "buy" : provider?.type,
+          region,
+        },
+      ];
+      const details = await getWatchmodeDetails(apiKey, release.id, region).catch(() => null);
+      return normalizeWatchmodeMovie(
+        release,
+        details,
+        fallbackSources,
+        type,
+        allowedSourceTypes,
+        release.release_date
+      );
     })
   );
 
-  return filterComingSoonReleaseWindow(
-    fallbackMovies.filter((movie): movie is ComingSoonMovie => Boolean(movie)),
-    days
-  );
+  const normalizedMovies = movies.filter((movie): movie is ComingSoonMovie => Boolean(movie));
+  const filteredMovies = filterComingSoonReleaseWindow(normalizedMovies, days);
+  logComingSoonDebug({
+    type,
+    region,
+    source: "watchmode:title-release-dates",
+    sourceCount: releaseDates.length,
+    normalizedCount: normalizedMovies.length,
+    filteredCount: filteredMovies.length,
+  });
+
+  // /list-titles returns currently available/popular catalog items, not strict upcoming
+  // availability events, so it is intentionally not used as a Coming Soon fallback.
+  return filteredMovies;
 };
 
 const getStreamingProviderIds = async (apiKey: string, region: string) => {
@@ -432,6 +443,43 @@ const getStreamingProviderIds = async (apiKey: string, region: string) => {
     .map((provider) => provider.provider_id)
     .filter(Boolean)
     .slice(0, 12);
+};
+
+const getTmdbReleaseDates = async (apiKey: string, movieId: number) => {
+  const cached = tmdbReleaseDatesCache.get(movieId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+
+  const data = await fetchTmdb<TmdbReleaseDatesResponse>(
+    buildTmdbUrl(`/movie/${movieId}/release_dates`, { api_key: apiKey })
+  );
+  tmdbReleaseDatesCache.set(movieId, {
+    expiresAt: Date.now() + CACHE_TTL_MS,
+    data,
+  });
+  return data;
+};
+
+const getTmdbReleaseEventDate = async (
+  apiKey: string,
+  movieId: number,
+  region: string,
+  releaseType: number,
+  days: number
+) => {
+  const data = await getTmdbReleaseDates(apiKey, movieId);
+  const regionRelease = (data.results || []).find(
+    (release) => release.iso_3166_1?.toUpperCase() === region
+  );
+
+  const eventDates = (regionRelease?.release_dates || [])
+    .filter((release) => release.type === releaseType)
+    .map((release) => normalizeReleaseDateKey(release.release_date))
+    .filter((releaseDate) => isWithinReleaseWindow(releaseDate, days))
+    .sort();
+
+  return eventDates[0] || "";
 };
 
 const discoverMovies = async (
@@ -452,8 +500,6 @@ const discoverMovies = async (
     region,
     include_adult: "false",
     sort_by: "popularity.desc",
-    "primary_release_date.gte": start,
-    "primary_release_date.lte": end,
     "release_date.gte": start,
     "release_date.lte": end,
   };
@@ -464,6 +510,11 @@ const discoverMovies = async (
 
   if (type === "physical") {
     baseParams.with_release_type = 5;
+  }
+
+  if (type !== "digital" && type !== "physical") {
+    baseParams["primary_release_date.gte"] = start;
+    baseParams["primary_release_date.lte"] = end;
   }
 
   if (type === "streaming") {
@@ -487,14 +538,64 @@ const discoverMovies = async (
   );
 
   const deduped = new Map<number, ComingSoonMovie>();
-  responses
+  const candidates = responses
     .flatMap((response) => response.results || [])
-    .filter((movie) => movie.id && movie.release_date >= start && movie.release_date <= end)
-    .forEach((movie) => {
+    .filter((movie) => movie.id)
+    .filter((movie) => {
+      if (type === "digital" || type === "physical") return true;
+      return movie.release_date && movie.release_date >= start && movie.release_date <= end;
+    });
+
+  const releaseType = type === "digital" ? 4 : type === "physical" ? 5 : undefined;
+  const moviesWithEventDates = await Promise.all(
+    candidates.map(async (movie) => {
+      const eventDate = releaseType
+        ? await getTmdbReleaseEventDate(apiKey, movie.id, region, releaseType, days).catch(
+            () => ""
+          )
+        : movie.release_date || "";
+      return { movie, eventDate };
+    })
+  );
+
+  moviesWithEventDates
+    .filter(({ eventDate }) => isWithinReleaseWindow(eventDate, days))
+    .forEach(({ movie, eventDate }) => {
       if (!deduped.has(movie.id)) {
-        deduped.set(movie.id, normalizeMovie(movie, type));
+        deduped.set(movie.id, normalizeMovie(movie, type, eventDate));
       }
     });
+
+  const filteredMovies = filterComingSoonReleaseWindow(Array.from(deduped.values()), days);
+  logComingSoonDebug({
+    type,
+    region,
+    source: "tmdb:discover",
+    sourceCount: candidates.length,
+    normalizedCount: deduped.size,
+    filteredCount: filteredMovies.length,
+  });
+
+  return filteredMovies;
+};
+
+const getDedupeKey = (movie: ComingSoonMovie) => {
+  if (movie.tmdbId) return `tmdb:${movie.tmdbId}`;
+  if (movie.imdbId) return `imdb:${movie.imdbId}`;
+  if (movie.watchmodeId) return `watchmode:${movie.watchmodeId}`;
+  return `title:${movie.title.toLowerCase()}:${movie.release_date}`;
+};
+
+const combineComingSoonMovies = (groups: ComingSoonMovie[][], days: number) => {
+  const deduped = new Map<string, ComingSoonMovie>();
+
+  groups.flat().forEach((movie) => {
+    const key = getDedupeKey(movie);
+    const existing = deduped.get(key);
+    if (!existing || Number(movie.vote_average || 0) > Number(existing.vote_average || 0)) {
+      deduped.set(key, movie);
+    }
+  });
 
   return filterComingSoonReleaseWindow(Array.from(deduped.values()), days);
 };
@@ -573,7 +674,7 @@ router.get("/", async (req: Request, res: Response) => {
   }
 
   try {
-    if (type === "physical") {
+    if (type === "digital" || type === "physical") {
       const tmdbApiKey = process.env.TMDB_API_KEY;
       if (!tmdbApiKey) {
         res.status(500).json({ msg: "TMDb API key is not configured on the server." });
@@ -592,25 +693,68 @@ router.get("/", async (req: Request, res: Response) => {
       return;
     }
 
+    if (type === "streaming") {
+      const watchmodeApiKey = process.env.WATCHMODE_API_KEY;
+      if (!watchmodeApiKey) {
+        res.status(500).json({ msg: "Watchmode API key is not configured on the server." });
+        return;
+      }
+
+      const movies = filterComingSoonReleaseWindow(
+        await fetchWatchmodeComingSoon(watchmodeApiKey, region, days, type),
+        days
+      );
+      cache.set(cacheKey, {
+        expiresAt: Date.now() + CACHE_TTL_MS,
+        data: movies,
+      });
+      res.json(movies);
+      return;
+    }
+
     const watchmodeApiKey = process.env.WATCHMODE_API_KEY;
     if (!watchmodeApiKey) {
       res.status(500).json({ msg: "Watchmode API key is not configured on the server." });
       return;
     }
 
-    const movies = filterComingSoonReleaseWindow(
-      await fetchWatchmodeComingSoon(watchmodeApiKey, region, days, type),
+    const tmdbApiKey = process.env.TMDB_API_KEY;
+    const digitalMovies = tmdbApiKey
+      ? await discoverMovies(tmdbApiKey, region, days, "digital")
+      : [];
+    const physicalMovies = tmdbApiKey
+      ? await discoverMovies(tmdbApiKey, region, days, "physical")
+      : [];
+    const streamingMovies = await fetchWatchmodeComingSoon(
+      watchmodeApiKey,
+      region,
+      days,
+      "streaming"
+    ).catch((error) => {
+      console.warn("Watchmode streaming release events unavailable for combined results:", error);
+      return [];
+    });
+    const movies = combineComingSoonMovies(
+      [digitalMovies, physicalMovies, streamingMovies],
       days
     );
+    logComingSoonDebug({
+      type,
+      region,
+      source: "combined",
+      sourceCount: digitalMovies.length + physicalMovies.length + streamingMovies.length,
+      normalizedCount: movies.length,
+      filteredCount: movies.length,
+    });
     cache.set(cacheKey, {
       expiresAt: Date.now() + CACHE_TTL_MS,
       data: movies,
     });
     res.json(movies);
   } catch (error) {
-    console.error("Failed to fetch coming soon movies from Watchmode:", error);
+    console.error("Failed to fetch coming soon movies:", error);
     res.status(502).json({
-      msg: "Failed to fetch coming soon movies from Watchmode.",
+      msg: "Failed to fetch coming soon movies.",
     });
   }
 });

@@ -134,6 +134,10 @@ const ComingSoon: React.FC = () => {
     () => FILTERS.find((filter) => filter.id === selectedType) || FILTERS[0],
     [selectedType]
   );
+  const selectedRegionLabel = useMemo(
+    () => REGIONS.find((option) => option.value === region)?.label || region,
+    [region]
+  );
   const visibleMovies = useMemo(
     () =>
       movies
@@ -337,8 +341,9 @@ const ComingSoon: React.FC = () => {
             <FaCalendarAlt />
             <h3>No matching releases found</h3>
             <p>
-              No releases found in the next {RELEASE_WINDOW_DAYS} days for this
-              region and filter.
+              No {selectedFilter.label.toLowerCase()} releases found in the next{" "}
+              {RELEASE_WINDOW_DAYS} days for {selectedRegionLabel}. Try another
+              filter or region.
             </p>
           </section>
         ) : (
