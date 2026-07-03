@@ -728,9 +728,9 @@ router.get("/:tmdbId/imdb", async (req: Request, res: Response) => {
 });
 
 router.get("/", async (req: Request, res: Response) => {
-  const region = String(req.query.region || process.env.WATCHMODE_REGION || "CA")
+  const region = String(req.query.region || process.env.WATCHMODE_REGION || "US")
     .trim()
-    .toUpperCase() || "CA";
+    .toUpperCase() || "US";
   const parsedDays = Number(req.query.days || 30);
   const days = Number.isFinite(parsedDays)
     ? Math.min(Math.max(Math.round(parsedDays), 1), 90)

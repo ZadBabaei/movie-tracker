@@ -38,8 +38,8 @@ type ApiErrorResponse = {
 };
 
 const REGIONS = [
-  { value: "CA", label: "Canada" },
   { value: "US", label: "United States" },
+  { value: "CA", label: "Canada" },
   { value: "GB", label: "United Kingdom" },
   { value: "AU", label: "Australia" },
 ];
@@ -141,7 +141,7 @@ const boxOfficeScore = (movie: ComingSoonMovie) =>
 
 const ComingSoon: React.FC = () => {
   const [movies, setMovies] = useState<ComingSoonMovie[]>([]);
-  const [region, setRegion] = useState("CA");
+  const [region, setRegion] = useState("US");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [addingIds, setAddingIds] = useState<Set<number>>(new Set());
