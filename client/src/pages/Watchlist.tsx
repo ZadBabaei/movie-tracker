@@ -1,18 +1,14 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
-  FaFilm,
-  FaSearch,
-  FaTh,
-  FaListUl,
-  FaStar,
   FaClock,
-  FaFire,
+  FaListUl,
   FaPlus,
+  FaSearch,
+  FaStar,
+  FaTh,
   FaTimes,
-  FaSlidersH,
 } from "react-icons/fa";
 import "./Watchlist.css";
-import Hero from "../component/Hero";
 import SearchBar from "../component/SearchBar";
 import MovieCard from "../component/MovieCard";
 import MovieDetailModal from "../component/MovieDetailModal";
@@ -30,10 +26,10 @@ type FilterMode = "all" | "top" | "recent";
 type SortMode = "date_desc" | "title_asc" | "rating_desc";
 type ViewMode = "grid" | "list";
 
-const FILTER_OPTIONS: { id: FilterMode; label: string; icon: React.ReactNode }[] = [
-  { id: "all", label: "All", icon: <FaFilm /> },
-  { id: "top", label: "Top Rated", icon: <FaStar /> },
-  { id: "recent", label: "Recently Added", icon: <FaFire /> },
+const FILTER_OPTIONS: { id: FilterMode; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "top", label: "Top Rated" },
+  { id: "recent", label: "Recently Added" },
 ];
 
 const SORT_OPTIONS: { id: SortMode; label: string }[] = [
@@ -41,6 +37,12 @@ const SORT_OPTIONS: { id: SortMode; label: string }[] = [
   { id: "title_asc", label: "Title A–Z" },
   { id: "rating_desc", label: "Highest rated" },
 ];
+
+const getPosterUrl = (poster?: string, size = "w780") => {
+  if (!poster) return "";
+  if (poster.startsWith("http")) return poster;
+  return `https://image.tmdb.org/t/p/${size}${poster}`;
+};
 
 const Watchlist: React.FC = () => {
   const {
@@ -154,6 +156,27 @@ const Watchlist: React.FC = () => {
     return { total, topRated, avg: Number(avg.toFixed(1)) };
   }, [movies]);
 
+  const headerBackdrop = useMemo(() => {
+    const withPoster = movies.filter((m) => m.poster);
+    if (withPoster.length === 0) return "";
+    const newest = [...withPoster].sort((a, b) => {
+      const ad = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bd = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bd - ad;
+    })[0];
+    return getPosterUrl(newest.poster);
+  }, [movies]);
+
+  const statsLine = useMemo(() => {
+    if (stats.total === 0) return "Awaiting its first title";
+    const parts = [
+      `${stats.total} ${stats.total === 1 ? "title" : "titles"}`,
+      `${stats.topRated} rated 7+`,
+    ];
+    if (stats.avg > 0) parts.push(`average ${stats.avg}`);
+    return parts.join("  ·  ");
+  }, [stats]);
+
   const visibleMovies = useMemo(() => {
     let result = [...movies];
 
@@ -193,97 +216,40 @@ const Watchlist: React.FC = () => {
     <div className="watchlist-page">
       <VerticalNavbar />
 
-      <Hero
-        backgroundImage="https://image.tmdb.org/t/p/original/xOMo8BRK7PfcJv9JCnx7s5hj0PX.jpg"
-        variant="group"
-        heroText="My Watchlist"
-        heroTextSub="A curated vault of the films waiting for you"
-      />
+      <header className="wl2-header">
+        {headerBackdrop && (
+          <img
+            className="wl2-header-backdrop"
+            src={headerBackdrop}
+            alt=""
+            aria-hidden="true"
+          />
+        )}
+        <div className="wl2-header-scrim" />
+        <div className="wl2-header-inner">
+          <p className="wl2-eyebrow">Personal collection</p>
+          <h1 className="wl2-header-title">My Watchlist</h1>
+          <p className="wl2-header-stats">{statsLine}</p>
+        </div>
+      </header>
 
       <div className="watchlist-main">
-        <section className="wl-stats-row">
-          <div className="wl-stat-card">
-            <div className="wl-stat-icon wl-stat-icon--primary">
-              <FaFilm />
-            </div>
-            <div className="wl-stat-meta">
-              <span className="wl-stat-value">{stats.total}</span>
-              <span className="wl-stat-label">In your vault</span>
-            </div>
-          </div>
-          <div className="wl-stat-card">
-            <div className="wl-stat-icon wl-stat-icon--gold">
-              <FaStar />
-            </div>
-            <div className="wl-stat-meta">
-              <span className="wl-stat-value">{stats.topRated}</span>
-              <span className="wl-stat-label">Top rated (7+)</span>
-            </div>
-          </div>
-          <div className="wl-stat-card">
-            <div className="wl-stat-icon wl-stat-icon--accent">
-              <FaFire />
-            </div>
-            <div className="wl-stat-meta">
-              <span className="wl-stat-value">
-                {stats.avg > 0 ? stats.avg : "—"}
-              </span>
-              <span className="wl-stat-label">Avg score</span>
-            </div>
-          </div>
-        </section>
-
-        <FavoritesCarousel
-          favorites={favorites}
-          onRemoveFavorite={(movieId) =>
-            handleFavoriteToggle({ _id: movieId })
-          }
-        />
-
-        <SuggestionsCarousel onAddToWatchlist={handleAddMovie} />
-
-        <section className="wl-control-panel">
-          <header className="wl-control-header">
-            <div className="wl-control-title-block">
-              <span className="wl-control-eyebrow">Your watchlist</span>
-              <h2 className="wl-control-title">
-                {stats.total === 0
-                  ? "Build your collection"
-                  : `${stats.total} ${stats.total === 1 ? "title" : "titles"} ready to roll`}
-              </h2>
-            </div>
-            <button
-              type="button"
-              className={`wl-quickadd-toggle${showQuickAdd ? " wl-quickadd-toggle--open" : ""}`}
-              onClick={() => setShowQuickAdd((prev) => !prev)}
-              aria-expanded={showQuickAdd}
-            >
-              {showQuickAdd ? <FaTimes /> : <FaPlus />}
-              <span>{showQuickAdd ? "Close" : "Add a movie"}</span>
-            </button>
-          </header>
-
-          {showQuickAdd && (
-            <div className="wl-quickadd-slot">
-              <SearchBar onMovieSelect={handleAddMovie} />
-            </div>
-          )}
-
-          <div className="wl-toolbar">
-            <div className="wl-search">
-              <FaSearch className="wl-search-icon" aria-hidden />
+        <section className="wl2-panel">
+          <div className="wl2-toolbar">
+            <div className="wl2-search">
+              <FaSearch className="wl2-search-icon" aria-hidden />
               <input
                 type="text"
-                placeholder="Filter your watchlist…"
+                placeholder="Search your collection…"
                 value={filterQuery}
                 onChange={(e) => setFilterQuery(e.target.value)}
-                className="wl-search-input"
+                className="wl2-search-input"
                 aria-label="Filter watchlist"
               />
               {filterQuery && (
                 <button
                   type="button"
-                  className="wl-search-clear"
+                  className="wl2-search-clear"
                   onClick={() => setFilterQuery("")}
                   aria-label="Clear filter"
                 >
@@ -292,26 +258,24 @@ const Watchlist: React.FC = () => {
               )}
             </div>
 
-            <div className="wl-chip-group" role="tablist" aria-label="Filter by category">
+            <div className="wl2-tabs" role="tablist" aria-label="Filter by category">
               {FILTER_OPTIONS.map((opt) => (
                 <button
                   key={opt.id}
                   type="button"
                   role="tab"
                   aria-selected={filterMode === opt.id}
-                  className={`wl-chip${filterMode === opt.id ? " wl-chip--active" : ""}`}
+                  className={`wl2-tab${filterMode === opt.id ? " wl2-tab--active" : ""}`}
                   onClick={() => setFilterMode(opt.id)}
                 >
-                  <span className="wl-chip-icon">{opt.icon}</span>
-                  <span>{opt.label}</span>
+                  {opt.label}
                 </button>
               ))}
             </div>
 
-            <div className="wl-toolbar-tail">
-              <label className="wl-sort">
-                <FaSlidersH aria-hidden className="wl-sort-icon" />
-                <span className="wl-sort-label">Sort</span>
+            <div className="wl2-toolbar-tail">
+              <label className="wl2-sort">
+                <span>Sort</span>
                 <select
                   value={sortMode}
                   onChange={(e) => setSortMode(e.target.value as SortMode)}
@@ -325,10 +289,10 @@ const Watchlist: React.FC = () => {
                 </select>
               </label>
 
-              <div className="wl-view-toggle" role="group" aria-label="Layout">
+              <div className="wl2-view" role="group" aria-label="Layout">
                 <button
                   type="button"
-                  className={`wl-view-btn${viewMode === "grid" ? " wl-view-btn--active" : ""}`}
+                  className={`wl2-view-btn${viewMode === "grid" ? " wl2-view-btn--active" : ""}`}
                   onClick={() => setViewMode("grid")}
                   aria-pressed={viewMode === "grid"}
                   aria-label="Grid view"
@@ -337,7 +301,7 @@ const Watchlist: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  className={`wl-view-btn${viewMode === "list" ? " wl-view-btn--active" : ""}`}
+                  className={`wl2-view-btn${viewMode === "list" ? " wl2-view-btn--active" : ""}`}
                   onClick={() => setViewMode("list")}
                   aria-pressed={viewMode === "list"}
                   aria-label="List view"
@@ -345,18 +309,34 @@ const Watchlist: React.FC = () => {
                   <FaListUl />
                 </button>
               </div>
+
+              <button
+                type="button"
+                className={`wl2-add-toggle${showQuickAdd ? " wl2-add-toggle--open" : ""}`}
+                onClick={() => setShowQuickAdd((prev) => !prev)}
+                aria-expanded={showQuickAdd}
+              >
+                {showQuickAdd ? <FaTimes /> : <FaPlus />}
+                <span>{showQuickAdd ? "Close" : "Add a Film"}</span>
+              </button>
             </div>
           </div>
 
+          {showQuickAdd && (
+            <div className="wl2-quickadd">
+              <SearchBar onMovieSelect={handleAddMovie} />
+            </div>
+          )}
+
           {isFiltering && stats.total > 0 && (
-            <div className="wl-result-summary">
+            <div className="wl2-summary">
               <span>
                 Showing <strong>{visibleMovies.length}</strong> of{" "}
                 <strong>{stats.total}</strong>
               </span>
               <button
                 type="button"
-                className="wl-reset-btn"
+                className="wl2-reset"
                 onClick={() => {
                   setFilterQuery("");
                   setFilterMode("all");
@@ -368,44 +348,38 @@ const Watchlist: React.FC = () => {
           )}
         </section>
 
-        <section className="wl-collection">
+        <section className="wl2-collection">
           {loading ? (
-            <div className="wl-skeleton-grid" aria-busy="true" aria-live="polite">
+            <div className="wl2-skeleton-grid" aria-busy="true" aria-live="polite">
               {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="wl-skeleton-card" />
+                <div key={i} className="wl2-skeleton-card" />
               ))}
             </div>
           ) : stats.total === 0 ? (
-            <div className="wl-empty wl-empty--first">
-              <div className="wl-empty-art" aria-hidden>
-                <FaFilm />
-              </div>
-              <h3 className="wl-empty-title">Your vault is empty</h3>
-              <p className="wl-empty-copy">
-                Start curating. Search a title above or pick from the trending
-                carousel and your watchlist will live right here.
+            <div className="wl2-empty">
+              <h3>An empty marquee</h3>
+              <p>
+                Start curating. Search a title and your collection will take
+                shape right here.
               </p>
               <button
                 type="button"
-                className="wl-empty-cta"
+                className="wl2-empty-cta"
                 onClick={() => setShowQuickAdd(true)}
               >
-                <FaPlus /> Add your first movie
+                <FaPlus /> Add your first film
               </button>
             </div>
           ) : visibleMovies.length === 0 ? (
-            <div className="wl-empty wl-empty--filtered">
-              <div className="wl-empty-art wl-empty-art--muted" aria-hidden>
-                <FaSearch />
-              </div>
-              <h3 className="wl-empty-title">No matches</h3>
-              <p className="wl-empty-copy">
-                Nothing in your watchlist fits the current filters. Try
+            <div className="wl2-empty">
+              <h3>No matches</h3>
+              <p>
+                Nothing in your collection fits the current filters. Try
                 broadening your search.
               </p>
               <button
                 type="button"
-                className="wl-empty-cta wl-empty-cta--ghost"
+                className="wl2-empty-cta wl2-empty-cta--ghost"
                 onClick={() => {
                   setFilterQuery("");
                   setFilterMode("all");
@@ -415,17 +389,14 @@ const Watchlist: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div
-              className={`wl-grid wl-grid--${viewMode} wl-grid--fade`}
-              role="list"
-            >
+            <div className={`wl2-grid wl2-grid--${viewMode}`} role="list">
               {visibleMovies.map((movie, idx) => (
                 <div
-                  className="wl-grid-cell"
+                  className="wl2-cell"
                   role="listitem"
                   key={movie._id}
                   style={{
-                    ["--wl-stagger" as any]: `${Math.min(idx, 12) * 40}ms`,
+                    ["--wl2-stagger" as any]: `${Math.min(idx, 12) * 35}ms`,
                   }}
                 >
                   <MovieCard
@@ -440,18 +411,19 @@ const Watchlist: React.FC = () => {
                     }
                   />
                   {viewMode === "list" && (
-                    <div className="wl-list-meta">
-                      <h4 className="wl-list-title" title={movie.title}>
+                    <div className="wl2-row-meta">
+                      <h4 className="wl2-row-title" title={movie.title}>
                         {movie.title}
                       </h4>
-                      <div className="wl-list-stats">
-                        <span className="wl-list-stat">
-                          <FaStar /> {movie.vote_average?.toFixed?.(1) ?? "—"}
+                      <div className="wl2-row-stats">
+                        <span className="wl2-row-stat">
+                          <FaStar aria-hidden />{" "}
+                          {movie.vote_average?.toFixed?.(1) ?? "—"}
                         </span>
                         {movie.createdAt && (
-                          <span className="wl-list-stat wl-list-stat--muted">
-                            <FaClock />{" "}
-                            {new Date(movie.createdAt).toLocaleDateString()}
+                          <span className="wl2-row-stat wl2-row-stat--muted">
+                            <FaClock aria-hidden />{" "}
+                            Added {new Date(movie.createdAt).toLocaleDateString()}
                           </span>
                         )}
                       </div>
@@ -462,6 +434,15 @@ const Watchlist: React.FC = () => {
             </div>
           )}
         </section>
+
+        <FavoritesCarousel
+          favorites={favorites}
+          onRemoveFavorite={(movieId) =>
+            handleFavoriteToggle({ _id: movieId })
+          }
+        />
+
+        <SuggestionsCarousel onAddToWatchlist={handleAddMovie} />
       </div>
 
       {selectedMovie && (
