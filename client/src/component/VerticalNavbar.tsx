@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   FaHome,
   FaUsers,
@@ -84,16 +84,16 @@ const VerticalNavbar: React.FC = () => {
       <img className="logo logo-img" src={logo} alt="Logo" />
       <ul className="navbar-list">
         <li className="navbar-item">
-          <a href="/home" className="navbar-link">
+          <Link to="/home" className="navbar-link">
             <span className="icon"><FaHome /></span>
             <span className="label">Home</span>
-          </a>
+          </Link>
         </li>
         <li className="navbar-item navbar-item--groups">
-          <a href="#" className="navbar-link" onClick={handleGroupsClick}>
+          <Link to="/my-groups" className="navbar-link" onClick={handleGroupsClick}>
             <span className="icon"><FaUsers /></span>
             <span className="label">Groups</span>
-          </a>
+          </Link>
           <div className="navbar-hover-row" aria-label="Groups quick links">
             <button
               type="button"
@@ -117,22 +117,22 @@ const VerticalNavbar: React.FC = () => {
           </div>
         </li>
         <li className="navbar-item">
-          <a href="/watchlist" className="navbar-link">
+          <Link to="/watchlist" className="navbar-link">
             <span className="icon"><FaThList /></span>
             <span className="label">Watchlist</span>
-          </a>
+          </Link>
         </li>
         <li className="navbar-item">
-          <a href="/coming-soon" className="navbar-link">
+          <Link to="/coming-soon" className="navbar-link">
             <span className="icon"><FaCalendarAlt /></span>
             <span className="label">Coming Soon</span>
-          </a>
+          </Link>
         </li>
         <li className="navbar-item">
-          <a href="/inbox" className="navbar-link">
+          <Link to="/inbox" className="navbar-link">
             <span className="icon"><FaEnvelope /></span>
             <span className="label">Messages</span>
-          </a>
+          </Link>
         </li>
         <li className="navbar-item navbar-item--chat">
           <a
@@ -173,7 +173,7 @@ const VerticalNavbar: React.FC = () => {
           </div>
         </li>
         <li className="navbar-item">
-          <a href="/profile" className="navbar-link navbar-link--profile">
+          <Link to="/profile" className="navbar-link navbar-link--profile">
             <img
               src={getAvatarUrl(profile || {})}
               alt=""
@@ -181,13 +181,13 @@ const VerticalNavbar: React.FC = () => {
               onError={(event) => handleAvatarError(event, profile || {})}
             />
             <span className="label">Profile</span>
-          </a>
+          </Link>
         </li>
         <li className="navbar-item">
-          <a href="/about" className="navbar-link">
+          <Link to="/about" className="navbar-link">
             <span className="icon"><FaInfoCircle /></span>
             <span className="label">About</span>
-          </a>
+          </Link>
         </li>
       </ul>
       <div className="navbar-logout">

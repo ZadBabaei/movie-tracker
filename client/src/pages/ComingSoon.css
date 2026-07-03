@@ -1,16 +1,14 @@
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap");
-
 .cs2-page {
-  --cs2-black: #08080b;
-  --cs2-charcoal: #0e0e13;
-  --cs2-ivory: #f3eee4;
-  --cs2-muted: #a49d8f;
-  --cs2-dim: #6e685d;
-  --cs2-gold: #d3ac6c;
-  --cs2-gold-bright: #e9c98d;
-  --cs2-hairline: rgba(211, 172, 108, 0.22);
-  --cs2-hairline-soft: rgba(243, 238, 228, 0.09);
-  --cs2-serif: "Fraunces", "Georgia", serif;
+  --cs2-black: var(--brand-black);
+  --cs2-charcoal: var(--brand-charcoal);
+  --cs2-ivory: var(--brand-ivory);
+  --cs2-muted: var(--brand-muted);
+  --cs2-dim: var(--brand-dim);
+  --cs2-gold: var(--brand-gold);
+  --cs2-gold-bright: var(--brand-gold-bright);
+  --cs2-hairline: var(--brand-hairline);
+  --cs2-hairline-soft: var(--brand-hairline-soft);
+  --cs2-serif: var(--font-serif);
 
   min-height: 100vh;
   overflow-x: hidden;
