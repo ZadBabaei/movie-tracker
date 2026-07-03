@@ -12,13 +12,14 @@ const SUPPORTED_TYPES = new Set([
     "streaming",
 ]);
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
-const CACHE_VERSION = "release-event-window-v2";
+const CACHE_VERSION = "release-event-window-v3-boxoffice";
 const WATCHMODE_BASE_URL = "https://api.watchmode.com/v1";
 const WATCHMODE_ENRICH_LIMIT = 24;
 const cache = new Map();
 const imdbLookupCache = new Map();
 const watchmodeDetailsCache = new Map();
 const tmdbReleaseDatesCache = new Map();
+const tmdbMovieDetailsCache = new Map();
 let watchmodeProvidersCache = null;
 const formatDate = (date) => date.toISOString().slice(0, 10);
 const formatWatchmodeDate = (date) => date.toISOString().slice(0, 10).replace(/-/g, "");
@@ -113,6 +114,7 @@ const normalizeMovie = (movie, type, releaseDate) => ({
     release_date: releaseDate || movie.release_date || "",
     vote_average: Number(movie.vote_average || 0),
     type,
+    tmdbId: movie.id,
 });
 const getWatchmodeSourceTypes = (type) => {
     if (type === "streaming")
@@ -202,6 +204,50 @@ const normalizeWatchmodeMovie = (base, details, fallbackSources, requestedType, 
         webUrl: getPrimaryWebUrl(sources),
     };
 };
+const getTmdbMovieDetails = async (apiKey, tmdbId) => {
+    const cached = tmdbMovieDetailsCache.get(tmdbId);
+    if (cached && cached.expiresAt > Date.now()) {
+        return cached.data;
+    }
+    const data = await fetchTmdb(buildTmdbUrl(`/movie/${tmdbId}`, { api_key: apiKey, language: "en-US" })).catch(() => null);
+    tmdbMovieDetailsCache.set(tmdbId, {
+        expiresAt: Date.now() + CACHE_TTL_MS,
+        data,
+    });
+    return data;
+};
+const enrichWithBoxOffice = async (movies) => {
+    const apiKey = process.env.TMDB_API_KEY;
+    if (!apiKey)
+        return movies;
+    return Promise.all(movies.map(async (movie) => {
+        if (!movie.tmdbId)
+            return movie;
+        const details = await getTmdbMovieDetails(apiKey, movie.tmdbId);
+        if (!details)
+            return movie;
+        return {
+            ...movie,
+            overview: movie.overview || details.overview || "",
+            poster_path: movie.poster_path ||
+                (details.poster_path
+                    ? `https://image.tmdb.org/t/p/w500${details.poster_path}`
+                    : ""),
+            backdrop_path: movie.backdrop_path ||
+                (details.backdrop_path
+                    ? `https://image.tmdb.org/t/p/original${details.backdrop_path}`
+                    : ""),
+            vote_average: Number(details.vote_average || movie.vote_average || 0),
+            revenue: Number(details.revenue || 0),
+            popularity: Number(details.popularity || 0),
+            runtime: Number(details.runtime || 0) || undefined,
+            genres: (details.genres || [])
+                .map((genre) => genre.name)
+                .filter((name) => Boolean(name))
+                .slice(0, 3),
+        };
+    }));
+};
 const fetchWatchmodeComingSoon = async (apiKey, region, days, type) => {
     const today = new Date();
     const endDate = new Date(today);
@@ -234,7 +280,8 @@ const fetchWatchmodeComingSoon = async (apiKey, region, days, type) => {
         return normalizeWatchmodeMovie(release, details, fallbackSources, type, allowedSourceTypes, release.release_date);
     }));
     const normalizedMovies = movies.filter((movie) => Boolean(movie));
-    const filteredMovies = filterComingSoonReleaseWindow(normalizedMovies, days);
+    const enrichedMovies = await enrichWithBoxOffice(normalizedMovies);
+    const filteredMovies = filterComingSoonReleaseWindow(enrichedMovies, days);
     logComingSoonDebug({
         type,
         region,
@@ -341,7 +388,8 @@ const discoverMovies = async (apiKey, region, days, type) => {
             deduped.set(movie.id, normalizeMovie(movie, type, eventDate));
         }
     });
-    const filteredMovies = filterComingSoonReleaseWindow(Array.from(deduped.values()), days);
+    const enrichedMovies = await enrichWithBoxOffice(Array.from(deduped.values()));
+    const filteredMovies = filterComingSoonReleaseWindow(enrichedMovies, days);
     logComingSoonDebug({
         type,
         region,
@@ -451,11 +499,24 @@ router.get("/", async (req, res) => {
         }
         if (type === "streaming") {
             const watchmodeApiKey = process.env.WATCHMODE_API_KEY;
-            if (!watchmodeApiKey) {
+            const tmdbApiKey = process.env.TMDB_API_KEY;
+            if (!watchmodeApiKey && !tmdbApiKey) {
                 res.status(500).json({ msg: "Watchmode API key is not configured on the server." });
                 return;
             }
-            const movies = filterComingSoonReleaseWindow(await fetchWatchmodeComingSoon(watchmodeApiKey, region, days, type), days);
+            let streamingMovies = [];
+            if (watchmodeApiKey) {
+                streamingMovies = await fetchWatchmodeComingSoon(watchmodeApiKey, region, days, type).catch((error) => {
+                    console.warn("Watchmode streaming release events unavailable:", error);
+                    return [];
+                });
+            }
+            // Watchmode's release-dates endpoint requires a paid plan; TMDB digital
+            // release events are the closest free equivalent for home availability.
+            if (streamingMovies.length === 0 && tmdbApiKey) {
+                streamingMovies = await discoverMovies(tmdbApiKey, region, days, "digital");
+            }
+            const movies = filterComingSoonReleaseWindow(streamingMovies, days);
             cache.set(cacheKey, {
                 expiresAt: Date.now() + CACHE_TTL_MS,
                 data: movies,
