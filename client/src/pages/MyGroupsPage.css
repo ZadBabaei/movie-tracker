@@ -4,24 +4,24 @@
 }
 
 .my-groups-page {
-  --groups-bg: #040a1c;
+  --groups-bg: #08080b;
   --groups-surface: rgba(255, 255, 255, 0.055);
   --groups-surface-strong: rgba(255, 255, 255, 0.085);
   --groups-border: rgba(255, 255, 255, 0.1);
   --groups-border-strong: rgba(255, 255, 255, 0.16);
-  --groups-text: #f4f7fb;
-  --groups-muted: #a7b2c3;
-  --groups-dim: #748194;
-  --groups-accent: #2ecc71;
-  --groups-gold: #f5c518;
+  --groups-text: #f3eee4;
+  --groups-muted: #a49d8f;
+  --groups-dim: #6e685d;
+  --groups-accent: #d3ac6c;
+  --groups-gold: #d3ac6c;
   --groups-danger: #ef4444;
 
   min-height: 100vh;
   width: 100%;
   color: var(--groups-text);
   background:
-    radial-gradient(80% 60% at 50% 100%, rgba(23, 66, 29, 0.34), transparent 70%),
-    linear-gradient(to top, #17421d, var(--groups-bg));
+    radial-gradient(80% 60% at 50% 100%, rgba(14, 14, 19, 0.34), transparent 70%),
+    linear-gradient(to top, #0e0e13, var(--groups-bg));
   padding: 36px 32px 88px;
   padding-left: calc(80px + 32px);
 }
@@ -77,10 +77,10 @@
   align-items: center;
   min-height: 34px;
   padding: 7px 12px;
-  border: 1px solid rgba(46, 204, 113, 0.26);
+  border: 1px solid rgba(211, 172, 108, 0.26);
   border-radius: 999px;
-  color: #d8fbe3;
-  background: rgba(46, 204, 113, 0.1);
+  color: #e9c98d;
+  background: rgba(211, 172, 108, 0.1);
   font-size: 0.84rem;
   font-weight: 800;
 }
@@ -211,8 +211,8 @@
   justify-content: center;
   flex: 0 0 34px;
   border-radius: 50%;
-  border: 2px solid #101827;
-  background: #142033;
+  border: 2px solid #0e0e13;
+  background: #17171f;
   color: var(--groups-text);
   font-size: 0.78rem;
   font-weight: 800;
@@ -232,9 +232,9 @@
 }
 
 .member-count-bubble {
-  background: rgba(46, 204, 113, 0.18);
-  border-color: #101827;
-  color: #d8fbe3;
+  background: rgba(211, 172, 108, 0.18);
+  border-color: #0e0e13;
+  color: #e9c98d;
 }
 
 .group-card-actions {
@@ -262,13 +262,13 @@
 }
 
 .group-action-primary {
-  color: #04110a;
+  color: #08080b;
   background: var(--groups-accent);
-  border-color: rgba(46, 204, 113, 0.7);
+  border-color: rgba(211, 172, 108, 0.7);
 }
 
 .group-action-primary:hover {
-  background: #35d77c;
+  background: #d3ac6c;
 }
 
 .group-action-secondary {
@@ -317,7 +317,7 @@
 .my-groups-state-card button {
   margin-top: 18px;
   padding: 0 18px;
-  color: #04110a;
+  color: #08080b;
   background: var(--groups-accent);
 }
 
@@ -378,7 +378,7 @@
 
 .group-card-actions button:focus-visible,
 .my-groups-state-card button:focus-visible {
-  outline: 3px solid rgba(46, 204, 113, 0.45);
+  outline: 3px solid rgba(211, 172, 108, 0.45);
   outline-offset: 3px;
 }
 

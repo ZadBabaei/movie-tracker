@@ -90,7 +90,7 @@
   padding: 8px 12px;
   border: none;
   border-radius: 8px;
-  background: linear-gradient(135deg, #ff4747, #ff7373);
+  background: linear-gradient(135deg, #d3ac6c, #e9c98d);
   color: white;
   font-size: 0.85rem;
   font-weight: 600;
@@ -100,7 +100,7 @@
 
 .carousel-add-btn:hover {
   transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(255, 71, 71, 0.4);
+  box-shadow: 0 4px 12px rgba(211, 172, 108, 0.4);
 }
 
 .carousel-btn {
@@ -109,7 +109,7 @@
   height: 40px;
   border-radius: 50%;
   border: none;
-  background: rgba(255, 71, 71, 0.8);
+  background: rgba(211, 172, 108, 0.8);
   color: white;
   font-size: 16px;
   cursor: pointer;
@@ -120,7 +120,7 @@
 }
 
 .carousel-btn:hover {
-  background: #ff4747;
+  background: #d3ac6c;
   transform: scale(1.1);
 }
 

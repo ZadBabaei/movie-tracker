@@ -6,7 +6,7 @@
 .comment-section-title {
   font-size: 1rem;
   font-weight: 700;
-  color: #f9f9f9;
+  color: #f3eee4;
   margin-bottom: 16px;
 }
 
@@ -21,7 +21,7 @@
   background: #1e1e1e;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
-  color: #f9f9f9;
+  color: #f3eee4;
   font-size: 0.875rem;
   padding: 10px 14px;
   outline: none;
@@ -37,7 +37,7 @@
 }
 
 .comment-submit-btn {
-  background: linear-gradient(135deg, #c026d3, #818cf8);
+  background: linear-gradient(135deg, #d3ac6c, #818cf8);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -162,7 +162,7 @@
 }
 
 .comment-reply-btn:hover {
-  color: #c026d3;
+  color: #d3ac6c;
 }
 
 .comment-reply-form {

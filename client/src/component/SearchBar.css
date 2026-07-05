@@ -34,13 +34,13 @@
 .search-btn-glass {
   padding: 12px 28px;
   font-size: 16px;
-  background: linear-gradient(135deg, #2ecc71, #27ae60);
+  background: linear-gradient(135deg, #d3ac6c, #b8945a);
   border: none;
   color: #052211;
   font-weight: 700;
   border-radius: 12px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(46, 204, 113, 0.2);
+  box-shadow: 0 2px 8px rgba(211, 172, 108, 0.2);
   transition: all 0.3s ease;
 }
 

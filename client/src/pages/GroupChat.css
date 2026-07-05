@@ -2,13 +2,13 @@
   display: flex;
   flex-direction: column;
 
-  background: -webkit-linear-gradient(to top, #17421d, #040a1c);
-  background: linear-gradient(to top, #17421d, #040a1c);
+  background: -webkit-linear-gradient(to top, #0e0e13, #08080b);
+  background: linear-gradient(to top, #0e0e13, #08080b);
 }
 #root {
-  background: #283048;
-  background: -webkit-linear-gradient(to top, #17421d, #040a1c);
-  background: linear-gradient(to top, #17421d, #040a1c);
+  background: #17171f;
+  background: -webkit-linear-gradient(to top, #0e0e13, #08080b);
+  background: linear-gradient(to top, #0e0e13, #08080b);
 }
 .GroupChatPage-main {
   padding: 20px;
@@ -22,7 +22,7 @@
 
 .GroupChatPage-section-title:hover {
   transform: scale(1.05);
-  background: linear-gradient(to right, #ff1a1a, #cc0000);
+  background: linear-gradient(to right, #d3ac6c, #b8945a);
 }
 .GroupChatPage-section-title {
   margin-bottom: 20px;
@@ -34,7 +34,7 @@
 
 .GroupChatPage-section-title:hover {
   transform: scale(1.05);
-  background: linear-gradient(to right, #ff1a1a, #cc0000);
+  background: linear-gradient(to right, #d3ac6c, #b8945a);
 }
 
 .GroupChatPage-placeholder {
@@ -175,7 +175,7 @@
 
 .GroupChatPage-poll-card-result {
   font-size: 12px;
-  color: #ffd700;
+  color: #e9c98d;
   font-weight: 600;
   font-family: var(--font-sans);
   letter-spacing: 0.2px;

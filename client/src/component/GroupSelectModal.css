@@ -52,7 +52,7 @@
 }
 
 .group-select-sub strong {
-  color: #ff7373;
+  color: #e9c98d;
 }
 
 .group-select-list {
@@ -75,8 +75,8 @@
 }
 
 .group-select-item:hover {
-  background: rgba(255, 71, 71, 0.15);
-  border-color: #ff4747;
+  background: rgba(211, 172, 108, 0.15);
+  border-color: #d3ac6c;
   transform: translateX(4px);
 }
 
@@ -135,7 +135,7 @@
 }
 
 .group-select-input:focus {
-  border-color: #ff4747;
+  border-color: #d3ac6c;
 }
 
 .group-select-loading {
@@ -178,7 +178,7 @@
 }
 
 .group-select-btn--done {
-  background: linear-gradient(135deg, #ff4747, #ff6b6b);
+  background: linear-gradient(135deg, #d3ac6c, #ff6b6b);
   color: white;
 }
 
@@ -225,8 +225,8 @@
 }
 
 .group-select-member-chip--active {
-  background: rgba(255, 71, 71, 0.12);
-  border-color: #ff4747;
+  background: rgba(211, 172, 108, 0.12);
+  border-color: #d3ac6c;
   color: white;
 }
 
@@ -234,7 +234,7 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #ff4747, #ff6b6b);
+  background: linear-gradient(135deg, #d3ac6c, #ff6b6b);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -258,7 +258,7 @@
 }
 
 .member-chip-check {
-  color: #4caf50;
+  color: #d3ac6c;
   font-size: 1rem;
   font-weight: 700;
 }

@@ -14,7 +14,7 @@
 .watch-timeline-heading {
   font-size: 1.8rem;
   font-weight: 700;
-  color: #f9f9f9;
+  color: #f3eee4;
   margin-bottom: 8px;
 }
 
@@ -211,7 +211,7 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #c026d3, #818cf8);
+  background: linear-gradient(135deg, #d3ac6c, #818cf8);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -273,7 +273,7 @@
   inset-x: 0;
   top: 0;
   width: 2px;
-  background: linear-gradient(to bottom, #c026d3, #818cf8, transparent);
+  background: linear-gradient(to bottom, #d3ac6c, #818cf8, transparent);
   border-radius: 2px;
 }
 

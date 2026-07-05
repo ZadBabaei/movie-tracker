@@ -4,9 +4,9 @@
   align-items: flex-start;
   padding: 60px 20px;
 
-  background: #283048; 
-  background: -webkit-linear-gradient(to top, #17421d, #040a1c);
-  background: linear-gradient(to top, #17421d, #040a1c);
+  background: #17171f; 
+  background: -webkit-linear-gradient(to top, #0e0e13, #08080b);
+  background: linear-gradient(to top, #0e0e13, #08080b);
 }
 
 .inbox-container {
@@ -64,7 +64,7 @@
 }
 
 .message-buttons button:first-child {
-  background-color: #27ae60;
+  background-color: #b8945a;
   color: white;
 }
 

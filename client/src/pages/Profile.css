@@ -4,16 +4,16 @@
 }
 
 .Profile-page {
-  --Profile-bg: #040a1c;
-  --Profile-bg-soft: #0a1728;
+  --Profile-bg: #08080b;
+  --Profile-bg-soft: #0e0e13;
   --Profile-surface: rgba(255, 255, 255, 0.055);
   --Profile-surface-strong: rgba(255, 255, 255, 0.085);
   --Profile-border: rgba(255, 255, 255, 0.1);
   --Profile-border-strong: rgba(255, 255, 255, 0.16);
-  --Profile-text: #f4f7fb;
-  --Profile-muted: #a7b2c3;
-  --Profile-dim: #748194;
-  --Profile-accent: #2ecc71;
+  --Profile-text: #f3eee4;
+  --Profile-muted: #a49d8f;
+  --Profile-dim: #6e685d;
+  --Profile-accent: #d3ac6c;
   --Profile-danger: #ef4444;
 
   min-height: 100vh;
@@ -22,8 +22,8 @@
   color: var(--Profile-text);
   font-family: var(--font-sans);
   background:
-    radial-gradient(80% 60% at 50% 100%, rgba(23, 66, 29, 0.34), transparent 70%),
-    linear-gradient(to top, #17421d, var(--Profile-bg));
+    radial-gradient(80% 60% at 50% 100%, rgba(14, 14, 19, 0.34), transparent 70%),
+    linear-gradient(to top, #0e0e13, var(--Profile-bg));
 }
 
 .Profile-container {
@@ -66,12 +66,12 @@
   font-size: 0.9rem;
   font-weight: 700;
   border: 1px solid var(--Profile-border);
-  background: #142033;
+  background: #17171f;
   box-shadow: 0 14px 28px rgba(0, 0, 0, 0.24);
 }
 
 .Profile-toast--success {
-  border-color: rgba(46, 204, 113, 0.42);
+  border-color: rgba(211, 172, 108, 0.42);
   background: #146336;
 }
 
@@ -259,13 +259,13 @@
 }
 
 .Profile-btn--primary {
-  color: #04110a;
+  color: #08080b;
   background: var(--Profile-accent);
-  border-color: rgba(46, 204, 113, 0.74);
+  border-color: rgba(211, 172, 108, 0.74);
 }
 
 .Profile-btn--primary:hover:not(:disabled) {
-  background: #35d77c;
+  background: #d3ac6c;
 }
 
 .Profile-btn--secondary {
@@ -326,9 +326,9 @@
 }
 
 .Profile-input:focus {
-  border-color: rgba(46, 204, 113, 0.66);
+  border-color: rgba(211, 172, 108, 0.66);
   background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.14);
+  box-shadow: 0 0 0 3px rgba(211, 172, 108, 0.14);
 }
 
 .Profile-section-header {
@@ -376,8 +376,8 @@
   justify-content: center;
   border-radius: 9px;
   color: var(--Profile-accent);
-  background: rgba(46, 204, 113, 0.1);
-  border: 1px solid rgba(46, 204, 113, 0.18);
+  background: rgba(211, 172, 108, 0.1);
+  border: 1px solid rgba(211, 172, 108, 0.18);
 }
 
 .Profile-stat-value {
@@ -506,7 +506,7 @@
 .Profile-btn:focus-visible,
 .Profile-logout-btn:focus-visible,
 .Profile-input:focus-visible {
-  outline: 3px solid rgba(46, 204, 113, 0.45);
+  outline: 3px solid rgba(211, 172, 108, 0.45);
   outline-offset: 3px;
 }
 

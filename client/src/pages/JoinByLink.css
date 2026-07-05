@@ -26,7 +26,7 @@
 .joinbylink-title {
   font-size: 24px;
   font-weight: 700;
-  color: #e2e8f0;
+  color: #d8d2c4;
   margin-bottom: 12px;
 }
 
@@ -38,13 +38,13 @@
 }
 
 .joinbylink-text strong {
-  color: #2ecc71;
+  color: #d3ac6c;
 }
 
 .joinbylink-btn {
   display: inline-block;
   padding: 12px 32px;
-  background: linear-gradient(135deg, #2ecc71, #27ae60);
+  background: linear-gradient(135deg, #d3ac6c, #b8945a);
   color: #052211;
   border: none;
   border-radius: 10px;
@@ -61,12 +61,12 @@
 
 .joinbylink-btn-secondary {
   background: transparent;
-  color: #2ecc71;
-  border: 2px solid #2ecc71;
+  color: #d3ac6c;
+  border: 2px solid #d3ac6c;
 }
 
 .joinbylink-btn-secondary:hover {
-  background: rgba(46, 204, 113, 0.1);
+  background: rgba(211, 172, 108, 0.1);
 }
 
 .joinbylink-btn-group {
@@ -78,8 +78,8 @@
 .joinbylink-spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid rgba(46, 204, 113, 0.2);
-  border-top-color: #2ecc71;
+  border: 4px solid rgba(211, 172, 108, 0.2);
+  border-top-color: #d3ac6c;
   border-radius: 50%;
   margin: 0 auto;
   animation: joinbylink-spin 0.8s linear infinite;

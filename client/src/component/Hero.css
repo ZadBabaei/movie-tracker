@@ -63,17 +63,17 @@ body,
   padding: 30px 50px;
   border-radius: 20px;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
-  border-left: 8px solid #ff4747;
+  border-left: 8px solid #d3ac6c;
   max-width: 800px;
 }
 
 .group-title-heading {
   font-size: 3rem;
-  font-weight: 800;
+  font-weight: 500;
   color: #fff;
   margin: 0;
-  font-family: var(--font-sans);
-  letter-spacing: 1px;
+  font-family: var(--font-serif);
+  letter-spacing: 0;
 line-height: 50px;
 }
 
@@ -95,7 +95,7 @@ line-height: 50px;
   max-width: 600px;
   padding: 20px 30px;
   background: rgba(0, 0, 0, 0.5);
-  border-left: 5px solid #2ecc71;
+  border-left: 5px solid #d3ac6c;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   border-radius: 12px;
   animation: fadeInSlideUp 1s ease forwards;
@@ -103,8 +103,9 @@ line-height: 50px;
 
 .main-heading {
   font-size: 64px;
-  font-family: var(--font-sans);
-  letter-spacing: 3px;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: 0;
   margin: 0;
   line-height: 1.1;
   color: #fff;

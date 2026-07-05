@@ -1,12 +1,12 @@
 body {
-  background-color: #0d0d0d;
+  background-color: #08080b;
 }
 
 
 .home-container {
   width: 100vw;
   min-height: 100vh;
-  background: linear-gradient(180deg, #0d0d0d, #111);
+  background: linear-gradient(180deg, #08080b, #111);
   color: #fff;
   font-family: var(--font-sans);
   display: flex;
@@ -32,7 +32,7 @@ body {
   max-width: 600px;
   padding: 20px 30px;
   background: rgba(0, 0, 0, 0.5);
-  border-left: 6px solid #2ecc71;
+  border-left: 6px solid #d3ac6c;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   border-radius: 12px;
   animation: fadeInSlideUp 1s ease forwards;
@@ -40,8 +40,9 @@ body {
 
 .main-heading {
   font-size: 64px;
-  font-family: var(--font-sans);
-  letter-spacing: 3px;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: 0;
   margin: 0;
   line-height: 1.1;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);

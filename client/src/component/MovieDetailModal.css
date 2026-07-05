@@ -57,7 +57,7 @@
 
 .mdm-close-btn:hover {
   background: rgba(255, 255, 255, 0.12);
-  color: #f9f9f9;
+  color: #f3eee4;
 }
 
 .mdm-top {
@@ -83,7 +83,7 @@
 .mdm-title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #f9f9f9;
+  color: #f3eee4;
   margin-bottom: 10px;
   line-height: 1.3;
 }
@@ -117,8 +117,8 @@
 
 .mdm-rating-link:hover {
   background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(245, 197, 24, 0.38);
-  box-shadow: 0 0 0 3px rgba(245, 197, 24, 0.12);
+  border-color: rgba(211, 172, 108, 0.38);
+  box-shadow: 0 0 0 3px rgba(211, 172, 108, 0.12);
 }
 
 .mdm-imdb-badge {
@@ -128,7 +128,7 @@
   min-width: 34px;
   padding: 3px 5px;
   border-radius: 5px;
-  background: #f5c518;
+  background: #d3ac6c;
   color: #111;
   font-size: 10px;
   font-weight: 900;
@@ -136,7 +136,7 @@
 }
 
 .mdm-rating-text {
-  color: #f2f4f8;
+  color: #f3eee4;
 }
 
 .mdm-group-rating-row {
@@ -173,7 +173,7 @@
 .mdm-rate-btn {
   border: 1px solid rgba(229, 9, 20, 0.5);
   background: rgba(229, 9, 20, 0.12);
-  color: #f9f9f9;
+  color: #f3eee4;
   border-radius: 999px;
   padding: 7px 12px;
   font-size: 0.82rem;

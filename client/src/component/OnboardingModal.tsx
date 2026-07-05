@@ -16,21 +16,21 @@ const steps = [
     title: "Create Your First Group",
     description: "Groups let you plan movie nights with friends. Start by creating one!",
     action: "Create a Group",
-    color: "#2ecc71",
+    color: "#d3ac6c",
   },
   {
     icon: <FaFilm size={40} />,
     title: "Discover Movies",
     description: "Search for movies you love and add them to your watchlist. You can suggest them to your group later!",
     action: "Browse Movies",
-    color: "#3498db",
+    color: "#e9c98d",
   },
   {
     icon: <FaUserPlus size={40} />,
     title: "Invite Friends",
     description: "Movie nights are better with friends. Invite them to your group and start planning together!",
     action: "Got It!",
-    color: "#e74c3c",
+    color: "#b8945a",
   },
 ];
 

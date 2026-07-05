@@ -210,15 +210,15 @@ const MyGroupsPage = () => {
                       }
                       className="group-favorite-button"
                       sx={{
-                        color: isFavorite ? "#f5c518" : "rgba(255,255,255,0.72)",
+                        color: isFavorite ? "#d3ac6c" : "rgba(255,255,255,0.72)",
                         background: "rgba(255,255,255,0.06)",
                         border: "1px solid rgba(255,255,255,0.1)",
                         "&:hover": {
-                          background: "rgba(245,197,24,0.12)",
-                          borderColor: "rgba(245,197,24,0.28)",
+                          background: "rgba(211,172,108,0.12)",
+                          borderColor: "rgba(211,172,108,0.28)",
                         },
                         "&:focus-visible": {
-                          outline: "3px solid rgba(46,204,113,0.45)",
+                          outline: "3px solid rgba(211,172,108,0.45)",
                           outlineOffset: "3px",
                         },
                       }}
