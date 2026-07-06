@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
 import VerticalNavbar from "../component/VerticalNavbar";
-import Hero from "../component/Hero";
 import "./GroupChat.css";
 import VoteModal from "../component/VoteModal";
 import ChatBox from "../component/ChatBox";
@@ -130,13 +129,11 @@ const GroupChat: React.FC = () => {
   return (
     <div className="GroupChatPage-content-container">
       <VerticalNavbar />
-      <Hero
-        backgroundImage="https://image.tmdb.org/t/p/original/2Epx7F9X7DrFptn4seqn4mzBVks.jpg"
-        heroText={`Group: ${groupName}`}
-        heroTextSub="Plan your next movie night!"
-        variant="group"
-        height="50vh"
-      />
+      <header className="gc2-header">
+        <p className="gc2-eyebrow">Group chat</p>
+        <h1 className="gc2-title">{groupName}</h1>
+        <p className="gc2-sub">Plan your next movie night together.</p>
+      </header>
 
       <div className="GroupChatPage-layout">
         <div className="GroupChatPage-left">

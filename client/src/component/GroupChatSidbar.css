@@ -1,7 +1,7 @@
 .GroupSidebar-sidebar-container {
   width: 250px;
-  background-color: #0f1a2c;
-  border-right: 1px solid #23334f;
+  background-color: #0e0e13;
+  border-right: 1px solid #23232e;
   padding: 1rem;
   height: 100vh;
   display: flex;
@@ -11,13 +11,13 @@
 
 .GroupSidebar-header {
   padding-bottom: 1rem;
-  border-bottom: 1px solid #23334f;
+  border-bottom: 1px solid #23232e;
 }
 
 .GroupSidebar-header-title {
   font-size: 1.2rem;
   font-weight: bold;
-  color: #91caff;
+  color: #e9c98d;
 }
 
 .GroupSidebar-member-list {
@@ -41,7 +41,7 @@
 }
 
 .GroupSidebar-member-item:hover {
-  background-color: #1b2b45;
+  background-color: #14141b;
 }
 
 .GroupSidebar-member-info {
@@ -56,7 +56,7 @@
   height: 36px;
   border-radius: 50%;
   margin-right: 0.75rem;
-  border: 2px solid #5588aa;
+  border: 2px solid #6b5c40;
   object-fit: cover;
 }
 
@@ -64,7 +64,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #1b2b45;
+  background: #14141b;
   color: #ffffff;
   font-size: 0.8rem;
   font-weight: 700;
@@ -97,13 +97,13 @@
 }
 
 .GroupSidebar-status.offline {
-  background-color: #6c7480;
+  background-color: #6e685d;
 }
 
 .GroupSidebar-dm-btn {
   opacity: 0;
   transition: opacity 0.3s ease;
-  background-color: #1e3a5f;
+  background-color: #1f1f29;
   color: #ffffff;
   border: none;
   padding: 4px 10px;
