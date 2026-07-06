@@ -3,7 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { FaFilm, FaLock, FaRegEye } from "react-icons/fa6";
 import { FaEyeSlash } from "react-icons/fa";
-import authVectorReference from "../assets/auth-vector-reference.png";
 import apiClient from "../api/apiClient";
 import "./AuthPage.css";
 
@@ -52,10 +51,6 @@ function ResetPassword() {
           <div className="AuthPage-copy">
             <h1>Set a new password.</h1>
             <p>Choose a secure password and get back to planning movie nights with your groups.</p>
-          </div>
-
-          <div className="AuthPage-cinema" aria-hidden="true">
-            <img className="AuthPage-heroImage" src={authVectorReference} alt="" loading="eager" />
           </div>
 
           <div className="AuthPage-trust">

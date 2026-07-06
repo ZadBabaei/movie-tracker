@@ -1,3 +1,5 @@
+/* Auth — shared by sign in, sign up, forgot & reset password */
+
 html,
 body,
 #root {
@@ -7,6 +9,7 @@ body,
 body.auth-route {
   margin: 0;
   padding-bottom: 0;
+  background: var(--brand-black);
 }
 
 body.auth-route #root {
@@ -21,252 +24,255 @@ body.auth-route #root {
 .AuthPage {
   min-height: 100dvh;
   width: 100%;
-  position: relative;
-  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(24px, 4vh, 48px) clamp(24px, 4vw, 44px);
-  font-family: var(--font-sans);
-  color: #ffffff;
+  padding: 48px 24px;
   background:
-    radial-gradient(circle at 20% 12%, rgba(46, 204, 113, 0.16), transparent 28%),
-    radial-gradient(circle at 82% 74%, rgba(39, 174, 96, 0.16), transparent 30%),
-    linear-gradient(135deg, #040a1c 0%, #071425 48%, #17421d 100%);
-}
-
-.AuthPage::before {
-  display: none;
-}
-
-.AuthPage::after {
-  display: none;
+    radial-gradient(90% 70% at 15% 0%, rgba(211, 172, 108, 0.07), transparent 60%),
+    radial-gradient(70% 60% at 90% 100%, rgba(211, 172, 108, 0.05), transparent 65%),
+    var(--brand-black);
+  color: var(--brand-ivory);
+  font-family: var(--font-sans);
 }
 
 .AuthPage-shell {
-  width: min(1180px, 100%);
-  min-height: 0;
-  max-height: calc(100vh - 40px);
-  position: relative;
-  z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(390px, 0.68fr);
-  gap: clamp(34px, 5vw, 58px);
-  align-items: center;
+  grid-template-columns: 1.05fr 1fr;
+  width: min(1060px, 100%);
+  border: 1px solid var(--brand-hairline-soft);
+  border-radius: var(--brand-radius-lg);
+  overflow: hidden;
+  background: var(--brand-charcoal);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
 }
 
+/* ---------- Hero panel ---------- */
+
 .AuthPage-hero {
-  min-height: 0;
+  position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: space-between;
+  gap: 40px;
+  padding: 48px 44px;
+  background:
+    radial-gradient(120% 90% at 80% 0%, #1a1710 0%, var(--brand-black) 70%);
+  border-right: 1px solid var(--brand-hairline-soft);
+}
+
+.AuthPage-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(45% 35% at 20% 85%, rgba(211, 172, 108, 0.12), transparent 70%),
+    radial-gradient(35% 30% at 85% 25%, rgba(211, 172, 108, 0.08), transparent 70%);
+}
+
+.AuthPage-hero > * {
+  position: relative;
+  z-index: 1;
 }
 
 .AuthPage-brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  width: fit-content;
-  color: #70efa2;
-  font-size: 15px;
-  font-weight: 900;
-  font-style: italic;
-  margin-bottom: clamp(24px, 4vh, 44px);
+  gap: 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--brand-gold);
 }
 
 .AuthPage-logoMark {
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #05140c;
-  background: linear-gradient(135deg, #2ecc71, #27ae60);
-  box-shadow: 0 2px 8px rgba(46, 204, 113, 0.25);
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--brand-hairline);
+  border-radius: var(--brand-radius);
+  color: var(--brand-gold-bright);
+  background: rgba(211, 172, 108, 0.08);
 }
 
 .AuthPage-copy h1 {
-  max-width: 525px;
-  margin: 0 0 16px;
-  font-size: clamp(38px, 4.2vw, 58px);
-  font-weight: 900;
-  line-height: 1.03;
-  letter-spacing: -0.035em;
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: clamp(1.9rem, 3.4vw, 2.9rem);
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  color: var(--brand-ivory);
+  text-wrap: balance;
 }
 
 .AuthPage-copy p {
-  max-width: 540px;
-  margin: 0;
-  color: #94a3b8;
-  font-size: 15px;
-  font-weight: 650;
-  line-height: 1.58;
+  margin: 18px 0 0;
+  max-width: 400px;
+  color: var(--brand-muted);
+  font-size: 0.96rem;
+  line-height: 1.7;
 }
 
+/* The old vector illustration slot — retired */
 .AuthPage-cinema {
-  width: min(430px, 100%);
-  max-height: min(34vh, 330px);
-  margin-top: clamp(24px, 4vh, 36px);
-  position: relative;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.04);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
-  overflow: hidden;
-}
-
-.AuthPage-cinema::before {
   display: none;
-}
-
-.AuthPage-heroImage {
-  display: block;
-  width: 100%;
-  height: min(34vh, 330px);
-  object-fit: contain;
-  position: relative;
-  z-index: 1;
-  filter: saturate(1.06) contrast(1.04) drop-shadow(0 24px 45px rgba(0, 0, 0, 0.34));
 }
 
 .AuthPage-trust {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
-  margin-top: clamp(22px, 4vh, 34px);
-  color: #7c8a9d;
-  font-size: 9.5px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  gap: 10px;
 }
 
-.AuthPage-trust span:not(:first-child)::before {
-  content: "+";
-  color: #2ecc71;
-  margin-right: 14px;
+.AuthPage-trust span {
+  padding: 8px 14px;
+  border: 1px solid var(--brand-hairline);
+  border-radius: var(--brand-radius);
+  color: var(--brand-gold-bright);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  background: rgba(8, 8, 11, 0.55);
 }
+
+/* ---------- Card ---------- */
 
 .AuthPage-card {
-  width: 100%;
-  max-width: 410px;
-  max-height: calc(100vh - 48px);
-  justify-self: end;
-  padding: clamp(24px, 3.4vh, 30px);
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+  padding: 44px 44px 36px;
+  background: var(--brand-charcoal);
 }
 
 .AuthPage-toggle {
-  height: 35px;
-  padding: 4px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
   gap: 4px;
-  border-radius: 999px;
-  background: rgba(3, 10, 20, 0.68);
-  margin-bottom: clamp(18px, 3vh, 26px);
+  margin-bottom: 30px;
+  border-bottom: 1px solid var(--brand-hairline-soft);
 }
 
 .AuthPage-toggle button {
+  padding: 10px 16px 12px;
   border: 0;
-  border-radius: 999px;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
   background: transparent;
-  color: #94a3b8;
-  font: inherit;
-  font-size: 11px;
-  font-weight: 850;
+  color: var(--brand-muted);
+  font-family: var(--font-sans);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: background 0.22s ease, color 0.22s ease, box-shadow 0.22s ease;
+  transition: color 0.25s ease, border-color 0.25s ease;
+}
+
+.AuthPage-toggle button:hover {
+  color: var(--brand-ivory);
 }
 
 .AuthPage-toggle button.active {
-  color: #062011;
-  background: linear-gradient(135deg, #2ecc71, #40df82);
-  box-shadow: 0 0 24px rgba(46, 204, 113, 0.36);
-}
-
-.AuthPage-cardHeader {
-  margin-bottom: clamp(16px, 2.4vh, 22px);
+  color: var(--brand-gold-bright);
+  border-bottom-color: var(--brand-gold);
 }
 
 .AuthPage-cardHeader h2 {
-  margin: 0 0 7px;
-  font-size: clamp(27px, 3.2vh, 31px);
-  line-height: 1;
-  font-weight: 900;
-  letter-spacing: -0.04em;
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 1.7rem;
+  color: var(--brand-ivory);
 }
 
 .AuthPage-cardHeader p {
-  margin: 0;
-  color: #94a3b8;
-  font-size: 13px;
-  font-weight: 700;
+  margin: 10px 0 0;
+  color: var(--brand-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
 }
+
+/* ---------- Form ---------- */
 
 .AuthPage-form {
-  display: grid;
-  gap: clamp(11px, 1.8vh, 15px);
-}
-
-.AuthPage-field {
-  display: grid;
-  gap: 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 28px;
 }
 
 .AuthPage-field > span {
-  color: #a7b4c5;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
+  display: block;
+  margin-bottom: 8px;
+  color: var(--brand-dim);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 
 .AuthPage-inputWrap {
-  min-height: 48px;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 0 14px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #94a3b8;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  border: 1px solid var(--brand-hairline-soft);
+  border-radius: var(--brand-radius);
+  background: rgba(8, 8, 11, 0.55);
+  transition: border-color 0.25s ease;
 }
 
 .AuthPage-inputWrap:focus-within {
-  background: rgba(255, 255, 255, 0.105);
-  border-color: rgba(46, 204, 113, 0.68);
-  box-shadow: 0 0 0 4px rgba(46, 204, 113, 0.12);
+  border-color: var(--brand-gold);
+}
+
+.AuthPage-inputWrap > svg {
+  flex-shrink: 0;
+  color: var(--brand-dim);
+  font-size: 0.85rem;
 }
 
 .AuthPage-inputWrap input {
-  width: 100%;
+  flex: 1;
   min-width: 0;
+  padding: 14px 0;
   border: 0;
   outline: 0;
   background: transparent;
-  color: #ffffff;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 750;
+  color: var(--brand-ivory);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
 }
 
 .AuthPage-inputWrap input::placeholder {
-  color: #7b8798;
+  color: var(--brand-dim);
+}
+
+.AuthPage-inputWrap input:-webkit-autofill,
+.AuthPage-inputWrap input:-webkit-autofill:hover,
+.AuthPage-inputWrap input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--brand-ivory);
+  -webkit-box-shadow: 0 0 0 1000px #0b0b0f inset;
+  transition: background-color 9999s ease-out;
 }
 
 .AuthPage-eye {
+  display: grid;
+  place-items: center;
+  padding: 6px;
   border: 0;
   background: transparent;
-  color: #94a3b8;
+  color: var(--brand-dim);
   cursor: pointer;
-  padding: 4px;
-  display: inline-flex;
+  transition: color 0.25s ease;
+}
+
+.AuthPage-eye:hover {
+  color: var(--brand-gold-bright);
 }
 
 .AuthPage-row {
@@ -279,303 +285,224 @@ body.auth-route #root {
 .AuthPage-check {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  color: #94a3b8;
-  font-size: 11.5px;
-  font-weight: 800;
-  line-height: 1.4;
+  gap: 10px;
+  color: var(--brand-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
 }
 
 .AuthPage-check input {
   width: 15px;
   height: 15px;
-  accent-color: #2ecc71;
-}
-
-.AuthPage-terms a,
-.AuthPage-inlineBtn,
-.AuthPage-bottomText button {
-  color: #2ecc71;
-  font-weight: 900;
-  text-decoration: none;
-}
-
-.AuthPage-inlineBtn,
-.AuthPage-bottomText button {
-  border: 0;
-  padding: 0;
-  background: transparent;
-  font: inherit;
-  font-size: 12px;
+  accent-color: var(--brand-gold);
   cursor: pointer;
+}
+
+.AuthPage-terms a {
+  color: var(--brand-gold-bright);
+  text-decoration: none;
+  border-bottom: 1px solid var(--brand-hairline);
+}
+
+.AuthPage-terms a:hover {
+  border-bottom-color: var(--brand-gold-bright);
+}
+
+.AuthPage-inlineBtn {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--brand-gold-bright);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 1px solid var(--brand-hairline);
+}
+
+.AuthPage-inlineBtn:hover {
+  border-bottom-color: var(--brand-gold-bright);
 }
 
 .AuthPage-error {
   margin: 0;
-  padding: 9px 11px;
-  border-radius: 10px;
-  color: #ffd7d7;
-  background: rgba(231, 76, 60, 0.12);
-  border: 1px solid rgba(231, 76, 60, 0.28);
-  font-size: 12px;
-  font-weight: 750;
+  padding: 12px 14px;
+  border: 1px solid rgba(193, 75, 75, 0.4);
+  border-radius: var(--brand-radius);
+  background: rgba(140, 47, 47, 0.14);
+  color: #e8b4b4;
+  font-size: 0.85rem;
+  line-height: 1.5;
 }
 
 .AuthPage-submit {
-  min-height: 49px;
-  border: 0;
-  border-radius: 13px;
-  color: #052211;
-  background: linear-gradient(135deg, #2ecc71, #27ae60);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 800;
+  min-height: 50px;
+  margin-top: 4px;
+  border: 1px solid var(--brand-gold);
+  border-radius: var(--brand-radius);
+  background: var(--brand-gold);
+  color: var(--brand-gold-ink);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(46, 204, 113, 0.2);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
 }
 
 .AuthPage-submit:hover:not(:disabled) {
+  background: var(--brand-gold-bright);
+  border-color: var(--brand-gold-bright);
   transform: translateY(-1px);
-  filter: brightness(1.05);
-  box-shadow: 0 6px 18px rgba(46, 204, 113, 0.25);
 }
 
 .AuthPage-submit:disabled {
-  opacity: 0.65;
   cursor: not-allowed;
+  opacity: 0.55;
 }
+
+/* ---------- Divider, socials, footer ---------- */
 
 .AuthPage-divider {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin: clamp(18px, 2.8vh, 23px) 0 clamp(14px, 2.2vh, 17px);
-  color: #667386;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
+  gap: 16px;
+  margin: 26px 0 18px;
 }
 
 .AuthPage-divider::before,
 .AuthPage-divider::after {
   content: "";
-  height: 1px;
   flex: 1;
-  background: rgba(255, 255, 255, 0.1);
+  height: 1px;
+  background: var(--brand-hairline-soft);
+}
+
+.AuthPage-divider span {
+  color: var(--brand-dim);
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
 }
 
 .AuthPage-socials {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
 }
 
 .AuthPage-socials button {
-  min-height: 43px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: rgba(255, 255, 255, 0.08);
-  color: #cbd5e1;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 44px;
+  border: 1px solid var(--brand-hairline-soft);
+  border-radius: var(--brand-radius);
+  background: transparent;
+  color: var(--brand-muted);
+  font-size: 1rem;
   cursor: pointer;
-  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+  transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease;
 }
 
 .AuthPage-socials button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(46, 204, 113, 0.22);
+  color: var(--brand-gold-bright);
+  border-color: var(--brand-gold);
+  background: rgba(211, 172, 108, 0.08);
 }
 
 .AuthPage-socials button:disabled {
-  opacity: 0.65;
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .AuthPage-bottomText {
-  margin: clamp(16px, 2.5vh, 21px) 0 0;
+  margin: 26px 0 0;
   text-align: center;
-  color: #94a3b8;
-  font-size: 13px;
-  font-weight: 750;
+  color: var(--brand-muted);
+  font-size: 0.88rem;
+}
+
+.AuthPage-bottomText button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--brand-gold-bright);
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 1px solid var(--brand-hairline);
+}
+
+.AuthPage-bottomText button:hover {
+  border-bottom-color: var(--brand-gold-bright);
 }
 
 .AuthPage-toast {
   position: fixed;
   bottom: 28px;
   left: 50%;
-  z-index: 1000;
   transform: translateX(-50%);
-  padding: 12px 20px;
-  border-radius: 12px;
-  background: rgba(4, 10, 28, 0.94);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 800;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.36);
+  z-index: 50;
+  padding: 14px 22px;
+  border: 1px solid var(--brand-hairline);
+  border-radius: var(--brand-radius);
+  background: var(--brand-charcoal);
+  color: var(--brand-ivory);
+  font-size: 0.88rem;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
 }
 
-@media (min-width: 1061px) and (max-height: 760px) {
+/* ---------- Responsive ---------- */
+
+@media (max-width: 960px) {
   .AuthPage {
-    padding-block: 18px;
-  }
-
-  .AuthPage-shell {
-    max-height: calc(100vh - 36px);
-  }
-
-  .AuthPage-brand {
-    margin-bottom: 24px;
-  }
-
-  .AuthPage-copy h1 {
-    font-size: clamp(34px, 4vw, 50px);
-    margin-bottom: 12px;
-  }
-
-  .AuthPage-copy p {
-    font-size: 14px;
-    line-height: 1.5;
-  }
-
-  .AuthPage-cinema {
-    width: min(360px, 100%);
-    max-height: 260px;
-    margin-top: 22px;
-  }
-
-  .AuthPage-heroImage {
-    height: 260px;
-  }
-
-  .AuthPage-trust {
-    margin-top: 20px;
-    font-size: 8.8px;
-  }
-
-  .AuthPage-card {
-    padding: 22px;
-  }
-
-  .AuthPage-toggle {
-    margin-bottom: 16px;
-  }
-
-  .AuthPage-cardHeader {
-    margin-bottom: 14px;
-  }
-
-  .AuthPage-cardHeader h2 {
-    font-size: 26px;
-  }
-
-  .AuthPage-form {
-    gap: 10px;
-  }
-
-  .AuthPage-inputWrap {
-    min-height: 44px;
-  }
-
-  .AuthPage-submit {
-    min-height: 46px;
-  }
-
-  .AuthPage-divider {
-    margin: 15px 0 12px;
-  }
-
-  .AuthPage-socials button {
-    min-height: 40px;
-  }
-
-  .AuthPage-bottomText {
-    margin-top: 13px;
-  }
-}
-
-@media (max-width: 1060px) {
-  .AuthPage {
-    min-height: 100dvh;
-    overflow-y: auto;
-    padding: clamp(28px, 5vh, 44px) 22px;
+    padding: 24px 16px;
   }
 
   .AuthPage-shell {
     grid-template-columns: 1fr;
-    max-height: none;
-    gap: 34px;
   }
 
   .AuthPage-hero {
-    min-height: auto;
-    align-items: center;
-    text-align: center;
+    gap: 26px;
+    padding: 32px 26px;
+    border-right: 0;
+    border-bottom: 1px solid var(--brand-hairline-soft);
   }
 
-  .AuthPage-brand {
-    margin-bottom: 34px;
-  }
-
-  .AuthPage-copy h1,
   .AuthPage-copy p {
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .AuthPage-cinema {
-    margin-top: 34px;
+    max-width: none;
   }
 
   .AuthPage-trust {
-    justify-content: center;
-    margin-top: 32px;
-  }
-
-  .AuthPage-card {
-    justify-self: center;
-  }
-}
-
-@media (max-width: 620px) {
-  .AuthPage {
-    padding: clamp(24px, 6vh, 36px) 14px;
-    align-items: flex-start;
-  }
-
-  .AuthPage-copy h1 {
-    font-size: 38px;
-  }
-
-  .AuthPage-copy p {
-    font-size: 14px;
-  }
-
-  .AuthPage-cinema {
     display: none;
   }
 
-  .AuthPage-trust {
-    gap: 10px;
-    font-size: 9px;
+  .AuthPage-card {
+    padding: 30px 26px 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .AuthPage {
+    padding: 0;
+    align-items: stretch;
   }
 
-  .AuthPage-trust span:not(:first-child)::before {
-    margin-right: 10px;
+  .AuthPage-shell {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .AuthPage-hero {
+    padding: 28px 20px;
   }
 
   .AuthPage-card {
-    padding: 22px;
-    border-radius: 22px;
-  }
-
-  .AuthPage-cardHeader h2 {
-    font-size: 28px;
-  }
-
-  .AuthPage-row {
-    align-items: flex-start;
-    flex-direction: column;
+    padding: 26px 20px calc(34px + env(safe-area-inset-bottom));
   }
 }

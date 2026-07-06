@@ -12,8 +12,7 @@ import {
   FaXTwitter,
 } from "react-icons/fa6";
 import { FaEyeSlash } from "react-icons/fa";
-import authVectorReference from "../assets/auth-vector-reference.png";
-import apiClient, { API_BASE_URL } from "../api/apiClient";
+import apiClient from "../api/apiClient";
 import "./AuthPage.css";
 
 const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
@@ -36,13 +35,7 @@ function GoogleAuthButton({ onSuccess, onError, onNonOAuthError, disabled }) {
   return (
     <button
       type="button"
-      onClick={() => {
-        console.log("Google button clicked");
-        console.log("Google client ID exists:", Boolean(GOOGLE_CLIENT_ID));
-        console.log("Current origin:", window.location.origin);
-        console.log("API base URL:", API_BASE_URL || "(same-origin /api fallback)");
-        login();
-      }}
+      onClick={() => login()}
       disabled={disabled}
       aria-label="Continue with Google"
     >
@@ -240,15 +233,6 @@ function AuthPage({ initialMode = "signin" }) {
               Create groups, vote on what to watch, build shared watchlists, and keep the night
               moving with real-time syncing.
             </p>
-          </div>
-
-          <div className="AuthPage-cinema" aria-hidden="true">
-            <img
-              className="AuthPage-heroImage"
-              src={authVectorReference}
-              alt=""
-              loading="eager"
-            />
           </div>
 
           <div className="AuthPage-trust">
