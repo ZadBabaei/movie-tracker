@@ -92,4 +92,36 @@ PollSchema.index({ groupId: 1, status: 1 });
 
 const Poll: Model<IPoll> = mongoose.model<IPoll>("Poll", PollSchema);
 
+// Polls are retained for 30 days. The database previously carried a 7-day
+// TTL on createdAt, which deleted history early — realign it on startup.
+const POLL_RETENTION_SECONDS = 30 * 24 * 60 * 60;
+
+const ensurePollRetentionIndex = async () => {
+  try {
+    const collection = mongoose.connection.db?.collection("polls");
+    if (!collection) return;
+
+    const indexes = await collection.indexes();
+    const createdAtIndex = indexes.find((index) => index.name === "createdAt_1");
+    if (createdAtIndex?.expireAfterSeconds === POLL_RETENTION_SECONDS) return;
+
+    if (createdAtIndex) {
+      await collection.dropIndex("createdAt_1");
+    }
+    await collection.createIndex(
+      { createdAt: 1 },
+      { expireAfterSeconds: POLL_RETENTION_SECONDS }
+    );
+    console.info("Poll retention TTL index set to 30 days.");
+  } catch (error) {
+    console.warn("Could not update poll retention TTL index:", error);
+  }
+};
+
+if (mongoose.connection.readyState === 1) {
+  void ensurePollRetentionIndex();
+} else {
+  mongoose.connection.once("open", () => void ensurePollRetentionIndex());
+}
+
 export default Poll;

@@ -146,11 +146,11 @@ const GroupChat: React.FC = () => {
             {getButtonText()}
           </button>
 
-          <h3 className="GroupChatPage-polls-title">Polls</h3>
+          <h3 className="GroupChatPage-polls-title">Polls · Last 30 Days</h3>
 
           <div className="GroupChatPage-poll-list">
             {pollHistory.length === 0 ? (
-              <p className="GroupChatPage-poll-empty">No polls yet. Create one!</p>
+              <p className="GroupChatPage-poll-empty">No polls in the last 30 days. Create one!</p>
             ) : (
               pollHistory.map((poll) => (
                 <div

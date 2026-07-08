@@ -6,6 +6,13 @@ import { getIO } from "../socket";
 
 const router = express.Router();
 
+// Finished polls stay visible in group history for this many days before
+// the TTL index removes them.
+const POLL_HISTORY_WINDOW_DAYS = 30;
+
+const pollRetentionDate = () =>
+  new Date(Date.now() + POLL_HISTORY_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+
 interface RankingPayload {
   movieTmdbId: string;
   rank: number;
@@ -158,6 +165,7 @@ const resultMovies = (poll: any, scoreMap: Record<string, number>) =>
 
 const cancelPollWithoutWinner = async (poll: any) => {
   poll.status = "cancelled";
+  poll.expiresAt = pollRetentionDate();
   poll.result = {
     mode: poll.round > 1 ? "runoff" : "ranked",
     lowestScoreWins: poll.round <= 1,
@@ -192,6 +200,7 @@ const completeOrRunoff = async (poll: any, currentUserId?: string): Promise<Comp
 
     poll.status = "completed";
     poll.winningMovieTmdbId = winners[0].tmdbId;
+    poll.expiresAt = pollRetentionDate();
     poll.result = {
       mode: randomTieBreak ? "randomTieBreak" : "runoff",
       lowestScoreWins: false,
@@ -244,6 +253,7 @@ const completeOrRunoff = async (poll: any, currentUserId?: string): Promise<Comp
   const winnerMovie = tiedMovies[0];
   poll.status = "completed";
   poll.winningMovieTmdbId = winnerMovie.tmdbId;
+  poll.expiresAt = pollRetentionDate();
   poll.result = {
     mode: "ranked",
     lowestScoreWins: true,
@@ -432,6 +442,7 @@ router.post("/:pollId/cancel", authenticate, async (req: Request, res: Response)
     }
 
     poll.status = "cancelled";
+    poll.expiresAt = pollRetentionDate();
     await poll.save();
     await Group.findByIdAndUpdate(poll.groupId, { $unset: { currentPoll: 1 } });
     getIO().to(poll.groupId.toString()).emit("poll:cancelled", {
@@ -544,9 +555,12 @@ router.get("/:pollId/results", authenticate, async (req: Request, res: Response)
 
 router.get("/group/:groupId/history", authenticate, async (req: Request, res: Response) => {
   try {
+    // Display window only — older polls stay in the database but are not listed.
+    const windowStart = new Date(Date.now() - POLL_HISTORY_WINDOW_DAYS * 24 * 60 * 60 * 1000);
     const polls = await Poll.find({
       groupId: req.params.groupId,
       status: { $in: ["completed", "cancelled"] },
+      createdAt: { $gte: windowStart },
     })
       .sort({ createdAt: -1 })
       .populate("creator", "name")
