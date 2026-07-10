@@ -2,7 +2,7 @@
 
 Movie Tracker is a full-stack social movie-night app for groups that want one shared place to plan what to watch, vote on options, track watched movies, and keep the conversation around each group.
 
-Live app: https://movie-tracker-cyan-six.vercel.app
+Live app: https://movietracker.zadprogramming.com/
 
 ## What it demonstrates
 
