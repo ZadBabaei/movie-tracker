@@ -2,3 +2,16 @@ node_modules/
 playwright-report/
 test-results/
 designRefrences/client_secret*.json
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Build outputs
+dist/
+build/
+
+# Logs and crash dumps
+*.log
+*.stackdump
