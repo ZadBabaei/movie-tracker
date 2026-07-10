@@ -113,10 +113,7 @@ Use the example files as the source of truth:
 
 Do not commit real `.env` files.
 
-## Portfolio notes
 
-- Keep screenshots current with the deployed app, especially group polls, watchlist, chat, and profile/favorite-group flows.
-- The repository intentionally ignores generated build output, logs, Playwright artifacts, and local env files.
 
 <!-- add-to-portfolio -->
 
