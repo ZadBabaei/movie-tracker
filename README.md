@@ -1,85 +1,125 @@
-# 🎬 Movie Tracker
+# Movie Tracker
 
-**Movie Tracker** is a full-stack web application designed to make movie nights with friends easier and more collaborative. Whether you're planning your next group viewing, voting on what to watch, or simply keeping track of shared favorites, this app helps you organize and enjoy movies together — all in one place.
+Movie Tracker is a full-stack social movie-night app for groups that want one shared place to plan what to watch, vote on options, track watched movies, and keep the conversation around each group.
 
----
+Live app: https://movie-tracker-cyan-six.vercel.app
 
-[Watch the demo video](https://streamable.com/0sbjip)
+## What it demonstrates
 
----
+- **Group movie planning:** Users can create groups, invite friends, manage memberships, and keep movie activity scoped to each group.
+- **Collaborative polls:** Groups can suggest movie options, vote, and resolve winners with app-level voting rules.
+- **Shared watchlist and watch history:** Groups can add movies, mark titles as watched, and keep richer watch context for later.
+- **Realtime group chat:** Stream Chat and Socket.io support private group conversations, unread counts, and navbar chat access.
+- **Authentication and profiles:** JWT auth, Google sign-in support, protected routes, user profiles, avatars, and favorite groups.
+- **Movie discovery:** TMDB-backed search/details plus coming-soon enrichment paths using TMDB and optional Watchmode data.
+- **Operational feedback loop:** Optional bug report flow can create GitHub issues and email notifications when configured.
 
-## 🌟 Features
+## Architecture
 
-### 👥 Group Management
-- Create and join movie groups
-- Invite friends by username
-- Display total members and group stats
+```mermaid
+flowchart LR
+  User["React client"] --> API["Express API"]
+  User <--> Socket["Socket.io"]
+  API --> Mongo["MongoDB + Mongoose"]
+  API --> Stream["Stream Chat"]
+  API --> TMDB["TMDB API"]
+  API --> Watchmode["Watchmode API"]
+  API --> Cloudinary["Cloudinary"]
+  API --> Email["SMTP/Resend"]
+```
 
-### 🗳️ Collaborative Movie Polls
-- Suggest movies and vote as a group
-- Limit voting to specific rules (e.g., max 4 picks per person)
-- Display winning movie with tie-breaking logic
+## Tech Stack
 
-### 💬 Group Chat
-- Real-time messaging powered by **Stream Chat API**
-- Every group has its own private chat space
-- Messages are scoped to the group, ensuring privacy and context
+| Layer | Technology |
+| --- | --- |
+| Frontend | React 18, TypeScript/JavaScript, React Router, Zustand, MUI, custom CSS |
+| Backend | Node.js, Express, TypeScript, Mongoose |
+| Realtime | Socket.io, Stream Chat |
+| Auth | JWT, Google OAuth |
+| Media/data | TMDB, Watchmode, Cloudinary |
+| Testing | Playwright end-to-end tests |
+| Deployment | Vercel frontend with separate backend service |
 
-### 🎞️ Watched Movies List
-- Add movies to the shared "watched" list
-- View a grid of group-watched content
-- Open detailed modal for movie info, vote history, and comments
+## Repository layout
 
-### ✍️ Comments & Reactions
-- Comment on specific movies inside the group
-- Leave notes, reactions, or thoughts after watching
+```text
+movie-tracker/
+  client/          React app, UI components, stores, API clients
+  server/          Express API, routes, models, middleware, realtime socket setup
+  tests/e2e/       Playwright end-to-end specs and helpers
+  Docs/            Planning notes and feature references
+```
 
-### 🔐 Role-based Permissions
-- Only the group creator can remove movies from the watched list
-- All users can add movies and participate in polls
+## Local setup
 
----
+Prerequisites:
 
-## 💻 Technologies Used
+- Node.js 20+
+- MongoDB connection string
+- TMDB API key
+- Stream Chat credentials for group chat
 
-### Frontend
-- **React**
-- **CSS (custom components + modular structure)**
-- **React Router** for page navigation
+```bash
+git clone https://github.com/ZadBabaei/movie-tracker.git
+cd movie-tracker
 
-### Backend
-- **Node.js** & **Express**
-- **MongoDB** with **Mongoose**
-- **JWT** authentication and route protection
+copy server\.env.example server\.env
+copy client\.env.example client\.env
+```
 
-### Real-Time Features
-- **Stream Chat API** for integrated group messaging
+Fill in the required values in `server/.env` and `client/.env`, then run:
 
----
+```bash
+cd server
+npm ci
+npm run build
+npm run dev
+```
 
-## 🧠 Project Purpose
+In a second terminal:
 
-This app was built to solve a common problem: _planning and organizing group movie nights with minimal friction._ With group chat, polls, watchlists, and availability-based features (coming soon), Movie Tracker is the ideal platform to help you and your friends pick, vote, and enjoy films — together.
+```bash
+cd client
+npm ci
+npm start
+```
 
----
+The client uses the CRA proxy in local development when `REACT_APP_API_BASE_URL` is empty.
 
-## 📁 Folder Structure
-/client → React frontend (components, pages, styles) /server → Express backend (routes, models, middleware) /context → Shared state for modals and auth
+## Validation
 
+```bash
+cd server
+npm ci
+npm run build
 
----
+cd ../client
+npm ci
+npm run build
 
-## ✨ Author
+cd ..
+npm ci
+npm run e2e
+```
 
-Created by **Zad Babaei**  
-GitHub: [@mehrzad-dev](https://github.com/mehrzad-dev)
-- <!-- add-to-portfolio -->
+The Playwright suite expects a reachable app and test database configuration. See `tests/e2e/README.md` for details.
 
----
+## Environment
 
+Use the example files as the source of truth:
 
+- `server/.env.example` for database, auth, Stream Chat, TMDB/Watchmode, Cloudinary, email, and bug-report integrations.
+- `client/.env.example` for frontend API URLs, Google OAuth, TMDB, and feature flags.
 
+Do not commit real `.env` files.
 
+## Portfolio notes
 
+- Keep screenshots current with the deployed app, especially group polls, watchlist, chat, and profile/favorite-group flows.
+- The repository intentionally ignores generated build output, logs, Playwright artifacts, and local env files.
 
+<!-- add-to-portfolio -->
 
+## License
+
+MIT
