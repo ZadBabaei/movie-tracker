@@ -13,7 +13,7 @@ import {
 import { FaEyeSlash } from "react-icons/fa";
 import apiClient from "../api/apiClient";
 import "./AuthPage.css";
-import wordmark from "../assets/logo-wordmark-transparent.png";
+import wordmark from "../assets/movie-tracker-logo-full.png";
 
 const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
 
@@ -122,7 +122,6 @@ function AuthPage({ initialMode = "signin" }) {
       email,
       password,
     });
-
     const loginRes = await apiClient.post("/api/auth/login", { email, password });
     localStorage.setItem("token", loginRes.data.token);
     redirectAfterAuth(loginRes.data.user);

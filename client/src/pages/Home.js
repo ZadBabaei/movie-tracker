@@ -2,10 +2,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import quotes from "../data/Quotes";
 import "./Home.css";
+import "../styles/Branding.css";
 import VerticalNavbar from "../component/VerticalNavbar";
 import apiClient from "../api/apiClient";
 import { useWatchlistStore } from "../store/useWatchlistStore";
 import { useGroupStore } from "../store/useGroupStore";
+import brandLockup from "../assets/movie-tracker-logo-full.png";
 
 const RELEASE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -193,7 +195,7 @@ function Home() {
           </>
         )}
         <div className="hub-header-inner">
-          <p className="hub-eyebrow">Movie Tracker</p>
+          <img className="hub-brand-lockup" src={brandLockup} alt="Movie Tracker" />
           <h1 className="hub-title">
             {greeting}
             {firstName ? `, ${firstName}` : ""}.
