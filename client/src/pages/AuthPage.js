@@ -13,7 +13,7 @@ import {
 import { FaEyeSlash } from "react-icons/fa";
 import apiClient from "../api/apiClient";
 import "./AuthPage.css";
-import wordmark from "../assets/movie-tracker-logo-full.png";
+import fullLogo from "../assets/movie-tracker-logo-full.svg";
 
 const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
 
@@ -220,7 +220,7 @@ function AuthPage({ initialMode = "signin" }) {
       <section className="AuthPage-shell">
         <div className="AuthPage-hero">
           <div className="AuthPage-brand">
-            <img className="AuthPage-brandLockup" src={wordmark} alt="Movie Tracker" />
+            <img className="AuthPage-brandLockup" src={fullLogo} alt="Movie Tracker" />
           </div>
 
           <div className="AuthPage-copy">

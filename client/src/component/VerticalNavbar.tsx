@@ -17,8 +17,7 @@ import { useGroupStore } from "../store/useGroupStore";
 import { useUnreadCounts } from "../hooks/useUnreadCounts";
 import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
 import "./VerticalNavbar.css";
-import "../styles/Branding.css";
-import brandMark from "../assets/movie-tracker-standalone-icon.png";
+import logoMark from "../assets/movie-tracker-logo-mark.svg";
 
 const VerticalNavbar: React.FC = () => {
   const location = useLocation();
@@ -82,8 +81,8 @@ const VerticalNavbar: React.FC = () => {
   return (
     <>
     <nav className="vertical-navbar">
-      <Link to="/home" className="navbar-brand" aria-label="Movie Tracker home">
-        <img className="navbar-brand-mark" src={brandMark} alt="" aria-hidden="true" />
+      <Link to="/home" className="navbar-brand-link" aria-label="Movie Tracker home">
+        <img className="navbar-brand-mark" src={logoMark} alt="" />
       </Link>
       <ul className="navbar-list">
         <li className="navbar-item">

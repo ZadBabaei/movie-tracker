@@ -2,12 +2,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import quotes from "../data/Quotes";
 import "./Home.css";
-import "../styles/Branding.css";
 import VerticalNavbar from "../component/VerticalNavbar";
 import apiClient from "../api/apiClient";
 import { useWatchlistStore } from "../store/useWatchlistStore";
 import { useGroupStore } from "../store/useGroupStore";
-import brandLockup from "../assets/movie-tracker-logo-full.png";
+import fullLogo from "../assets/movie-tracker-logo-full.svg";
 
 const RELEASE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -195,7 +194,7 @@ function Home() {
           </>
         )}
         <div className="hub-header-inner">
-          <img className="hub-brand-lockup" src={brandLockup} alt="Movie Tracker" />
+          <img className="hub-brand-logo" src={fullLogo} alt="Movie Tracker" />
           <h1 className="hub-title">
             {greeting}
             {firstName ? `, ${firstName}` : ""}.

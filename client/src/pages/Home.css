@@ -53,13 +53,15 @@
   box-sizing: border-box;
 }
 
-.hub-eyebrow {
-  margin: 0 0 16px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.34em;
-  text-transform: uppercase;
-  color: var(--brand-gold);
+.hub-brand-logo {
+  display: block;
+  width: min(400px, 100%);
+  height: auto;
+  margin: 0 0 24px;
+  object-fit: contain;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
 .hub-title {
