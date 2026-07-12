@@ -15,3 +15,8 @@ build/
 # Logs and crash dumps
 *.log
 *.stackdump
+
+# Local tooling state and editor config
+.claude/
+.omc/
+.vercel/
