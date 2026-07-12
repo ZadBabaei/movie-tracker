@@ -154,6 +154,30 @@
   font-weight: 600;
 }
 
+.about-attribution {
+  margin: 0 0 56px;
+  padding-top: 20px;
+  border-top: 1px solid var(--brand-hairline-soft);
+}
+
+.about-attribution p {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.7;
+  letter-spacing: 0.04em;
+  color: var(--brand-dim);
+}
+
+.about-attribution a {
+  color: var(--brand-muted);
+  text-decoration: none;
+  border-bottom: 1px solid var(--brand-hairline);
+}
+
+.about-attribution a:hover {
+  color: var(--brand-gold);
+}
+
 .about-bug-report {
   display: flex;
   align-items: center;

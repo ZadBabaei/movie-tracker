@@ -18,6 +18,14 @@ const getPosterUrl = (path, size = "w342") => {
   return "";
 };
 
+const getBackdropUrl = (movie) => {
+  const path = movie?.backdrop_path || movie?.poster_path;
+  if (!path) return "";
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  if (path.startsWith("/")) return `https://image.tmdb.org/t/p/original${path}`;
+  return "";
+};
+
 const daysUntil = (value) => {
   if (!value || !RELEASE_DATE_PATTERN.test(value)) return null;
   const target = new Date(`${value}T00:00:00.000Z`);
@@ -55,6 +63,9 @@ const relativeTime = (value) => {
   const years = Math.floor(months / 12);
   return years === 1 ? "1 year ago" : `${years} years ago`;
 };
+
+const notability = (movie) =>
+  (movie.revenue || 0) * 1000 + (movie.popularity || 0);
 
 const greetingForHour = (hour) => {
   if (hour < 5) return "Late night pick";
@@ -125,13 +136,20 @@ function Home() {
   }, []);
 
   const upcomingPicks = useMemo(() => {
-    const notability = (movie) =>
-      (movie.revenue || 0) * 1000 + (movie.popularity || 0);
     return upcoming
       .filter((movie) => movie.poster_path && daysUntil(movie.release_date) !== null)
       .sort((a, b) => notability(b) - notability(a))
       .slice(0, 6)
       .sort((a, b) => (a.release_date || "").localeCompare(b.release_date || ""));
+  }, [upcoming]);
+
+  const featuredBackdrop = useMemo(() => {
+    const featured = upcoming
+      .filter((movie) => movie.backdrop_path && daysUntil(movie.release_date) !== null)
+      .sort((a, b) => notability(b) - notability(a))[0];
+    return featured
+      ? { url: getBackdropUrl(featured), title: featured.title }
+      : null;
   }, [upcoming]);
 
   const watchlistHighlights = useMemo(() => {
@@ -163,6 +181,17 @@ function Home() {
       <VerticalNavbar />
 
       <header className="hub-header">
+        {featuredBackdrop && (
+          <>
+            <img
+              className="hub-header-backdrop"
+              src={featuredBackdrop.url}
+              alt=""
+              aria-hidden="true"
+            />
+            <div className="hub-header-scrim" />
+          </>
+        )}
         <div className="hub-header-inner">
           <p className="hub-eyebrow">Movie Tracker</p>
           <h1 className="hub-title">
@@ -342,6 +371,18 @@ function Home() {
             )}
           </div>
         </section>
+
+        <p className="hub-attribution">
+          This product uses the TMDB API but is not endorsed or certified by{" "}
+          <a
+            href="https://www.themoviedb.org/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            TMDB
+          </a>
+          .
+        </p>
       </main>
     </div>
   );

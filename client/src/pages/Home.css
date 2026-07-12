@@ -12,9 +12,27 @@
   position: relative;
   display: flex;
   align-items: flex-end;
-  min-height: 38vh;
+  min-height: 54vh;
   overflow: hidden;
   background: radial-gradient(120% 90% at 70% 0%, #16130d 0%, var(--brand-black) 70%);
+}
+
+.hub-header-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 25%;
+  filter: saturate(1.15);
+}
+
+.hub-header-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to top, var(--brand-black) 0%, rgba(8, 8, 11, 0.66) 26%, rgba(8, 8, 11, 0.12) 60%, rgba(8, 8, 11, 0.25) 100%),
+    linear-gradient(100deg, rgba(8, 8, 11, 0.62) 0%, rgba(8, 8, 11, 0.18) 44%, rgba(8, 8, 11, 0) 70%);
 }
 
 .hub-header::after {
@@ -52,6 +70,7 @@
   line-height: 1.04;
   letter-spacing: -0.01em;
   color: var(--brand-ivory);
+  text-shadow: 0 2px 18px rgba(8, 8, 11, 0.55);
 }
 
 .hub-quote {
@@ -342,6 +361,29 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--brand-dim);
+}
+
+/* ---------- Attribution ---------- */
+
+.hub-attribution {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding-top: 20px;
+  border-top: 1px solid var(--brand-hairline-soft);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  color: var(--brand-dim);
+}
+
+.hub-attribution a {
+  color: var(--brand-muted);
+  text-decoration: none;
+  border-bottom: 1px solid var(--brand-hairline);
+}
+
+.hub-attribution a:hover {
+  color: var(--brand-gold);
 }
 
 /* ---------- Empty states ---------- */

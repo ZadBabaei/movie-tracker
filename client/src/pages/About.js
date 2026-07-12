@@ -185,6 +185,30 @@ const About = () => {
           </div>
         </section>
 
+        {/* Data attribution */}
+        <section className="about-attribution">
+          <p>
+            Movie data, posters, and artwork are provided by{" "}
+            <a
+              href="https://www.themoviedb.org/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              The Movie Database (TMDB)
+            </a>{" "}
+            and{" "}
+            <a
+              href="https://www.watchmode.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Watchmode
+            </a>
+            . This product uses the TMDB API but is not endorsed or certified
+            by TMDB.
+          </p>
+        </section>
+
         {bugReportsEnabled && (
           <section className="about-bug-report">
             <div className="about-bug-report-copy">
