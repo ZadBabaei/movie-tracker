@@ -8,14 +8,17 @@ const getEmailConfig = () => {
   const user = process.env.EMAIL_USER || process.env.SMTP_USER;
   const pass = process.env.EMAIL_PASS || process.env.SMTP_PASS;
   const resendApiKey = process.env.RESEND_API_KEY;
-  const defaultFrom = resendApiKey
+  const emailProvider = String(process.env.EMAIL_PROVIDER || "").trim().toLowerCase();
+  const hasSmtpConfig = Boolean(user && pass);
+  const useResend = emailProvider === "resend" || (!hasSmtpConfig && Boolean(resendApiKey));
+  const defaultFrom = useResend
     ? "Movie Tracker <onboarding@resend.dev>"
     : user
       ? `Movie Tracker <${user}>`
       : undefined;
   const from = process.env.EMAIL_FROM || defaultFrom;
 
-  return { host, port, user, pass, from, resendApiKey };
+  return { host, port, user, pass, from, resendApiKey, useResend };
 };
 
 const getEmailDomain = (email: string) => {
@@ -57,13 +60,17 @@ interface SendMailParams {
 }
 
 const sendEmail = async ({ to, subject, text, html }: SendMailParams): Promise<void> => {
-  const { from, resendApiKey } = getEmailConfig();
+  const { from, resendApiKey, useResend } = getEmailConfig();
 
   if (!from) {
     throw new Error("EMAIL_FROM is not configured");
   }
 
-  if (resendApiKey) {
+  if (useResend) {
+    if (!resendApiKey) {
+      throw new Error("RESEND_API_KEY must be configured when EMAIL_PROVIDER=resend");
+    }
+
     const { error } = await getResendClient(resendApiKey).emails.send({
       from,
       to,
