@@ -4,7 +4,7 @@
 }
 
 .my-groups-page {
-  --groups-bg: #08080b;
+  --groups-bg: #021a08;
   --groups-surface: rgba(255, 255, 255, 0.055);
   --groups-surface-strong: rgba(255, 255, 255, 0.085);
   --groups-border: rgba(255, 255, 255, 0.1);
@@ -20,8 +20,8 @@
   width: 100%;
   color: var(--groups-text);
   background:
-    radial-gradient(80% 60% at 50% 100%, rgba(14, 14, 19, 0.34), transparent 70%),
-    linear-gradient(to top, #0e0e13, var(--groups-bg));
+    radial-gradient(80% 60% at 50% 100%, rgba(5, 36, 14, 0.34), transparent 70%),
+    linear-gradient(to top, #05240e, var(--groups-bg));
   padding: 36px 32px 88px;
   padding-left: calc(80px + 32px);
 }
@@ -211,8 +211,8 @@
   justify-content: center;
   flex: 0 0 34px;
   border-radius: 50%;
-  border: 2px solid #0e0e13;
-  background: #17171f;
+  border: 2px solid #05240e;
+  background: #062e10;
   color: var(--groups-text);
   font-size: 0.78rem;
   font-weight: 800;
@@ -233,7 +233,7 @@
 
 .member-count-bubble {
   background: rgba(211, 172, 108, 0.18);
-  border-color: #0e0e13;
+  border-color: #05240e;
   color: #e9c98d;
 }
 
@@ -262,7 +262,7 @@
 }
 
 .group-action-primary {
-  color: #08080b;
+  color: #021a08;
   background: var(--groups-accent);
   border-color: rgba(211, 172, 108, 0.7);
 }
@@ -317,7 +317,7 @@
 .my-groups-state-card button {
   margin-top: 18px;
   padding: 0 18px;
-  color: #08080b;
+  color: #021a08;
   background: var(--groups-accent);
 }
 

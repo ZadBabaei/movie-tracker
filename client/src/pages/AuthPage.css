@@ -57,7 +57,7 @@ body.auth-route #root {
   gap: 40px;
   padding: 48px 44px;
   background:
-    radial-gradient(120% 90% at 80% 0%, #1a1710 0%, var(--brand-black) 70%);
+    radial-gradient(120% 90% at 80% 0%, #062c10 0%, var(--brand-black) 70%);
   border-right: 1px solid var(--brand-hairline-soft);
 }
 
@@ -137,7 +137,7 @@ body.auth-route #root {
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  background: rgba(8, 8, 11, 0.55);
+  background: rgba(2, 26, 8, 0.55);
 }
 
 /* ---------- Card ---------- */
@@ -222,7 +222,7 @@ body.auth-route #root {
   padding: 0 14px;
   border: 1px solid var(--brand-hairline-soft);
   border-radius: var(--brand-radius);
-  background: rgba(8, 8, 11, 0.55);
+  background: rgba(2, 26, 8, 0.55);
   transition: border-color 0.25s ease;
 }
 

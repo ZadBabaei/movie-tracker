@@ -4,9 +4,9 @@
   align-items: flex-start;
   padding: 60px 20px;
 
-  background: #17171f; 
-  background: -webkit-linear-gradient(to top, #0e0e13, #08080b);
-  background: linear-gradient(to top, #0e0e13, #08080b);
+  background: #062e10; 
+  background: -webkit-linear-gradient(to top, #05240e, #021a08);
+  background: linear-gradient(to top, #05240e, #021a08);
 }
 
 .inbox-container {

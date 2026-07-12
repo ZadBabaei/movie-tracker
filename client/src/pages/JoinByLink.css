@@ -3,12 +3,12 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #0d1117;
+  background: #021a08;
   padding: 20px;
 }
 
 .joinbylink-content {
-  background: rgba(16, 18, 26, 0.98);
+  background: rgba(4, 35, 12, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
   padding: 48px 40px;

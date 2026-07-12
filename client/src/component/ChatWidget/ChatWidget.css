@@ -8,7 +8,7 @@
   border-radius: 50%;
   border: none;
   background: linear-gradient(135deg, #f4c542, #ff9800);
-  color: #1a1a1a;
+  color: #073312;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -35,9 +35,9 @@
   right: 24px;
   width: 400px;
   height: 560px;
-  background: #141414;
+  background: #052a0e;
   border-radius: 16px;
-  border: 1px solid #2d2d2d;
+  border: 1px solid #0c4a1e;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -52,8 +52,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  background: linear-gradient(135deg, #242424, #1e1e1e);
-  border-bottom: 1px solid #2d2d2d;
+  background: linear-gradient(135deg, #093f16, #073312);
+  border-bottom: 1px solid #0c4a1e;
   flex-shrink: 0;
 }
 
@@ -104,7 +104,7 @@
 
 .chat-widget-clear-btn:hover,
 .chat-widget-close-btn:hover {
-  background: #2d2d2d;
+  background: #0c4a1e;
   color: #fff;
 }
 
@@ -174,7 +174,7 @@
 }
 
 .chat-widget-suggestion-chip {
-  background: #1e2a3a;
+  background: #073312;
   border: 1px solid #2a3a4a;
   border-radius: 12px;
   color: #ddd;
@@ -215,7 +215,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: #1a1a1a;
+  color: #073312;
   margin-top: 2px;
 }
 
@@ -232,13 +232,13 @@
 
 .chat-widget-bubble-user {
   background: linear-gradient(135deg, #f4c542, #e6b535);
-  color: #1a1a1a;
+  color: #073312;
   font-weight: 500;
   border-bottom-right-radius: 4px;
 }
 
 .chat-widget-bubble-assistant {
-  background: #1e2a3a;
+  background: #073312;
   color: #f0f0f0;
   border-bottom-left-radius: 4px;
 }
@@ -286,14 +286,14 @@
   align-items: flex-end;
   gap: 8px;
   padding: 12px 16px;
-  border-top: 1px solid #2d2d2d;
-  background: #1e1e1e;
+  border-top: 1px solid #0c4a1e;
+  background: #073312;
   flex-shrink: 0;
 }
 
 .chat-widget-input {
   flex: 1;
-  background: #1e1e1e;
+  background: #073312;
   border: 1px solid #3a3a3a;
   border-radius: 12px;
   padding: 10px 14px;
@@ -325,7 +325,7 @@
   border-radius: 12px;
   border: none;
   background: linear-gradient(135deg, #f4c542, #ff9800);
-  color: #1a1a1a;
+  color: #073312;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -354,7 +354,7 @@
     height: 70vh;
     max-height: 70vh;
     border-radius: 16px;
-    border: 1px solid #2d2d2d;
+    border: 1px solid #0c4a1e;
     z-index: 1100;
   }
 

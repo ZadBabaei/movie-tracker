@@ -12,7 +12,7 @@
 
 .mdm-modal {
   position: relative;
-  background: #141414;
+  background: #052a0e;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   width: 100%;
@@ -129,7 +129,7 @@
   padding: 3px 5px;
   border-radius: 5px;
   background: #d3ac6c;
-  color: #111;
+  color: #04230c;
   font-size: 10px;
   font-weight: 900;
   letter-spacing: -0.02em;

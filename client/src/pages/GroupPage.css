@@ -1,7 +1,7 @@
 .group-page {
-  background: #17171f;
-  background: -webkit-linear-gradient(to top, #0e0e13, #08080b);
-  background: linear-gradient(to top, #0e0e13, #08080b);
+  background: #062e10;
+  background: -webkit-linear-gradient(to top, #05240e, #021a08);
+  background: linear-gradient(to top, #05240e, #021a08);
 }
 
 .group-timeline-section {
@@ -29,7 +29,7 @@
   overflow-y: auto;
   padding: 28px;
   border-radius: 20px;
-  background: linear-gradient(145deg, rgba(14, 14, 19, 0.98), rgba(14, 14, 19, 0.98));
+  background: linear-gradient(145deg, rgba(5, 36, 14, 0.98), rgba(5, 36, 14, 0.98));
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #f3eee4;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);

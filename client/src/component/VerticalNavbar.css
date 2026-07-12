@@ -3,9 +3,9 @@
   position: fixed;
   top: 1rem;
   left: 1rem;
- background: #17171f;  
-background: -webkit-linear-gradient(to top, #0e0e13, #08080b);  
-background: linear-gradient(to top, #0e0e13, #08080b); 
+ background: #062e10;  
+background: -webkit-linear-gradient(to top, #05240e, #021a08);  
+background: linear-gradient(to top, #05240e, #021a08); 
 
   border-radius: 12px;
   padding: 1rem 0;
@@ -84,7 +84,7 @@ background: linear-gradient(to top, #0e0e13, #08080b);
   top: 50%;
 
   transform: translateY(-50%) translateX(-50px);
-  background-color: rgba(14, 14, 19, 0.95);
+  background-color: rgba(5, 36, 14, 0.95);
   padding: 0.7rem 1rem;
   border-radius: 10px;
   white-space: nowrap;
@@ -209,7 +209,7 @@ background: linear-gradient(to top, #0e0e13, #08080b);
   padding: 0.7rem 1rem;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
-  background: rgba(14, 14, 19, 0.95);
+  background: rgba(5, 36, 14, 0.95);
   color: #d8d2c4;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   cursor: pointer;
@@ -271,7 +271,7 @@ background: linear-gradient(to top, #0e0e13, #08080b);
   height: 8px;
   background: #f44336;
   border-radius: 50%;
-  border: 2px solid #08080b;
+  border: 2px solid #021a08;
 }
 
 @media (max-width: 1024px) {
@@ -309,7 +309,7 @@ background: linear-gradient(to top, #0e0e13, #08080b);
     gap: 2px;
     min-height: 64px;
     padding: 7px 8px calc(7px + env(safe-area-inset-bottom));
-    background: linear-gradient(to top, #06150d, #0e0e13);
+    background: linear-gradient(to top, #06150d, #05240e);
     border-top: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35);
     box-sizing: border-box;
@@ -358,7 +358,7 @@ background: linear-gradient(to top, #0e0e13, #08080b);
     height: 8px;
     border-radius: 50%;
     background: #f44336;
-    border: 2px solid #0e0e13;
+    border: 2px solid #05240e;
   }
 
   .mobile-more-wrap {
@@ -377,7 +377,7 @@ background: linear-gradient(to top, #0e0e13, #08080b);
     width: min(220px, calc(100vw - 16px));
     overflow: hidden;
     border-radius: 14px;
-    background: rgba(14, 14, 19, 0.98);
+    background: rgba(5, 36, 14, 0.98);
     border: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
   }

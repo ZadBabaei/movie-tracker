@@ -25,7 +25,7 @@
   display: flex;
   align-items: flex-end;
   overflow: hidden;
-  background: radial-gradient(120% 90% at 70% 0%, #16130d 0%, var(--wl2-black) 70%);
+  background: radial-gradient(120% 90% at 70% 0%, #062c10 0%, var(--wl2-black) 70%);
 }
 
 .wl2-header-backdrop {
@@ -43,7 +43,7 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(to top, var(--wl2-black) 2%, rgba(8, 8, 11, 0.72) 40%, rgba(8, 8, 11, 0.4) 100%);
+    linear-gradient(to top, var(--wl2-black) 2%, rgba(2, 26, 8, 0.72) 40%, rgba(2, 26, 8, 0.4) 100%);
 }
 
 .wl2-header-inner {
@@ -455,7 +455,7 @@
 }
 
 .watchlist-page .MovieCard-overlay {
-  background: linear-gradient(to top, rgba(8, 8, 11, 0.94) 0%, rgba(8, 8, 11, 0.72) 60%, rgba(8, 8, 11, 0.45) 100%);
+  background: linear-gradient(to top, rgba(2, 26, 8, 0.94) 0%, rgba(2, 26, 8, 0.72) 60%, rgba(2, 26, 8, 0.45) 100%);
 }
 
 .watchlist-page .MovieCard-overview {
@@ -467,7 +467,7 @@
 .watchlist-page .MovieCard-action {
   border: 1px solid var(--wl2-hairline);
   border-radius: 50%;
-  background: rgba(8, 8, 11, 0.65);
+  background: rgba(2, 26, 8, 0.65);
   color: var(--wl2-gold-bright);
   transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease;
 }
@@ -531,7 +531,7 @@
 .watchlist-page .carousel-btn {
   border: 1px solid var(--wl2-hairline-soft);
   border-radius: 2px;
-  background: rgba(14, 14, 19, 0.85);
+  background: rgba(5, 36, 14, 0.85);
   color: var(--wl2-ivory);
 }
 

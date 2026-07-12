@@ -2,13 +2,13 @@
   display: flex;
   flex-direction: column;
 
-  background: -webkit-linear-gradient(to top, #0e0e13, #08080b);
-  background: linear-gradient(to top, #0e0e13, #08080b);
+  background: -webkit-linear-gradient(to top, #05240e, #021a08);
+  background: linear-gradient(to top, #05240e, #021a08);
 }
 #root {
-  background: #17171f;
-  background: -webkit-linear-gradient(to top, #0e0e13, #08080b);
-  background: linear-gradient(to top, #0e0e13, #08080b);
+  background: #062e10;
+  background: -webkit-linear-gradient(to top, #05240e, #021a08);
+  background: linear-gradient(to top, #05240e, #021a08);
 }
 .GroupChatPage-main {
   padding: 20px;
@@ -22,7 +22,7 @@
   padding: 96px 48px 30px;
   box-sizing: border-box;
   border-bottom: 1px solid var(--brand-hairline-soft);
-  background: radial-gradient(90% 120% at 20% 0%, #16130d 0%, transparent 70%);
+  background: radial-gradient(90% 120% at 20% 0%, #062c10 0%, transparent 70%);
 }
 
 .gc2-eyebrow {
@@ -102,7 +102,7 @@
   width: 50vh;
   margin-inline-end: 20px;
 
-  background-color: rgba(20, 20, 26, 0.82);
+  background-color: rgba(5, 42, 14, 0.82);
   padding: 16px;
   padding-block-start: 15px;
   border: 1px solid var(--brand-hairline-soft);
@@ -255,7 +255,7 @@
   position: absolute;
   right: 0;
   top: 100%;
-  background: #17171f;
+  background: #062e10;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
@@ -348,7 +348,7 @@
   transform: translateY(-1px);
 }
 .GroupChatPage-banner-section {
-  background-color: rgba(14, 14, 19, 0.73);
+  background-color: rgba(5, 36, 14, 0.73);
   backdrop-filter: blur(6px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;

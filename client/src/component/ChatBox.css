@@ -1,6 +1,6 @@
 .custom-chat-container {
   position: relative;
-  background-color: #0e0e13;
+  background-color: #05240e;
   border: 1px solid var(--brand-hairline-soft);
   border-radius: var(--brand-radius-lg);
   overflow: hidden;
@@ -52,14 +52,14 @@
 
 .str-chat__main-panel {
   flex-grow: 1;
-  background-color: #0e0e13;
+  background-color: #05240e;
   display: flex;
   flex-direction: column;
   border-left: 1px solid #23232e;
 }
 
 .custom-chat-header {
-  background-color: #17171f;
+  background-color: #062e10;
   padding: 1rem;
   border-bottom: 1px solid #23232e;
   font-size: 1rem;
@@ -80,7 +80,7 @@
 }
 
 .str-chat__list {
-  background-color: #0e0e13;
+  background-color: #05240e;
   padding: 1rem;
   overflow-y: auto;
   flex-grow: 1;
@@ -107,20 +107,20 @@
 }
 
 .str-chat__message--other {
-  background-color: #1e1e28;
+  background-color: #083614;
   color: white;
   border-radius: 12px;
   padding: 10px 14px;
 }
 
 .str-chat__input-flat {
-  background-color: #14141b;
+  background-color: #052a0e;
   padding: 12px;
   border-top: 1px solid #23232e;
 }
 
 .str-chat__input-flat textarea {
-  background-color: #14141b;
+  background-color: #052a0e;
   color: white;
 }
 
@@ -288,7 +288,7 @@
 }
 
 .message-row.theirs .message-bubble {
-  background: #1e1e28;
+  background: #083614;
   border: 1px solid rgba(243, 238, 228, 0.08);
   border-bottom-left-radius: 4px;
 }
@@ -365,21 +365,21 @@
   overflow: hidden;
   color: inherit;
   text-decoration: none;
-  background: rgba(8, 8, 11, 0.38);
+  background: rgba(2, 26, 8, 0.38);
   border: 1px solid rgba(211, 172, 108, 0.22);
   border-radius: 10px;
 }
 
 .link-preview-card:hover {
   border-color: rgba(211, 172, 108, 0.5);
-  background: rgba(8, 8, 11, 0.55);
+  background: rgba(2, 26, 8, 0.55);
 }
 
 .link-preview-image {
   width: 96px;
   min-height: 96px;
   object-fit: cover;
-  background: #14141b;
+  background: #052a0e;
 }
 
 .link-preview-content {
@@ -417,7 +417,7 @@
 .custom-chat-input {
   position: relative;
   padding: 10px 12px 12px;
-  background: #14141b;
+  background: #052a0e;
   border-top: 1px solid #23232e;
 }
 
@@ -462,7 +462,7 @@
   border: 1px solid rgba(211, 172, 108, 0.18);
   border-radius: 12px;
   padding: 11px 12px;
-  background: #0b0b10;
+  background: #042109;
   color: #ffffff;
   outline: none;
   font: inherit;
@@ -488,7 +488,7 @@
 
 .emoji-toggle {
   width: 42px;
-  background: #1f1f29;
+  background: #083814;
   font-size: 20px;
 }
 
@@ -520,7 +520,7 @@
   grid-template-columns: repeat(4, 36px);
   gap: 4px;
   padding: 8px;
-  background: #17171f;
+  background: #062e10;
   border: 1px solid rgba(211, 172, 108, 0.2);
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);

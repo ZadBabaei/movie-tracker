@@ -4,8 +4,8 @@
 }
 
 .Profile-page {
-  --Profile-bg: #08080b;
-  --Profile-bg-soft: #0e0e13;
+  --Profile-bg: #021a08;
+  --Profile-bg-soft: #05240e;
   --Profile-surface: rgba(255, 255, 255, 0.055);
   --Profile-surface-strong: rgba(255, 255, 255, 0.085);
   --Profile-border: rgba(255, 255, 255, 0.1);
@@ -22,8 +22,8 @@
   color: var(--Profile-text);
   font-family: var(--font-sans);
   background:
-    radial-gradient(80% 60% at 50% 100%, rgba(14, 14, 19, 0.34), transparent 70%),
-    linear-gradient(to top, #0e0e13, var(--Profile-bg));
+    radial-gradient(80% 60% at 50% 100%, rgba(5, 36, 14, 0.34), transparent 70%),
+    linear-gradient(to top, #05240e, var(--Profile-bg));
 }
 
 .Profile-container {
@@ -66,7 +66,7 @@
   font-size: 0.9rem;
   font-weight: 700;
   border: 1px solid var(--Profile-border);
-  background: #17171f;
+  background: #062e10;
   box-shadow: 0 14px 28px rgba(0, 0, 0, 0.24);
 }
 
@@ -259,7 +259,7 @@
 }
 
 .Profile-btn--primary {
-  color: #08080b;
+  color: #021a08;
   background: var(--Profile-accent);
   border-color: rgba(211, 172, 108, 0.74);
 }

@@ -1,6 +1,6 @@
 .GroupSidebar-sidebar-container {
   width: 250px;
-  background-color: #0e0e13;
+  background-color: #05240e;
   border-right: 1px solid #23232e;
   padding: 1rem;
   height: 100vh;
@@ -41,7 +41,7 @@
 }
 
 .GroupSidebar-member-item:hover {
-  background-color: #14141b;
+  background-color: #052a0e;
 }
 
 .GroupSidebar-member-info {
@@ -64,7 +64,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #14141b;
+  background: #052a0e;
   color: #ffffff;
   font-size: 0.8rem;
   font-weight: 700;
@@ -103,7 +103,7 @@
 .GroupSidebar-dm-btn {
   opacity: 0;
   transition: opacity 0.3s ease;
-  background-color: #1f1f29;
+  background-color: #083814;
   color: #ffffff;
   border: none;
   padding: 4px 10px;

@@ -24,7 +24,7 @@
 }
 
 .VoteModal-content {
-  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  background: linear-gradient(135deg, #073312 0%, #0c4a1e 100%);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
   padding: 30px;
@@ -113,7 +113,7 @@
   aspect-ratio: 2 / 3;
   object-fit: cover;
   border-radius: 10px;
-  background: #111;
+  background: #04230c;
 }
 
 .VoteModal-rank-title {
@@ -153,7 +153,7 @@
 }
 
 .VoteModal-rank-select option {
-  background: #1f1f1f;
+  background: #073512;
   color: #fff;
 }
 
@@ -162,7 +162,7 @@
   padding: 11px 14px;
   border: none;
   border-radius: 10px;
-  background: linear-gradient(135deg, #444, #2b2b2b);
+  background: linear-gradient(135deg, #444, #0a4519);
   color: #fff;
   font-weight: 700;
   cursor: pointer;
@@ -261,7 +261,7 @@
   left: -8px;
   width: 32px;
   height: 32px;
-  background-color: #111;
+  background-color: #04230c;
   color: white;
   border-radius: 50%;
   font-size: 12px;
@@ -313,7 +313,7 @@
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background-color: #292929;
+  background-color: #0a4519;
   color: white;
   font-size: 11px;
   font-weight: bold;
@@ -594,7 +594,7 @@
   position: relative;
   overflow-x: hidden;
   overflow-y: auto;
-  background: linear-gradient(160deg, #0a0a0f 0%, #141420 40%, #1a1a2e 100%) !important;
+  background: linear-gradient(160deg, #0a0a0f 0%, #141420 40%, #05240e 100%) !important;
   border: 1px solid rgba(255, 215, 0, 0.08) !important;
 }
 
@@ -715,7 +715,7 @@
   align-items: center;
   gap: 6px;
   background: linear-gradient(135deg, #e9c98d, #f0a500);
-  color: #1a1a1a;
+  color: #073312;
   font-size: 0.7rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -1428,7 +1428,7 @@
   position: absolute;
   right: 0;
   top: 100%;
-  background: #2d2d2d;
+  background: #0c4a1e;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);

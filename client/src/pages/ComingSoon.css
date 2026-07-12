@@ -25,7 +25,7 @@
   display: flex;
   align-items: flex-end;
   overflow: hidden;
-  background: radial-gradient(120% 90% at 70% 0%, #1a1710 0%, var(--cs2-black) 68%);
+  background: radial-gradient(120% 90% at 70% 0%, #062c10 0%, var(--cs2-black) 68%);
 }
 
 .cs2-headliner-backdrop {
@@ -42,8 +42,8 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(to top, var(--cs2-black) 4%, rgba(8, 8, 11, 0.78) 30%, rgba(8, 8, 11, 0.18) 62%, rgba(8, 8, 11, 0.44) 100%),
-    linear-gradient(to right, rgba(8, 8, 11, 0.82) 0%, rgba(8, 8, 11, 0.28) 44%, transparent 72%);
+    linear-gradient(to top, var(--cs2-black) 4%, rgba(2, 26, 8, 0.78) 30%, rgba(2, 26, 8, 0.18) 62%, rgba(2, 26, 8, 0.44) 100%),
+    linear-gradient(to right, rgba(2, 26, 8, 0.82) 0%, rgba(2, 26, 8, 0.28) 44%, transparent 72%);
 }
 
 .cs2-headliner-inner {
@@ -152,7 +152,7 @@
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  background: rgba(8, 8, 11, 0.55);
+  background: rgba(2, 26, 8, 0.55);
 }
 
 .cs2-headliner-actions {

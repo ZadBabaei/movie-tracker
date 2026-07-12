@@ -1,5 +1,5 @@
 .MovieCard {
-  --card-bg: #0e0e13;
+  --card-bg: #05240e;
   --card-panel: rgba(255, 255, 255, 0.06);
   --card-text: #f7f7f7;
   --card-muted: #a7adb8;
@@ -28,7 +28,7 @@
   position: relative;
   aspect-ratio: 2 / 3;
   overflow: hidden;
-  background: #07080a;
+  background: #031f0a;
 }
 
 .MovieCard-poster {
@@ -193,7 +193,7 @@
   padding: 3px 5px;
   border-radius: 5px;
   background: var(--card-accent);
-  color: #111;
+  color: #04230c;
   font-size: 10px;
   font-weight: 900;
   letter-spacing: -0.02em;

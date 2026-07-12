@@ -55,7 +55,7 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #1a1a1a;
+  background: #073312;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -68,7 +68,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #2a2a2a;
+  background: #0a4519;
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -135,7 +135,7 @@
   place-items: center;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 50%;
-  background: rgba(10, 12, 18, 0.78);
+  background: rgba(3, 31, 10, 0.78);
   color: rgba(255, 210, 210, 0.86);
   cursor: pointer;
   opacity: 0;
