@@ -17,7 +17,7 @@ import { useGroupStore } from "../store/useGroupStore";
 import { useUnreadCounts } from "../hooks/useUnreadCounts";
 import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
 import "./VerticalNavbar.css";
-import logo from "../assets/movie-tracker-logo-full.png";
+import logo from "../assets/logo-wordmark-transparent.png";
 
 const VerticalNavbar: React.FC = () => {
   const location = useLocation();

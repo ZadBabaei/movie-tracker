@@ -23,8 +23,7 @@ background: linear-gradient(to top, #05240e, #021a08);
 }
 
 .logo {
-  font-size: 2rem;
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
 }
 
 .navbar-menu,
@@ -113,10 +112,11 @@ background: linear-gradient(to top, #05240e, #021a08);
   transform: translateY(-50%) translateX(10px);
 }
 .logo-img {
-  width: 70px;
+  width: 220px;
+  max-width: none;
   height: auto;
   object-fit: contain;
-  filter: brightness(0) invert(1);
+  margin-left: 150px;
 }
 
 /* ── Profile Avatar in Navbar ───────────── */
@@ -289,7 +289,8 @@ background: linear-gradient(to top, #05240e, #021a08);
   }
 
   .logo-img {
-    width: 62px;
+    width: 190px;
+    margin-left: 128px;
   }
 }
 

@@ -79,18 +79,11 @@ body.auth-route #root {
 .AuthPage-brand {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 0;
 }
 
-.AuthPage-logoMark {
-  width: 56px;
-  height: 56px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.AuthPage-wordmark {
-  width: min(100%, 260px);
+.AuthPage-brandLockup {
+  width: min(100%, 540px);
   height: auto;
   display: block;
   object-fit: contain;
@@ -475,8 +468,8 @@ body.auth-route #root {
     max-width: none;
   }
 
-  .AuthPage-wordmark {
-    width: min(100%, 230px);
+  .AuthPage-brandLockup {
+    width: min(100%, 420px);
   }
 
   .AuthPage-trust {
