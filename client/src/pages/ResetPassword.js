@@ -5,7 +5,7 @@ import { FaLock, FaRegEye } from "react-icons/fa6";
 import { FaEyeSlash } from "react-icons/fa";
 import apiClient from "../api/apiClient";
 import "./AuthPage.css";
-import wordmark from "../assets/logo-wordmark-transparent.png";
+import wordmark from "../assets/movie-tracker-logo-full.png";
 
 function ResetPassword() {
   const { token } = useParams();
