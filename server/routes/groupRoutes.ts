@@ -13,6 +13,52 @@ import { sendGroupInviteEmail } from "../utils/emailService";
 import { getDefaultAvatarUrl } from "../utils/avatar";
 
 const router = express.Router();
+const objectIdPattern = /^[a-f\d]{24}$/i;
+
+const slugifyGroupName = (value: string) =>
+  String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-{2,}/g, "-")
+    || "group";
+
+const buildUniqueGroupSlug = async (groupName: string, excludeGroupId?: string) => {
+  const baseSlug = slugifyGroupName(groupName);
+
+  for (let suffix = 0; suffix < 5000; suffix += 1) {
+    const slug = suffix === 0 ? baseSlug : `${baseSlug}-${suffix + 1}`;
+    const existing = await Group.findOne({ slug }).select("_id").lean();
+    if (!existing || String(existing._id) === excludeGroupId) {
+      return slug;
+    }
+  }
+
+  throw new Error("Could not generate a unique group slug.");
+};
+
+const ensureGroupSlug = async (group: any) => {
+  if (group?.slug) return group;
+  group.slug = await buildUniqueGroupSlug(group.name, group._id?.toString());
+  await group.save();
+  return group;
+};
+
+const ensureGroupSlugs = async (groups: any[]) => Promise.all(groups.map((group) => ensureGroupSlug(group)));
+
+const findGroupBySlugOrId = async (slugOrId: string) => {
+  if (objectIdPattern.test(slugOrId)) {
+    const byId = await Group.findById(slugOrId);
+    if (byId) return ensureGroupSlug(byId);
+  }
+
+  const bySlug = await Group.findOne({ slug: slugOrId });
+  if (bySlug) return ensureGroupSlug(bySlug);
+
+  return null;
+};
 
 const upsertUserToStream = async (user: { _id: any; name?: string; email?: string; avatar?: string }) => {
   const apiKey = process.env.STREAM_API_KEY?.trim();
@@ -94,7 +140,8 @@ router.get("/mine", authenticate, async (req: Request, res: Response) => {
       .populate("members", "name email avatar")
       .populate("creator", "_id name")
       .sort({ createdAt: -1 });
-    res.json(groups);
+    const groupsWithSlugs = await ensureGroupSlugs(groups);
+    res.json(groupsWithSlugs);
   } catch (err) {
     console.error("Error fetching user groups:", err);
     res.status(500).json({ msg: "Failed to fetch groups." });
@@ -131,20 +178,15 @@ router.post("/:id/leave", authenticate, async (req: Request, res: Response) => {
 router.post("/create", authenticate, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
-    const { groupName } = req.body;
+    const groupName = String(req.body?.groupName || "").trim();
     if (!groupName) {
       res.status(400).json({ msg: "Group name required." });
       return;
     }
 
-    const existing = await Group.findOne({ name: groupName });
-    if (existing) {
-      res.status(400).json({ msg: "Group already exists." });
-      return;
-    }
-
     const group = new Group({
       name: groupName,
+      slug: await buildUniqueGroupSlug(groupName),
       members: [userId],
       pendingInvitations: [],
       creator: userId,
@@ -154,6 +196,23 @@ router.post("/create", authenticate, async (req: Request, res: Response) => {
     res.json({ msg: "Group created", group });
   } catch (error) {
     console.error("Error creating group:", error);
+    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+  }
+});
+
+router.get("/slug/:slug", authenticate, async (req: Request, res: Response) => {
+  try {
+    const slug = String(req.params.slug || "").trim().toLowerCase();
+    const group = await findGroupBySlugOrId(slug);
+
+    if (!group) {
+      res.status(404).json({ msg: "Group not found" });
+      return;
+    }
+
+    res.json({ _id: group._id, slug: group.slug, name: group.name });
+  } catch (error) {
+    console.error("Error fetching group by slug:", error);
     res.status(500).json({ msg: "Server error", error: (error as Error).message });
   }
 });
@@ -241,10 +300,10 @@ router.post("/respond", authenticate, async (req: Request, res: Response) => {
 
 router.get("/:id", authenticate, async (req: Request, res: Response) => {
   try {
-    const groupId = req.params.id;
+    const groupHandle = String(req.params.id || "").trim();
 
     // First fetch to migrate old plain-ObjectId movie entries
-    const rawGroup = await Group.findById(groupId);
+    const rawGroup = await findGroupBySlugOrId(groupHandle);
     if (!rawGroup) {
       res.status(404).json({ msg: "Group not found" });
       return;
@@ -279,7 +338,7 @@ router.get("/:id", authenticate, async (req: Request, res: Response) => {
     if (needsSave) await rawGroup.save();
 
     // Now fetch with populate
-    const group = await Group.findById(groupId)
+    const group = await Group.findById(rawGroup._id)
       .populate("members", "_id name email avatar")
       .populate("creator", "_id name")
       .populate({
@@ -654,8 +713,8 @@ router.get("/join-by-link/:token", async (req: Request, res: Response) => {
       return;
     }
 
-    const group = link.groupId as any;
-    res.json({ groupId: group._id, groupName: group.name, valid: true });
+    const group = await ensureGroupSlug(link.groupId as any);
+    res.json({ groupId: group._id, groupSlug: group.slug, groupName: group.name, valid: true });
   } catch (error) {
     console.error("Error validating invite link:", error);
     res.status(500).json({ msg: "Server error", error: (error as Error).message });
@@ -674,12 +733,12 @@ router.post("/join-by-link/:token", async (req: Request, res: Response) => {
       return;
     }
 
-    const group = link.groupId as any;
+    const group = await ensureGroupSlug(link.groupId as any);
 
     // Check for auth header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      res.status(401).json({ msg: "auth required", groupId: group._id, groupName: group.name });
+      res.status(401).json({ msg: "auth required", groupId: group._id, groupSlug: group.slug, groupName: group.name });
       return;
     }
 
@@ -688,13 +747,13 @@ router.post("/join-by-link/:token", async (req: Request, res: Response) => {
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET as string);
     } catch {
-      res.status(401).json({ msg: "auth required", groupId: group._id, groupName: group.name });
+      res.status(401).json({ msg: "auth required", groupId: group._id, groupSlug: group.slug, groupName: group.name });
       return;
     }
 
     const user = await User.findById(decoded.id);
     if (!user) {
-      res.status(401).json({ msg: "auth required", groupId: group._id, groupName: group.name });
+      res.status(401).json({ msg: "auth required", groupId: group._id, groupSlug: group.slug, groupName: group.name });
       return;
     }
 
@@ -717,7 +776,8 @@ router.post("/join-by-link/:token", async (req: Request, res: Response) => {
     }
 
     await dedupeGroupMembers(fullGroup.id);
-    res.json({ joined, alreadyMember: !joined, groupId: fullGroup._id });
+    const hydratedGroup = await ensureGroupSlug(fullGroup);
+    res.json({ joined, alreadyMember: !joined, groupId: hydratedGroup._id, groupSlug: hydratedGroup.slug });
   } catch (error) {
     console.error("Error joining by link:", error);
     res.status(500).json({ msg: "Server error", error: (error as Error).message });
@@ -798,12 +858,13 @@ router.post("/invite-by-email", authenticate, async (req: Request, res: Response
 
 router.get("/favorites/list", authenticate, async (req: Request, res: Response) => {
   try {
-    const user = await User.findById(req.user!.id).populate("favoriteGroups", "name");
+    const user = await User.findById(req.user!.id).populate("favoriteGroups", "name slug");
     if (!user) {
       res.status(404).json({ msg: "User not found" });
       return;
     }
-    res.json(user.favoriteGroups || []);
+    const favorites = await ensureGroupSlugs((user.favoriteGroups || []) as any[]);
+    res.json(favorites);
   } catch (error) {
     console.error("Error fetching favorite groups:", error);
     res.status(500).json({ msg: "Server error", error: (error as Error).message });

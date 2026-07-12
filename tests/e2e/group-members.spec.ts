@@ -33,7 +33,7 @@ test.describe("group membership", () => {
     await joinGroupByInvite(request, sessions[2].token, invite.token);
 
     await seedBrowserAuth(page, owner);
-    await page.goto(`/group/${group._id}`);
+    await page.goto(`/group/${group.slug || group._id}`);
 
     await expect(page.getByRole("heading", { name: "Group Members" })).toBeVisible();
     await expect(page.getByTestId("group-member-card")).toHaveCount(20);

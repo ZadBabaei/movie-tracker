@@ -9,8 +9,8 @@ const MovieGroupsDropdown = ({ groups, refreshGroups }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
 
-  const handleGroupClick = (groupId) => {
-    navigate(`/group/${groupId}`);
+  const handleGroupClick = (group) => {
+    navigate(`/group/${group.slug || group._id}`);
     setIsOpen(false); 
   };
 
@@ -33,7 +33,7 @@ const MovieGroupsDropdown = ({ groups, refreshGroups }) => {
                 <div
                   key={group._id}
                   className="group-item clickable"
-                  onClick={() => handleGroupClick(group._id)}
+                  onClick={() => handleGroupClick(group)}
                 >
                   {group.name}
                 </div>

@@ -17,7 +17,7 @@ import { useGroupStore } from "../store/useGroupStore";
 import { useUnreadCounts } from "../hooks/useUnreadCounts";
 import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
 import "./VerticalNavbar.css";
-import logo from "../assets/Logo PM.png";
+import logo from "../assets/movie-tracker-logo-full.png";
 
 const VerticalNavbar: React.FC = () => {
   const location = useLocation();
@@ -62,7 +62,7 @@ const VerticalNavbar: React.FC = () => {
     }
 
     const fallbackGroup = favoriteGroups[0] || groupList[0];
-    navigate(fallbackGroup ? `/group/${fallbackGroup._id}/chat` : "/my-groups");
+    navigate(fallbackGroup ? `/group/${fallbackGroup.slug || fallbackGroup._id}/chat` : "/my-groups");
   };
 
   const logout = () => {
@@ -81,7 +81,7 @@ const VerticalNavbar: React.FC = () => {
   return (
     <>
     <nav className="vertical-navbar">
-      <img className="logo logo-img" src={logo} alt="Logo" />
+      <img className="logo logo-img" src={logo} alt="Movie Tracker" />
       <ul className="navbar-list">
         <li className="navbar-item">
           <Link to="/home" className="navbar-link">
@@ -108,7 +108,7 @@ const VerticalNavbar: React.FC = () => {
                 type="button"
                 className="navbar-hover-pill"
                 onClick={() => {
-                  navigate(`/group/${g._id}`);
+                  navigate(`/group/${g.slug || g._id}`);
                 }}
               >
                 <span className="navbar-hover-pill-text">{g.name}</span>
@@ -161,7 +161,7 @@ const VerticalNavbar: React.FC = () => {
                 type="button"
                 className="navbar-hover-pill navbar-hover-pill--chat"
                 onClick={() => {
-                  navigate(`/group/${g._id}/chat`);
+                  navigate(`/group/${g.slug || g._id}/chat`);
                 }}
               >
                 <span className="navbar-hover-pill-text">{g.name}</span>

@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
-import { FaFilm, FaLock, FaRegEye } from "react-icons/fa6";
+import { FaLock, FaRegEye } from "react-icons/fa6";
 import { FaEyeSlash } from "react-icons/fa";
 import apiClient from "../api/apiClient";
 import "./AuthPage.css";
+import brandMark from "../assets/movie-tracker-standalone-icon.png";
+import wordmark from "../assets/movie-tracker-wordmark.png";
 
 function ResetPassword() {
   const { token } = useParams();
@@ -42,10 +44,8 @@ function ResetPassword() {
       <section className="AuthPage-shell">
         <div className="AuthPage-hero">
           <div className="AuthPage-brand">
-            <span className="AuthPage-logoMark">
-              <FaFilm />
-            </span>
-            <span>Movie Tracker</span>
+            <img className="AuthPage-logoMark" src={brandMark} alt="" aria-hidden="true" />
+            <img className="AuthPage-wordmark" src={wordmark} alt="Movie Tracker" />
           </div>
 
           <div className="AuthPage-copy">

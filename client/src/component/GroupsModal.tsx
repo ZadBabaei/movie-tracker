@@ -47,7 +47,7 @@ const GroupsModal: React.FC<GroupsModalProps> = ({ isOpen, onClose, groups }) =>
                 key={group._id}
                 className="group-item"
                 onClick={() => {
-                  navigate(`/group/${group._id}`);
+                  navigate(`/group/${group.slug || group._id}`);
                   onClose();
                 }}
               >

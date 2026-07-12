@@ -8,6 +8,7 @@ type Status = "loading" | "valid" | "joined" | "already-member" | "auth-required
 
 interface GroupInfo {
   groupId: string;
+  groupSlug?: string;
   groupName: string;
 }
 
@@ -30,7 +31,7 @@ const JoinByLink: React.FC = () => {
     const validate = async () => {
       try {
         const data = await validateInviteLink(token);
-        setGroupInfo({ groupId: data.groupId, groupName: data.groupName });
+        setGroupInfo({ groupId: data.groupId, groupSlug: data.groupSlug, groupName: data.groupName });
 
         if (isAuthenticated) {
           await handleJoin();
@@ -56,10 +57,10 @@ const JoinByLink: React.FC = () => {
         const data = await joinByLink(token!);
         if (data.alreadyMember) {
           setStatus("already-member");
-          setGroupInfo((prev) => prev || { groupId: data.groupId, groupName: "" });
+          setGroupInfo((prev) => prev || { groupId: data.groupId, groupSlug: data.groupSlug, groupName: "" });
         } else {
           setStatus("joined");
-          setGroupInfo((prev) => prev || { groupId: data.groupId, groupName: "" });
+          setGroupInfo((prev) => prev || { groupId: data.groupId, groupSlug: data.groupSlug, groupName: "" });
           toast.success("Successfully joined the group!");
         }
       } catch (err: any) {
@@ -80,7 +81,7 @@ const JoinByLink: React.FC = () => {
 
   const handleGoToGroup = () => {
     if (groupInfo?.groupId) {
-      navigate(`/group/${groupInfo.groupId}`);
+      navigate(`/group/${groupInfo.groupSlug || groupInfo.groupId}`);
     }
   };
 

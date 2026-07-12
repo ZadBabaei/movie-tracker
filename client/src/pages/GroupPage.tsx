@@ -55,6 +55,7 @@ interface Movie {
 
 interface GroupData {
   _id: string;
+  slug?: string;
   name: string;
   members: Member[];
   creator: { _id: string; name: string };
@@ -115,7 +116,7 @@ const buildTimelineMovie = (entry: any): Movie | null => {
 };
 
 const GroupPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [group, setGroup] = useState<GroupData | null>(null);
   const [timelineMovies, setTimelineMovies] = useState<Movie[]>([]);
@@ -143,11 +144,11 @@ const GroupPage: React.FC = () => {
 
   useEffect(() => {
     fetchGroupDetails();
-  }, [id]);
+  }, [slug]);
 
   const fetchGroupDetails = async () => {
     const token = localStorage.getItem("token");
-    const res = await apiClient.get(`/api/groups/${id}`, {
+    const res = await apiClient.get(`/api/groups/${slug}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     setGroup({ ...res.data, members: dedupeMembers(res.data.members || []) });
@@ -225,7 +226,7 @@ const GroupPage: React.FC = () => {
     const token = localStorage.getItem("token");
     try {
       await apiClient.post(
-        `/api/groups/${id}/add-movie`,
+        `/api/groups/${group!._id}/add-movie`,
         {
           movie: pendingMovie,
           watchedAt: watchDetails.watchedAt,
@@ -272,7 +273,7 @@ const GroupPage: React.FC = () => {
     const token = localStorage.getItem("token");
     try {
       await apiClient.delete(
-        `/api/groups/${id}/history/${deleteTarget.historyItemId}`,
+        `/api/groups/${group!._id}/history/${deleteTarget.historyItemId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setTimelineMovies((prev) =>
@@ -321,7 +322,7 @@ const GroupPage: React.FC = () => {
     const tk = localStorage.getItem("token");
     try {
       await apiClient.delete(
-        `/api/groups/${id}/remove-member/${memberId}`,
+        `/api/groups/${group!._id}/remove-member/${memberId}`,
         { headers: { Authorization: `Bearer ${tk}` } }
       );
       setGroup((prev) =>
@@ -399,7 +400,7 @@ const GroupPage: React.FC = () => {
           </button>
           <button
             className="group-member-btn"
-            onClick={() => navigate(`/group/${group._id}/chat`)}
+            onClick={() => navigate(`/group/${group.slug || group._id}/chat`)}
           >
             Group chat
           </button>
@@ -609,7 +610,7 @@ const GroupPage: React.FC = () => {
       {selectedMovie && (
         <MovieDetailModal
           movie={selectedMovie}
-          groupId={id}
+          groupId={group._id}
           onRatingSaved={handleHistoryRatingSaved}
           onClose={() => setSelectedMovie(null)}
         />

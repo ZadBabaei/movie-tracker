@@ -80,22 +80,20 @@ body.auth-route #root {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  color: var(--brand-gold);
 }
 
 .AuthPage-logoMark {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border: 1px solid var(--brand-hairline);
-  border-radius: var(--brand-radius);
-  color: var(--brand-gold-bright);
-  background: rgba(211, 172, 108, 0.08);
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.AuthPage-wordmark {
+  width: min(100%, 260px);
+  height: auto;
+  display: block;
+  object-fit: contain;
 }
 
 .AuthPage-copy h1 {
@@ -475,6 +473,10 @@ body.auth-route #root {
 
   .AuthPage-copy p {
     max-width: none;
+  }
+
+  .AuthPage-wordmark {
+    width: min(100%, 230px);
   }
 
   .AuthPage-trust {

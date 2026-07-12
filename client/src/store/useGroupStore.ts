@@ -4,6 +4,7 @@ import apiClient from "../api/apiClient";
 export interface Group {
   _id: string;
   name: string;
+  slug?: string;
   members: string[];
 }
 

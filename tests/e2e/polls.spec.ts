@@ -49,7 +49,7 @@ test.describe("poll results", () => {
         response.url().includes(`/api/polls/group/${group._id}/history`) &&
         response.request().method() === "GET"
     );
-    await page.goto(`/group/${group._id}/chat`);
+    await page.goto(`/group/${group.slug || group._id}/chat`);
     const historyResponse = await historyResponsePromise;
     expect(historyResponse.ok()).toBeTruthy();
     const history = await historyResponse.json();

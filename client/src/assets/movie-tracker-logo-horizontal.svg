@@ -1,0 +1,46 @@
+<svg width="920" height="240" viewBox="0 0 920 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="2b963baf41d74477946736943c780ec9" x1="40" y1="20" x2="220" y2="220" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#17171E" />
+      <stop offset="0.48" stop-color="#0D0D12" />
+      <stop offset="1" stop-color="#050507" />
+    </linearGradient>
+    <linearGradient id="2d60ed2581c64cea8e9f5dde606f9a85" x1="50" y1="40" x2="180" y2="190" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F5C774" />
+      <stop offset="0.35" stop-color="#E8A95A" />
+      <stop offset="0.66" stop-color="#7FD0C9" />
+      <stop offset="1" stop-color="#90A7FF" />
+    </linearGradient>
+    <radialGradient id="017837a552ee437486dde4687adfd8f2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(128 112) rotate(90) scale(98)">
+      <stop stop-color="#FFF7E0" stop-opacity="0.95" />
+      <stop offset="0.42" stop-color="#F1CA7A" stop-opacity="0.75" />
+      <stop offset="1" stop-color="#F1CA7A" stop-opacity="0" />
+    </radialGradient>
+    <filter id="dfdd6a1540e643eb8fdca8de37e96e2f" x="28" y="16" width="200" height="200" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="10" result="blur" />
+      <feBlend in="SourceGraphic" in2="blur" mode="screen" />
+    </filter>
+    <pattern id="067cf020734f4aef87172b4f6f7135c1" width="24" height="24" patternUnits="userSpaceOnUse">
+      <rect width="24" height="24" fill="transparent" />
+      <rect x="0" y="8" width="4" height="8" rx="2" fill="#F3E0BA" fill-opacity="0.15" />
+      <rect x="20" y="8" width="4" height="8" rx="2" fill="#F3E0BA" fill-opacity="0.15" />
+    </pattern>
+  </defs>
+  <g>
+    <rect x="16" y="16" width="208" height="208" rx="52" fill="url(#2b963baf41d74477946736943c780ec9)" />
+    <rect x="16.75" y="16.75" width="206.5" height="206.5" rx="51.25" stroke="rgba(243,224,186,0.16)" />
+    <rect x="34" y="34" width="172" height="172" rx="38" fill="url(#067cf020734f4aef87172b4f6f7135c1)" />
+    <circle cx="128" cy="120" r="72" fill="url(#017837a552ee437486dde4687adfd8f2)" />
+    <g filter="url(#dfdd6a1540e643eb8fdca8de37e96e2f)">
+      <path d="M128 50L144.5 103.5L198 120L144.5 136.5L128 190L111.5 136.5L58 120L111.5 103.5L128 50Z" fill="url(#2d60ed2581c64cea8e9f5dde606f9a85)" />
+      <path d="M128 74L138.5 109.5L174 120L138.5 130.5L128 166L117.5 130.5L82 120L117.5 109.5L128 74Z" fill="#FFF4DB" fill-opacity="0.88" />
+      <path d="M128 90L135 113L158 120L135 127L128 150L121 127L98 120L121 113L128 90Z" fill="#0E0E13" fill-opacity="0.55" />
+    </g>
+    <path d="M89 176C102 164.6 112.8 159 128.5 159C143 159 154.1 165.1 168 178" stroke="#E5C98F" stroke-width="9" stroke-linecap="round" opacity="0.72" />
+  </g>
+  <g transform="translate(240 132)">
+    <text x="0" y="0" fill="#F4E9D2" font-size="74" font-family="'Segoe UI Semibold', 'Trebuchet MS', sans-serif" letter-spacing="1.4">Movie</text>
+    <text x="0" y="70" fill="#D5AE6E" font-size="74" font-family="'Segoe UI', 'Trebuchet MS', sans-serif" letter-spacing="10">TRACKER</text>
+    <rect x="0" y="94" width="290" height="4" rx="2" fill="url(#2d60ed2581c64cea8e9f5dde606f9a85)" opacity="0.9" />
+  </g>
+</svg>

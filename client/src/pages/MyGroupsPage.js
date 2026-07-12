@@ -238,10 +238,10 @@ const MyGroupsPage = () => {
                   </div>
 
                   <div className="group-card-actions">
-                    <button type="button" className="group-action-primary" onClick={() => navigate(`/group/${group._id}`)}>
+                    <button type="button" className="group-action-primary" onClick={() => navigate(`/group/${group.slug || group._id}`)}>
                       Open group
                     </button>
-                    <button type="button" className="group-action-secondary" onClick={() => navigate(`/group/${group._id}/chat`)}>
+                    <button type="button" className="group-action-secondary" onClick={() => navigate(`/group/${group.slug || group._id}/chat`)}>
                       Chat
                     </button>
                     <button type="button" className="group-action-danger" onClick={() => handleLeaveGroup(group._id)}>

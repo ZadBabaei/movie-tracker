@@ -23,6 +23,7 @@ export interface IWatchedMovie {
 
 export interface IGroup extends Document {
   name: string;
+  slug?: string;
   creator: Types.ObjectId;
   members: Types.ObjectId[];
   pendingInvitations: IGroupInvitation[];
@@ -35,6 +36,7 @@ export interface IGroup extends Document {
 const groupSchema = new Schema<IGroup>(
   {
     name: { type: String, required: true },
+    slug: { type: String, unique: true, sparse: true, trim: true, lowercase: true },
     creator: { type: Schema.Types.ObjectId, ref: "User", required: true },
     members: [{ type: Schema.Types.ObjectId, ref: "User" }],
     pendingInvitations: [
@@ -67,6 +69,8 @@ const groupSchema = new Schema<IGroup>(
   },
   { timestamps: true }
 );
+
+groupSchema.index({ slug: 1 }, { unique: true, sparse: true });
 
 groupSchema.methods.hasActivePoll = async function (): Promise<boolean> {
   const Poll = mongoose.model("Poll");

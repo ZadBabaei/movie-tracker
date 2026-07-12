@@ -12,13 +12,14 @@ import { useSocket } from "../hooks/useSocket";
 const GroupChat: React.FC = () => {
   const { isVoteModalOpen, openVoteModal } = useModalStore();
   const { clearVoteSelections, pollHistory, fetchPollHistory, fetchPollResults, deletePoll } = usePollStore();
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const [groupName, setGroupName] = useState("Loading...");
+  const [groupId, setGroupId] = useState("");
   const [pollStatus, setPollStatus] = useState("none");
   const [userId, setUserId] = useState("");
   const [menuOpenPollId, setMenuOpenPollId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const socket = useSocket(id!);
+  const socket = useSocket(groupId);
 
   useEffect(() => {
     const uid = localStorage.getItem("userId");
@@ -26,15 +27,16 @@ const GroupChat: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!id) return;
+    if (!slug) return;
 
     const fetchGroupDetails = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await apiClient.get(`/api/groups/${id}`, {
+        const res = await apiClient.get(`/api/groups/${slug}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setGroupName(res.data.name);
+        setGroupId(res.data._id);
         setPollStatus(res.data.hasActivePoll ? "active" : "none");
       } catch (error) {
         console.error("Failed to fetch group info:", error);
@@ -43,24 +45,29 @@ const GroupChat: React.FC = () => {
     };
 
     fetchGroupDetails();
-    fetchPollHistory(id);
-  }, [fetchPollHistory, id]);
+  }, [slug]);
+
+  useEffect(() => {
+    if (groupId) {
+      fetchPollHistory(groupId);
+    }
+  }, [fetchPollHistory, groupId]);
 
   useEffect(() => {
     socket.on("poll:created", () => {
       setPollStatus("active");
-      if (id) fetchPollHistory(id);
+      if (groupId) fetchPollHistory(groupId);
     });
     socket.on("poll:completed", () => {
       setPollStatus("completed");
-      if (id) fetchPollHistory(id);
+      if (groupId) fetchPollHistory(groupId);
     });
     socket.on("poll:runoff", () => {
       setPollStatus("active");
     });
     socket.on("poll:cancelled", () => {
       setPollStatus("none");
-      if (id) fetchPollHistory(id);
+      if (groupId) fetchPollHistory(groupId);
     });
 
     return () => {
@@ -69,7 +76,7 @@ const GroupChat: React.FC = () => {
       socket.off("poll:runoff");
       socket.off("poll:cancelled");
     };
-  }, [fetchPollHistory, socket, id]);
+  }, [fetchPollHistory, socket, groupId]);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -93,7 +100,7 @@ const GroupChat: React.FC = () => {
   const handlePollStatusChange = (newStatus: string) => {
     setPollStatus(newStatus);
     if (newStatus === "completed" || newStatus === "none") {
-      if (id) fetchPollHistory(id);
+      if (groupId) fetchPollHistory(groupId);
     }
   };
 
@@ -138,7 +145,7 @@ const GroupChat: React.FC = () => {
       <div className="GroupChatPage-layout">
         <div className="GroupChatPage-left">
           <section className="GroupChatPage-section GroupChatPage-chat-section">
-            <ChatBox groupId={id!} groupName={groupName} />
+            {groupId ? <ChatBox groupId={groupId} groupName={groupName} /> : null}
           </section>
         </div>
         <div className="GroupChatPage-search-section">
@@ -202,7 +209,7 @@ const GroupChat: React.FC = () => {
         </div>
       </div>
       {isVoteModalOpen && (
-        <VoteModal groupId={id!} onPollStatusChange={handlePollStatusChange} />
+        groupId ? <VoteModal groupId={groupId} onPollStatusChange={handlePollStatusChange} /> : null
       )}
     </div>
   );

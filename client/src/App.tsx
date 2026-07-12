@@ -93,8 +93,8 @@ function App({ isAuthenticated, isAuthPage }: AppProps) {
           <Route path="/home" element={<Home />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/inbox" element={<Inbox />} />
-          <Route path="/group/:id" element={<GroupPage />} />
-          <Route path="/group/:id/chat" element={<GroupChat />} />
+          <Route path="/group/:slug" element={<GroupPage />} />
+          <Route path="/group/:slug/chat" element={<GroupChat />} />
           <Route path="/my-groups" element={<MyGroupsPage />} />
           <Route path="/watchlist" element={<Watchlist />} />
           <Route path="/coming-soon" element={<ComingSoon />} />
