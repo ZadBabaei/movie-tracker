@@ -27,6 +27,24 @@ background: linear-gradient(to top, #05240e, #021a08);
   margin-bottom: 3rem;
 }
 
+.navbar-brand-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin: 0 0 1.5rem;
+  text-decoration: none;
+}
+
+.navbar-brand-mark {
+  display: block;
+  width: 48px;
+  height: auto;
+  max-width: calc(100% - 16px);
+  object-fit: contain;
+  background: transparent;
+}
+
 .navbar-menu,
 .navbar-list {
   list-style: none;
@@ -290,6 +308,10 @@ background: linear-gradient(to top, #05240e, #021a08);
 
   .logo-img {
     width: 62px;
+  }
+
+  .navbar-brand-mark {
+    width: 44px;
   }
 }
 
