@@ -1,4 +1,5 @@
 import express, { Request, Response } from "express";
+import mongoose from "mongoose";
 import multer from "multer";
 import { authenticate } from "../middleware/authMiddleware";
 import User from "../models/user";
@@ -32,17 +33,24 @@ const toIsoString = (value?: Date | string | null) => {
   return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
 };
 
-const getProfileStats = async (userId: string, watchlistLength?: number): Promise<ProfileStats> => {
-  const [groupsJoined, pollsVoted, pollsCreated, user] = await Promise.all([
+const getProfileStats = async (userId: string): Promise<ProfileStats> => {
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+  const [groupsJoined, watchedMovieCounts, pollsVoted, pollsCreated] = await Promise.all([
     Group.countDocuments({ members: userId }),
+    Group.aggregate<{ count: number }>([
+      { $match: { "movies.watchedWith": userObjectId } },
+      { $unwind: "$movies" },
+      { $match: { "movies.watchedWith": userObjectId } },
+      { $group: { _id: "$movies.movieId" } },
+      { $count: "count" },
+    ]),
     Poll.countDocuments({ "votes.userId": userId }),
     Poll.countDocuments({ creator: userId }),
-    watchlistLength === undefined ? User.findById(userId).select("watchlist").lean() : null,
   ]);
 
   return {
     groupsJoined,
-    moviesWatched: watchlistLength ?? user?.watchlist?.length ?? 0,
+    moviesWatched: watchedMovieCounts[0]?.count ?? 0,
     pollsVoted,
     pollsCreated,
   };
@@ -263,7 +271,7 @@ router.get("/dashboard", authenticate, async (req: Request, res: Response) => {
     }
 
     const [stats, recentActivity] = await Promise.all([
-      getProfileStats(userId, user.watchlist?.length ?? 0),
+      getProfileStats(userId),
       getRecentActivity(userId, user.watchlist || []),
     ]);
 

@@ -274,6 +274,40 @@ const completeOrRunoff = async (poll: any, currentUserId?: string): Promise<Comp
   return { poll: await getPopulatedPoll(poll._id, currentUserId) };
 };
 
+router.get("/active-for-user", authenticate, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const groups = await Group.find({ members: userId }).select("_id name").lean();
+    const groupNames = new Map(groups.map((group) => [group._id.toString(), group.name]));
+    const polls = await Poll.find({
+      groupId: { $in: groups.map((group) => group._id) },
+      status: "active",
+    })
+      .select("name groupId movies votes status round expiresAt")
+      .lean();
+
+    res.json(
+      polls.map((poll: any) => ({
+        _id: poll._id,
+        groupId: poll.groupId,
+        groupName: groupNames.get(poll.groupId.toString()) || "Movie group",
+        name: poll.name,
+        question: poll.name,
+        options: (poll.movies || []).map(normalizeMovie),
+        movies: (poll.movies || []).map(normalizeMovie),
+        round: poll.round || 1,
+        expiresAt: poll.expiresAt,
+        hasCurrentUserVoted: (poll.votes || []).some(
+          (vote: any) => vote.userId?.toString() === userId.toString()
+        ),
+      }))
+    );
+  } catch (error) {
+    console.error("Error fetching active polls for user:", error);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
+
 router.post("/create", authenticate, async (req: Request, res: Response) => {
   try {
     const { groupId, movies, name, deadline } = req.body;
