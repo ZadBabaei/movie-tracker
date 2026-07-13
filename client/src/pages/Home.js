@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
 import quotes from "../data/Quotes";
 import "./Home.css";
 import VerticalNavbar from "../component/VerticalNavbar";
@@ -9,6 +10,8 @@ import { useGroupStore } from "../store/useGroupStore";
 import fullLogo from "../assets/movie-tracker-logo-full.svg";
 
 const RELEASE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const FEATURED_MOVIE_QUERY = "The Death of Robin Hood";
+const FEATURED_MOVIE_PATTERN = /the death of robin hood/i;
 
 const toDateKey = (date = new Date()) => date.toISOString().slice(0, 10);
 
@@ -87,6 +90,7 @@ function Home() {
   const [dashboard, setDashboard] = useState(null);
   const [upcoming, setUpcoming] = useState([]);
   const [upcomingLoading, setUpcomingLoading] = useState(true);
+  const [featuredMovieSearch, setFeaturedMovieSearch] = useState(null);
   const [quote] = useState(
     () => quotes[Math.floor(Math.random() * quotes.length)]
   );
@@ -144,14 +148,66 @@ function Home() {
       .sort((a, b) => (a.release_date || "").localeCompare(b.release_date || ""));
   }, [upcoming]);
 
+  const featuredFromUpcoming = useMemo(() => {
+    const match = upcoming.find(
+      (movie) =>
+        FEATURED_MOVIE_PATTERN.test(movie.title || "") &&
+        (movie.backdrop_path || movie.poster_path)
+    );
+    return match ? { url: getBackdropUrl(match), title: match.title } : null;
+  }, [upcoming]);
+
+  useEffect(() => {
+    if (featuredFromUpcoming || featuredMovieSearch) return;
+
+    let cancelled = false;
+    const apiKey = process.env.REACT_APP_TMDB_API_KEY;
+    if (!apiKey) return;
+
+    const fetchFeaturedMovie = async () => {
+      try {
+        const res = await axios.get(
+          "https://api.themoviedb.org/3/search/movie",
+          {
+            params: {
+              api_key: apiKey,
+              language: "en-US",
+              include_adult: false,
+              query: FEATURED_MOVIE_QUERY,
+            },
+          }
+        );
+        const match = (res.data.results || [])[0];
+        const path = match?.backdrop_path || match?.poster_path;
+        if (!cancelled && match && path) {
+          setFeaturedMovieSearch({
+            url: `https://image.tmdb.org/t/p/original${path}`,
+            title: match.title,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching featured movie:", error);
+      }
+    };
+
+    fetchFeaturedMovie();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [featuredFromUpcoming, featuredMovieSearch]);
+
   const featuredBackdrop = useMemo(() => {
+    if (featuredFromUpcoming) return featuredFromUpcoming;
+    if (featuredMovieSearch) return featuredMovieSearch;
+
     const featured = upcoming
       .filter((movie) => movie.backdrop_path && daysUntil(movie.release_date) !== null)
       .sort((a, b) => notability(b) - notability(a))[0];
     return featured
       ? { url: getBackdropUrl(featured), title: featured.title }
       : null;
-  }, [upcoming]);
+  }, [upcoming, featuredFromUpcoming, featuredMovieSearch]);
 
   const watchlistHighlights = useMemo(() => {
     return [...watchlistMovies]

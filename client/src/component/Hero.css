@@ -126,3 +126,84 @@ line-height: 50px;
   height: 100%;
   overflow: hidden;
 }
+
+/* ---------- Glass hero (group variant) ---------- */
+
+.hero-glass {
+  display: flex;
+  align-items: flex-end;
+  background: radial-gradient(120% 90% at 70% 0%, #062c10 0%, var(--brand-black) 70%);
+}
+
+.hero-glass-backdrop {
+  position: absolute;
+  inset: -40px;
+  width: calc(100% + 80px);
+  height: calc(100% + 80px);
+  object-fit: cover;
+  filter: blur(26px) saturate(0.85);
+  opacity: 0.4;
+}
+
+.hero-glass-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to top, var(--brand-black) 2%, rgba(2, 26, 8, 0.72) 40%, rgba(2, 26, 8, 0.4) 100%);
+}
+
+.hero-glass-inner {
+  position: relative;
+  z-index: 1;
+  width: min(1240px, calc(100% - 80px));
+  margin-left: 80px;
+  margin-right: auto;
+  padding: 96px 48px 48px;
+  box-sizing: border-box;
+}
+
+.hero-glass-eyebrow {
+  margin: 0 0 16px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--brand-gold);
+}
+
+.hero-glass-title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: clamp(2.2rem, 4.6vw, 3.8rem);
+  line-height: 1.04;
+  letter-spacing: -0.01em;
+  color: var(--brand-ivory);
+}
+
+.hero-glass-sub {
+  margin: 18px 0 0;
+  max-width: 560px;
+  color: var(--brand-muted);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.hero-glass-stats {
+  display: inline-block;
+  margin: 20px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--brand-hairline);
+  color: var(--brand-muted);
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 768px) {
+  .hero-glass-inner {
+    width: 100%;
+    margin-left: 0;
+    padding: 88px 24px 36px;
+  }
+}

@@ -3,28 +3,25 @@
   "name": "Movie Tracker",
   "icons": [
     {
-      "src": "movie-tracker-icon-64.png",
-      "type": "image/png",
-      "sizes": "64x64"
+      "src": "favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
     },
     {
-      "src": "movie-tracker-icon-32.png",
+      "src": "logo192.png",
       "type": "image/png",
-      "sizes": "32x32"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
-      "src": "movie-tracker-icon-192.png",
+      "src": "logo512.png",
       "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "movie-tracker-icon-512.png",
-      "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#0d0d12",
-  "background_color": "#0d0d12"
+  "theme_color": "#021a08",
+  "background_color": "#021a08"
 }

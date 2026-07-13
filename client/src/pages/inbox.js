@@ -54,10 +54,12 @@ const Inbox = () => {
     <>
       <VerticalNavbar />
       <Hero
-        height="70vh"
+        height="46vh"
+        eyebrow="Notifications"
         backgroundImage="https://image.tmdb.org/t/p/original/tNUbjqyn1Bf0KqL5NPyvgdw7Eq0.jpg"
         heroText="Stay in the Loop"
         heroTextSub="Accept invites, join the fun, and never miss a moment with your crew."
+        stats={`${messages.length} ${messages.length === 1 ? "message" : "messages"} waiting`}
       ></Hero>
       <div className="inbox-wrapper">
         <div className="inbox-container">

@@ -22,22 +22,9 @@ background: linear-gradient(to top, #05240e, #021a08);
   display: none;
 }
 
-.navbar-brand-link {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  margin: 0 0 1.5rem;
-  text-decoration: none;
-}
-
-.navbar-brand-mark {
-  display: block;
-  width: 48px;
-  height: auto;
-  max-width: calc(100% - 16px);
-  object-fit: contain;
-  background: transparent;
+.logo {
+  font-size: 2rem;
+  margin-bottom: 3rem;
 }
 
 .navbar-menu,
@@ -125,6 +112,13 @@ background: linear-gradient(to top, #05240e, #021a08);
   pointer-events: auto;
   transform: translateY(-50%) translateX(10px);
 }
+.logo-img {
+  width: 70px;
+  height: auto;
+  object-fit: contain;
+  mix-blend-mode: screen;
+}
+
 /* ── Profile Avatar in Navbar ───────────── */
 
 .navbar-avatar {
@@ -294,8 +288,8 @@ background: linear-gradient(to top, #05240e, #021a08);
     height: 52px;
   }
 
-  .navbar-brand-mark {
-    width: 44px;
+  .logo-img {
+    width: 62px;
   }
 }
 

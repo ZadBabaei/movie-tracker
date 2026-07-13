@@ -68,7 +68,19 @@ interface WatchDetailsForm {
   watchedNotes: string;
 }
 
+const DEFAULT_GROUP_HERO_IMAGE =
+  "https://image.tmdb.org/t/p/original/vW7JMRiXuXGfxgUYovvR7iqRGtl.jpg";
+
 const getTodayInputValue = () => new Date().toISOString().split("T")[0];
+
+const getGroupHeroBackdrop = (movies: Movie[]) => {
+  const withPoster = movies.find((movie) => movie.poster_path);
+  const path = withPoster?.poster_path;
+  if (!path) return DEFAULT_GROUP_HERO_IMAGE;
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  if (path.startsWith("/")) return `https://image.tmdb.org/t/p/original${path}`;
+  return DEFAULT_GROUP_HERO_IMAGE;
+};
 
 const dedupeMembers = <T extends { _id: string }>(members: T[] = []) => {
   const seen = new Set<string>();
@@ -341,8 +353,9 @@ const GroupPage: React.FC = () => {
     <div className="group-page">
       <VerticalNavbar />
       <Hero
-        height="60vh"
-        backgroundImage="https://image.tmdb.org/t/p/original/vW7JMRiXuXGfxgUYovvR7iqRGtl.jpg"
+        height="46vh"
+        eyebrow="Movie night crew"
+        backgroundImage={getGroupHeroBackdrop(timelineMovies)}
         heroText={`🎬 ${group.name} Watch Club`}
         heroTextSub="lets watch movies like there is no tomorrow"
       />

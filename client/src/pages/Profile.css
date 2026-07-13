@@ -32,27 +32,6 @@
   padding: 38px 32px 72px;
 }
 
-.Profile-page-header {
-  margin-bottom: 22px;
-}
-
-.Profile-page-header h1 {
-  margin: 0;
-  color: var(--Profile-text);
-  font-size: clamp(2rem, 4vw, 3rem);
-  font-weight: 800;
-  letter-spacing: 0;
-  line-height: 1.1;
-}
-
-.Profile-page-header p {
-  margin: 8px 0 0;
-  max-width: 620px;
-  color: var(--Profile-muted);
-  font-size: 1rem;
-  line-height: 1.6;
-}
-
 .Profile-toast {
   position: fixed;
   top: 22px;
@@ -555,10 +534,6 @@
 }
 
 @media (max-width: 560px) {
-  .Profile-page-header {
-    margin-bottom: 18px;
-  }
-
   .Profile-account-main {
     flex-direction: column;
   }

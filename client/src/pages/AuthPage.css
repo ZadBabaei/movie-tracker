@@ -79,14 +79,19 @@ body.auth-route #root {
 .AuthPage-brand {
   display: inline-flex;
   align-items: center;
-  gap: 0;
+  gap: 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--brand-gold);
 }
 
-.AuthPage-brandLockup {
-  width: min(100%, 540px);
+.AuthPage-logo {
+  width: min(320px, 78%);
   height: auto;
-  display: block;
   object-fit: contain;
+  mix-blend-mode: screen;
 }
 
 .AuthPage-copy h1 {
@@ -466,10 +471,6 @@ body.auth-route #root {
 
   .AuthPage-copy p {
     max-width: none;
-  }
-
-  .AuthPage-brandLockup {
-    width: min(100%, 420px);
   }
 
   .AuthPage-trust {

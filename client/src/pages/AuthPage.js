@@ -12,8 +12,8 @@ import {
 } from "react-icons/fa6";
 import { FaEyeSlash } from "react-icons/fa";
 import apiClient from "../api/apiClient";
+import brandLogo from "../assets/Logo 2 PM.png";
 import "./AuthPage.css";
-import fullLogo from "../assets/movie-tracker-logo-full.svg";
 
 const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
 
@@ -122,6 +122,7 @@ function AuthPage({ initialMode = "signin" }) {
       email,
       password,
     });
+
     const loginRes = await apiClient.post("/api/auth/login", { email, password });
     localStorage.setItem("token", loginRes.data.token);
     redirectAfterAuth(loginRes.data.user);
@@ -220,7 +221,7 @@ function AuthPage({ initialMode = "signin" }) {
       <section className="AuthPage-shell">
         <div className="AuthPage-hero">
           <div className="AuthPage-brand">
-            <img className="AuthPage-brandLockup" src={fullLogo} alt="Movie Tracker" />
+            <img className="AuthPage-logo" src={brandLogo} alt="Movie Tracker" />
           </div>
 
           <div className="AuthPage-copy">

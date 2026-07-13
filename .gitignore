@@ -20,3 +20,6 @@ build/
 .claude/
 .omc/
 .vercel/
+
+# Local design mockups
+design-alternatives/

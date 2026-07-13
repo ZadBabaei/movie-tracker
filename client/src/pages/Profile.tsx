@@ -14,6 +14,7 @@ import {
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import VerticalNavbar from "../component/VerticalNavbar";
+import Hero from "../component/Hero";
 import { useUserStore } from "../store/useUserStore";
 import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
 import "./Profile.css";
@@ -144,6 +145,7 @@ const Profile: React.FC = () => {
     return (
       <div className="Profile-page">
         <VerticalNavbar />
+        <Hero height="34vh" eyebrow="Account" heroText="Profile" />
         <main className="Profile-container">
           <div className="Profile-loading" role="status">
             <div className="Profile-spinner" />
@@ -158,6 +160,7 @@ const Profile: React.FC = () => {
     return (
       <div className="Profile-page">
         <VerticalNavbar />
+        <Hero height="34vh" eyebrow="Account" heroText="Profile" />
         <main className="Profile-container">
           <p className="Profile-error">Unable to load profile. Please log in again.</p>
         </main>
@@ -189,9 +192,23 @@ const Profile: React.FC = () => {
     },
   ];
 
+  const profileStatsLine = [
+    `${stats?.groupsJoined ?? 0} ${(stats?.groupsJoined ?? 0) === 1 ? "group" : "groups"}`,
+    `${stats?.moviesWatched ?? 0} watched`,
+    `${stats?.pollsVoted ?? 0} ${(stats?.pollsVoted ?? 0) === 1 ? "poll" : "polls"} voted`,
+  ].join("   ·   ");
+
   return (
     <div className="Profile-page">
       <VerticalNavbar />
+
+      <Hero
+        height="34vh"
+        eyebrow="Account"
+        heroText="Profile"
+        heroTextSub="Manage your account, photo, and movie-night settings."
+        stats={profileStatsLine}
+      />
 
       {toast && (
         <div className={`Profile-toast Profile-toast--${toast.type}`} role="status">
@@ -200,11 +217,6 @@ const Profile: React.FC = () => {
       )}
 
       <main className="Profile-container">
-        <header className="Profile-page-header">
-          <h1>Profile</h1>
-          <p>Manage your account, photo, and movie-night settings.</p>
-        </header>
-
         <section className="Profile-account-card" aria-labelledby="profile-account-title">
           <div className="Profile-account-main">
             <div

@@ -2,10 +2,10 @@ import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { FaLock, FaRegEye } from "react-icons/fa6";
+import brandLogo from "../assets/Logo 2 PM.png";
 import { FaEyeSlash } from "react-icons/fa";
 import apiClient from "../api/apiClient";
 import "./AuthPage.css";
-import fullLogo from "../assets/movie-tracker-logo-full.svg";
 
 function ResetPassword() {
   const { token } = useParams();
@@ -43,7 +43,7 @@ function ResetPassword() {
       <section className="AuthPage-shell">
         <div className="AuthPage-hero">
           <div className="AuthPage-brand">
-            <img className="AuthPage-brandLockup" src={fullLogo} alt="Movie Tracker" />
+            <img className="AuthPage-logo" src={brandLogo} alt="Movie Tracker" />
           </div>
 
           <div className="AuthPage-copy">

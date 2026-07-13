@@ -123,19 +123,22 @@ const MyGroupsPage = () => {
     <>
       <VerticalNavbar />
       <Hero
-        height="64vh"
+        height="46vh"
+        eyebrow="Movie nights"
         heroText="My Groups"
         heroTextSub="Manage your watch groups, open chats, and plan the next movie night."
+        stats={
+          !loading
+            ? `${groups.length} ${groups.length === 1 ? "group" : "groups"}   ·   ${favoriteCount} ${
+                favoriteCount === 1 ? "favorite" : "favorites"
+              }`
+            : ""
+        }
         backgroundImage="https://image.tmdb.org/t/p/original/edKpE9B5qN3e559OuMCLZdW1iBZ.jpg"
       />
 
       <main className="my-groups-page">
-        <section className="my-groups-header-card">
-          <div>
-            <span className="my-groups-eyebrow">Groups</span>
-            <h1>Your groups</h1>
-            <p>Open a group, jump into chat, or manage your favorites.</p>
-          </div>
+        <section className="my-groups-header-card my-groups-header-card--summary">
           <div className="my-groups-summary">
             <span className="group-count-badge">
               {groups.length} {groups.length === 1 ? "group" : "groups"}
