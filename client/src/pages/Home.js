@@ -310,6 +310,7 @@ function Home() {
 
   const tonightPick = watchlistMovies.find((movie) => movieKey(movie) === tonightPickId);
   const recentActivity = (dashboard?.recentActivity || []).slice(0, 5);
+  const watchedMovies = dashboard?.watchedMovies || [];
   const stats = dashboard?.stats;
   const firstName = (dashboard?.user?.name || "").split(" ")[0];
   const greeting = greetingForHour(new Date().getHours());
@@ -521,6 +522,36 @@ function Home() {
           <span className="legend-inner">● Inner orbit — coming to streaming</span>
           <span className="legend-outer">● Outer orbit — your watchlist</span>
         </div>
+
+        {watchedMovies.length > 0 && (
+          <section className="console-panel watched-panel" aria-label="Films watched">
+            <h2>
+              <span>Constellation log — {watchedMovies.length} {watchedMovies.length === 1 ? "film" : "films"} watched</span>
+              <i />
+            </h2>
+            <div className="watched-grid">
+              {watchedMovies.map((movie) => (
+                <button
+                  type="button"
+                  className="watched-poster"
+                  key={movieKey(movie)}
+                  onClick={() => setSelectedMovie(movie)}
+                  title={movie.title}
+                  aria-label={`Open details for ${movie.title}`}
+                >
+                  {moviePoster(movie) ? (
+                    <img src={moviePoster(movie)} alt="" loading="lazy" />
+                  ) : (
+                    <span className="watched-fallback">{movie.title}</span>
+                  )}
+                  {movie.timesWatched > 1 && (
+                    <span className="watched-count">×{movie.timesWatched}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="console-split">
           <div className="console-panel">

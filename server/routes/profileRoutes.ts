@@ -38,9 +38,8 @@ const getProfileStats = async (userId: string): Promise<ProfileStats> => {
   const [groupsJoined, watchedMovieCounts, pollsVoted, pollsCreated] = await Promise.all([
     Group.countDocuments({ members: userId }),
     Group.aggregate<{ count: number }>([
-      { $match: { "movies.watchedWith": userObjectId } },
+      { $match: { members: userObjectId } },
       { $unwind: "$movies" },
-      { $match: { "movies.watchedWith": userObjectId } },
       { $group: { _id: "$movies.movieId" } },
       { $count: "count" },
     ]),
@@ -54,6 +53,47 @@ const getProfileStats = async (userId: string): Promise<ProfileStats> => {
     pollsVoted,
     pollsCreated,
   };
+};
+
+interface WatchedMovieSummary {
+  _id: mongoose.Types.ObjectId;
+  title: string;
+  poster?: string;
+  imdbID?: string;
+  vote_average?: number;
+  lastWatchedAt?: Date;
+  timesWatched: number;
+}
+
+// Every movie logged in any group the user belongs to, deduplicated by movie
+// so rewatches (or the same film in several groups) count once.
+const getWatchedMovies = async (userId: string): Promise<WatchedMovieSummary[]> => {
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+  return Group.aggregate<WatchedMovieSummary>([
+    { $match: { members: userObjectId } },
+    { $unwind: "$movies" },
+    {
+      $group: {
+        _id: "$movies.movieId",
+        lastWatchedAt: { $max: "$movies.watchedDate" },
+        timesWatched: { $sum: 1 },
+      },
+    },
+    { $lookup: { from: "movies", localField: "_id", foreignField: "_id", as: "movie" } },
+    { $unwind: "$movie" },
+    {
+      $project: {
+        _id: "$movie._id",
+        title: "$movie.title",
+        poster: "$movie.poster",
+        imdbID: "$movie.imdbID",
+        vote_average: "$movie.vote_average",
+        lastWatchedAt: 1,
+        timesWatched: 1,
+      },
+    },
+    { $sort: { lastWatchedAt: -1 } },
+  ]);
 };
 
 const getRecentActivity = async (userId: string, watchlistIds: any[] = []): Promise<RecentActivity[]> => {
@@ -270,9 +310,10 @@ router.get("/dashboard", authenticate, async (req: Request, res: Response) => {
       return;
     }
 
-    const [stats, recentActivity] = await Promise.all([
+    const [stats, recentActivity, watchedMovies] = await Promise.all([
       getProfileStats(userId),
       getRecentActivity(userId, user.watchlist || []),
+      getWatchedMovies(userId),
     ]);
 
     res.json({
@@ -286,6 +327,7 @@ router.get("/dashboard", authenticate, async (req: Request, res: Response) => {
       },
       stats,
       recentActivity,
+      watchedMovies,
     });
   } catch (error) {
     console.error("Error fetching profile dashboard:", error);
