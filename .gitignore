@@ -23,3 +23,7 @@ build/
 
 # Local design mockups
 design-alternatives/
+
+# Agent tooling state
+.agents/
+skills-lock.json
