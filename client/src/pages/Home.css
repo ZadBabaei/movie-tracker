@@ -183,7 +183,7 @@
 
 .home-page .planet--outer,
 .orbit-ghost--outer {
-  width: 70px;
+  width: 100px;
   opacity: 0.92;
 }
 
@@ -698,7 +698,7 @@
   .home-page .planet--inner,
   .orbit-ghost--inner { width: 62px; }
   .home-page .planet--outer,
-  .orbit-ghost--outer { width: 56px; }
+  .orbit-ghost--outer { width: 80px; }
   .chart-core { width: 228px; height: 228px; padding: 19px; }
   .chart-core h1 { font-size: 1.2rem; }
   .core-quote { font-size: 0.59rem; }
