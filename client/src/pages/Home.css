@@ -127,6 +127,12 @@
 .orbit-spin {
   position: absolute;
   inset: 0;
+  pointer-events: none;
+}
+
+.home-page .planet,
+.orbit-ghost--action {
+  pointer-events: auto;
 }
 
 .mobile-orbit { display: none; }
