@@ -42,7 +42,9 @@ const buildUniqueGroupSlug = async (groupName: string, excludeGroupId?: string) 
 const ensureGroupSlug = async (group: any) => {
   if (group?.slug) return group;
   group.slug = await buildUniqueGroupSlug(group.name, group._id?.toString());
-  await group.save();
+  // Legacy groups may hold plain-ObjectId movie entries that fail full
+  // validation; only the slug is being written here.
+  await group.save({ validateModifiedOnly: true });
   return group;
 };
 

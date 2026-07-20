@@ -41,7 +41,33 @@
 }
 
 .my-groups-header-card--summary {
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.my-groups-create-button {
+  flex: 0 0 auto;
+  min-height: 46px;
+  padding: 0 22px;
+  border: 1px solid rgba(211, 172, 108, 0.7);
+  border-radius: 12px;
+  color: #021a08;
+  background: var(--groups-accent);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.my-groups-create-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(211, 172, 108, 0.24);
+}
+
+.my-groups-create-button:focus-visible {
+  outline: 3px solid rgba(211, 172, 108, 0.45);
+  outline-offset: 3px;
 }
 
 .my-groups-summary {
@@ -376,6 +402,10 @@
   .my-groups-summary {
     width: 100%;
     justify-items: stretch;
+  }
+
+  .my-groups-create-button {
+    width: 100%;
   }
 
   .group-summary-metrics {

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchMyGroups, leaveGroup } from "../api/groupApi";
 import { toast } from "react-toastify";
@@ -6,6 +6,7 @@ import IconButton from "@mui/material/IconButton";
 import Star from "@mui/icons-material/Star";
 import StarBorder from "@mui/icons-material/StarBorder";
 import { useGroupStore } from "../store/useGroupStore";
+import { useModalStore } from "../store/useModalStore";
 import VerticalNavbar from "../component/VerticalNavbar";
 import Hero from "../component/Hero";
 import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
@@ -19,6 +20,8 @@ const MyGroupsPage = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { favoriteGroups, fetchFavoriteGroups, toggleFavoriteGroup } = useGroupStore();
+  const { openGroupNameModal, isGroupNameModalOpen } = useModalStore();
+  const wasGroupNameModalOpen = useRef(false);
 
   const dedupeMembers = (members = []) => {
     const seen = new Set();
@@ -48,6 +51,13 @@ const MyGroupsPage = () => {
     loadGroups();
     fetchFavoriteGroups();
   }, [fetchFavoriteGroups, loadGroups]);
+
+  useEffect(() => {
+    if (wasGroupNameModalOpen.current && !isGroupNameModalOpen) {
+      loadGroups();
+    }
+    wasGroupNameModalOpen.current = isGroupNameModalOpen;
+  }, [isGroupNameModalOpen, loadGroups]);
 
   const handleLeaveGroup = async (groupId) => {
     if (!window.confirm("Are you sure you want to leave this group?")) return;
@@ -139,6 +149,13 @@ const MyGroupsPage = () => {
 
       <main className="my-groups-page">
         <section className="my-groups-header-card my-groups-header-card--summary">
+          <button
+            type="button"
+            className="my-groups-create-button"
+            onClick={openGroupNameModal}
+          >
+            + Create Group
+          </button>
           <div className="my-groups-summary">
             <span className="group-count-badge">
               {groups.length} {groups.length === 1 ? "group" : "groups"}
@@ -187,6 +204,9 @@ const MyGroupsPage = () => {
           <section className="my-groups-state-card">
             <h2>No groups yet</h2>
             <p>Create or join a group to start planning movie nights with friends.</p>
+            <button type="button" onClick={openGroupNameModal}>
+              + Create Group
+            </button>
           </section>
         ) : (
           <section className="group-card-grid" aria-label="Your groups">
