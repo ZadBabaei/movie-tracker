@@ -1,5 +1,5 @@
 .home-page {
-  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-mono: Arial, Helvetica, sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
   background:
