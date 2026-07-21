@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import Modal from "./Modal/Modal";
 import "./InviteFriendsModal.css";
 import { useGroupStore } from "../store/useGroupStore";
 import { toast } from "react-toastify";
@@ -64,17 +65,14 @@ const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({ isOpen, onClose
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="InviteFriendsModal-overlay">
-      <div className="InviteFriendsModal-container">
-        <button className="InviteFriendsModal-close-btn" onClick={onClose}>
-          &times;
-        </button>
-        <h2 className="InviteFriendsModal-title">Invite Friends to Group</h2>
-
-        <div className="InviteFriendsModal-tab-content">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="md"
+      title="Invite Friends to Group"
+    >
+      <div className="InviteFriendsModal-tab-content">
           {!inviteLink ? (
             <div className="InviteFriendsModal-link-section">
               <p className="InviteFriendsModal-link-desc">
@@ -118,12 +116,11 @@ const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({ isOpen, onClose
           )}
         </div>
 
-        <div className="InviteFriendsModal-btns-container">
-          <button className="InviteFriendsModal-btn-submit" onClick={onClose}>Done</button>
-          <button className="InviteFriendsModal-btn-cancel" onClick={onClose}>Cancel</button>
-        </div>
+      <div className="InviteFriendsModal-btns-container">
+        <button className="InviteFriendsModal-btn-submit" onClick={onClose}>Done</button>
+        <button className="InviteFriendsModal-btn-cancel" onClick={onClose}>Cancel</button>
       </div>
-    </div>
+    </Modal>
   );
 };
 
