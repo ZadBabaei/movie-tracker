@@ -1,20 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import {
-  FaBookmark,
-  FaCamera,
-  FaChartBar,
-  FaCheck,
-  FaEdit,
-  FaEnvelope,
-  FaPoll,
-  FaSignOutAlt,
-  FaTimes,
-  FaTrash,
-  FaUsers,
-} from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import VerticalNavbar from "../component/VerticalNavbar";
-import Hero from "../component/Hero";
 import { useUserStore } from "../store/useUserStore";
 import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
 import "./Profile.css";
@@ -145,8 +131,8 @@ const Profile: React.FC = () => {
     return (
       <div className="Profile-page">
         <VerticalNavbar />
-        <Hero height="34vh" eyebrow="Account" heroText="Profile" />
-        <main className="Profile-container">
+        <div className="Profile-stars" aria-hidden="true" />
+        <main className="Profile-stage">
           <div className="Profile-loading" role="status">
             <div className="Profile-spinner" />
             <span>Loading profile...</span>
@@ -160,8 +146,8 @@ const Profile: React.FC = () => {
     return (
       <div className="Profile-page">
         <VerticalNavbar />
-        <Hero height="34vh" eyebrow="Account" heroText="Profile" />
-        <main className="Profile-container">
+        <div className="Profile-stars" aria-hidden="true" />
+        <main className="Profile-stage">
           <p className="Profile-error">Unable to load profile. Please log in again.</p>
         </main>
       </div>
@@ -169,46 +155,25 @@ const Profile: React.FC = () => {
   }
 
   const profileAvatarUrl = getAvatarUrl(profile);
-  const statItems = [
-    {
-      label: "Groups",
-      value: stats?.groupsJoined ?? 0,
-      icon: <FaUsers />,
-    },
-    {
-      label: "Watchlist",
-      value: stats?.moviesWatched ?? 0,
-      icon: <FaBookmark />,
-    },
-    {
-      label: "Poll votes",
-      value: stats?.pollsVoted ?? 0,
-      icon: <FaPoll />,
-    },
-    {
-      label: "Polls created",
-      value: stats?.pollsCreated ?? 0,
-      icon: <FaChartBar />,
-    },
+
+  const orbitStats = [
+    { key: "groups", label: "Groups", value: stats?.groupsJoined ?? 0, arm: "a" },
+    { key: "watched", label: "Watched", value: stats?.moviesWatched ?? 0, arm: "b" },
+    { key: "votes", label: "Votes", value: stats?.pollsVoted ?? 0, arm: "c" },
+    { key: "polls", label: "Polls", value: stats?.pollsCreated ?? 0, arm: "d" },
   ];
 
-  const profileStatsLine = [
-    `${stats?.groupsJoined ?? 0} ${(stats?.groupsJoined ?? 0) === 1 ? "group" : "groups"}`,
-    `${stats?.moviesWatched ?? 0} watched`,
-    `${stats?.pollsVoted ?? 0} ${(stats?.pollsVoted ?? 0) === 1 ? "poll" : "polls"} voted`,
-  ].join("   ·   ");
+  const srStats = [
+    `Groups joined: ${stats?.groupsJoined ?? 0}`,
+    `Films watched: ${stats?.moviesWatched ?? 0}`,
+    `Poll votes cast: ${stats?.pollsVoted ?? 0}`,
+    `Polls created: ${stats?.pollsCreated ?? 0}`,
+  ];
 
   return (
     <div className="Profile-page">
       <VerticalNavbar />
-
-      <Hero
-        height="34vh"
-        eyebrow="Account"
-        heroText="Profile"
-        heroTextSub="Manage your account, photo, and movie-night settings."
-        stats={profileStatsLine}
-      />
+      <div className="Profile-stars" aria-hidden="true" />
 
       {toast && (
         <div className={`Profile-toast Profile-toast--${toast.type}`} role="status">
@@ -216,9 +181,33 @@ const Profile: React.FC = () => {
         </div>
       )}
 
-      <main className="Profile-container">
-        <section className="Profile-account-card" aria-labelledby="profile-account-title">
-          <div className="Profile-account-main">
+      <main className="Profile-stage">
+        <p className="Profile-kicker Profile-rise Profile-d1">Your Constellation</p>
+
+        <section className="Profile-system" aria-label="Activity overview">
+          <ul className="Profile-sr-only">
+            {srStats.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+
+          <div className="Profile-ring Profile-ring--1" aria-hidden="true" />
+          <div className="Profile-ring Profile-ring--2" aria-hidden="true" />
+          <div className="Profile-ring Profile-ring--3" aria-hidden="true" />
+
+          <div className="Profile-orbit" aria-hidden="true">
+            {orbitStats.map((stat) => (
+              <div key={stat.key} className={`Profile-arm Profile-arm--${stat.arm}`}>
+                <div className="Profile-node">
+                  <span className="Profile-node-fig">{stat.value}</span>
+                  <span className="Profile-node-lbl">{stat.label}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="Profile-core">
+            <div className="Profile-glow" aria-hidden="true" />
             <div
               className="Profile-avatar"
               role="button"
@@ -233,8 +222,8 @@ const Profile: React.FC = () => {
                 className="Profile-avatar-img"
                 onError={(event) => handleAvatarError(event, profile)}
               />
-              <span className="Profile-avatar-overlay">
-                {uploading ? <span className="Profile-avatar-spinner" /> : <FaCamera />}
+              <span className="Profile-avatar-veil">
+                {uploading ? <span className="Profile-avatar-spinner" /> : "Replace"}
               </span>
             </div>
 
@@ -245,104 +234,28 @@ const Profile: React.FC = () => {
               onChange={handleFileChange}
               className="Profile-file-input"
             />
-
-            <div className="Profile-account-info">
-              <h2 id="profile-account-title">{profile.name}</h2>
-              <p>
-                <FaEnvelope aria-hidden="true" />
-                <span>{profile.email}</span>
-              </p>
-            </div>
-          </div>
-
-          {editing ? (
-            <div className="Profile-edit-form">
-              <div className="Profile-field">
-                <label htmlFor="profile-name">Name</label>
-                <input
-                  id="profile-name"
-                  className="Profile-input"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  placeholder="Your name"
-                />
-              </div>
-              <div className="Profile-field">
-                <label htmlFor="profile-email">Email</label>
-                <input
-                  id="profile-email"
-                  className="Profile-input"
-                  value={editEmail}
-                  onChange={(e) => setEditEmail(e.target.value)}
-                  placeholder="Your email"
-                  type="email"
-                />
-              </div>
-              <div className="Profile-actions">
-                <button className="Profile-btn Profile-btn--primary" onClick={handleSaveProfile} disabled={saving}>
-                  <FaCheck aria-hidden="true" />
-                  <span>{saving ? "Saving..." : "Save changes"}</span>
-                </button>
-                <button className="Profile-btn Profile-btn--secondary" onClick={handleCancelEditing} disabled={saving}>
-                  <FaTimes aria-hidden="true" />
-                  <span>Cancel</span>
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="Profile-actions">
-              <button className="Profile-btn Profile-btn--secondary" onClick={handleAvatarClick} disabled={uploading}>
-                <FaCamera aria-hidden="true" />
-                <span>{uploading ? "Uploading..." : "Change photo"}</span>
-              </button>
-              <button className="Profile-btn Profile-btn--primary" onClick={handleStartEditing}>
-                <FaEdit aria-hidden="true" />
-                <span>Edit profile</span>
-              </button>
-              {profile.avatar && (
-                <button className="Profile-btn Profile-btn--danger" onClick={handleRemoveAvatar} disabled={uploading}>
-                  <FaTrash aria-hidden="true" />
-                  <span>Remove photo</span>
-                </button>
-              )}
-            </div>
-          )}
-        </section>
-
-        <section className="Profile-stats-card" aria-labelledby="profile-stats-title">
-          <div className="Profile-section-header">
-            <h2 id="profile-stats-title">Activity summary</h2>
-          </div>
-          <div className="Profile-stats-grid">
-            {statItems.map((stat) => (
-              <article key={stat.label} className="Profile-stat-item">
-                <span className="Profile-stat-icon" aria-hidden="true">
-                  {stat.icon}
-                </span>
-                <span className="Profile-stat-value">{stat.value}</span>
-                <span className="Profile-stat-label">{stat.label}</span>
-              </article>
-            ))}
           </div>
         </section>
 
-        <section className="Profile-content-grid">
-          <div className="Profile-panel">
-            <div className="Profile-section-header">
-              <h2>Recent activity</h2>
-            </div>
+        <div className="Profile-nameplate Profile-rise Profile-d2">
+          <h1>{profile.name}</h1>
+          <p className="Profile-addr">{profile.email}</p>
+        </div>
+
+        <section className="Profile-console">
+          <div className="Profile-pane Profile-pane--wide Profile-rise Profile-d2">
+            <div className="Profile-pane-head">Signals</div>
 
             {recentActivity.length > 0 ? (
-              <div className="Profile-activity-list">
-                {recentActivity.map((activity, index) => (
-                  <article className="Profile-activity-item" key={`${activity.type}-${activity.title}-${index}`}>
-                    <div>
-                      <h3>{activity.title}</h3>
-                      <p>{activity.description}</p>
-                    </div>
-                  </article>
-                ))}
-              </div>
+              recentActivity.map((activity, index) => (
+                <article className="Profile-beam" key={`${activity.type}-${activity.title}-${index}`}>
+                  <span className="Profile-beam-star" aria-hidden="true" />
+                  <div>
+                    <h3>{activity.title}</h3>
+                    <p>{activity.description}</p>
+                  </div>
+                </article>
+              ))
             ) : (
               <p className="Profile-empty-state">
                 No recent activity yet. Start by adding a movie or joining a group.
@@ -350,28 +263,97 @@ const Profile: React.FC = () => {
             )}
           </div>
 
-          <div className="Profile-panel">
-            <div className="Profile-section-header">
-              <h2>Account session</h2>
-            </div>
+          <div className="Profile-pane Profile-rise Profile-d3">
+            <div className="Profile-pane-head">Identity</div>
 
-            <div className="Profile-session-user">
-              <img
-                src={profileAvatarUrl}
-                alt=""
-                onError={(event) => handleAvatarError(event, profile)}
-              />
-              <div>
-                <span>{profile.name}</span>
-                <small>{profile.email}</small>
-              </div>
-            </div>
+            {editing ? (
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  handleSaveProfile();
+                }}
+              >
+                <div className="Profile-field">
+                  <label htmlFor="profile-name">Name</label>
+                  <input
+                    id="profile-name"
+                    className="Profile-input"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder="Your name"
+                  />
+                </div>
+                <div className="Profile-field">
+                  <label htmlFor="profile-email">Email</label>
+                  <input
+                    id="profile-email"
+                    className="Profile-input"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    placeholder="Your email"
+                    type="email"
+                  />
+                </div>
+                <div className="Profile-btnrow">
+                  <button type="submit" className="Profile-btn Profile-btn--solid" disabled={saving}>
+                    {saving ? "Saving..." : "Save"}
+                  </button>
+                  <button
+                    type="button"
+                    className="Profile-btn Profile-btn--quiet"
+                    onClick={handleCancelEditing}
+                    disabled={saving}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <>
+                <div className="Profile-idbox">
+                  <img
+                    src={profileAvatarUrl}
+                    alt=""
+                    onError={(event) => handleAvatarError(event, profile)}
+                  />
+                  <div>
+                    <span className="Profile-idbox-name">{profile.name}</span>
+                    <small className="Profile-idbox-mail">{profile.email}</small>
+                  </div>
+                </div>
 
-            <p className="Profile-session-copy">Sign out of this device when you’re finished.</p>
+                <div className="Profile-btnrow">
+                  <button className="Profile-btn Profile-btn--solid" onClick={handleStartEditing}>
+                    Edit
+                  </button>
+                  <button
+                    className="Profile-btn Profile-btn--quiet"
+                    onClick={handleAvatarClick}
+                    disabled={uploading}
+                  >
+                    {uploading ? "Uploading..." : "New Photo"}
+                  </button>
+                  {profile.avatar && (
+                    <button
+                      className="Profile-btn Profile-btn--danger"
+                      onClick={handleRemoveAvatar}
+                      disabled={uploading}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
 
-            <button className="Profile-logout-btn" onClick={handleLogout}>
-              <FaSignOutAlt aria-hidden="true" />
-              <span>Log out</span>
+          <div className="Profile-pane Profile-rise Profile-d4">
+            <div className="Profile-pane-head">Session</div>
+            <p className="Profile-note">
+              This device is currently orbiting your account. Sign out when you drift away.
+            </p>
+            <button className="Profile-btn Profile-btn--signout" onClick={handleLogout}>
+              Sign Out
             </button>
           </div>
         </section>
