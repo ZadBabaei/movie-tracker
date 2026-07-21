@@ -95,9 +95,6 @@
   flex: 1;
   padding-inline: 20px;
 }
-.search-bar-glass {
-  margin-left: 20px;
-}
 .GroupChatPage-search-section {
   width: 50vh;
   margin-inline-end: 20px;
@@ -119,10 +116,6 @@
   margin-left: 50px;
   border-radius: 8px;
   padding: 10px;
-}
-.search-bar-glass-wrapper {
-  padding: 0px;
-  margin-top: 20px;
 }
 .GroupChatPage-selected-movie {
   max-height: 600px;
