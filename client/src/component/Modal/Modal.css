@@ -1,0 +1,178 @@
+/* ============================================================
+   Shared modal chrome — overlay, panel, close button.
+   Every modal in the app renders through <Modal />, so these
+   values are the single source of truth for modal appearance.
+
+   Content styling stays in each feature's own stylesheet.
+   ============================================================ */
+
+:root {
+  /* Scrim */
+  --modal-scrim: rgba(0, 0, 0, 0.78);
+  --modal-scrim-blur: 8px;
+
+  /* Panel */
+  --modal-surface: var(--brand-charcoal);
+  --modal-border: rgba(255, 255, 255, 0.1);
+  --modal-border-danger: rgba(255, 83, 83, 0.28);
+  --modal-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  --modal-text: var(--brand-ivory);
+
+  /* Shape.
+     NOTE: set to 16px to match the app's existing modals. Switch this to
+     var(--brand-radius-lg) to align modals with the sharp-edged Home/Profile
+     redesign — it is the only change needed. */
+  --modal-radius: 16px;
+  --modal-padding: 28px;
+
+  /* Stacking. Sits above the navbar (1000) and mobile bottom nav (1200). */
+  --modal-z: 1500;
+}
+
+/* ---------- overlay ---------- */
+
+.mt-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--modal-z);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+  background: var(--modal-scrim);
+  backdrop-filter: blur(var(--modal-scrim-blur));
+  -webkit-backdrop-filter: blur(var(--modal-scrim-blur));
+  animation: mt-modal-scrim-in 0.2s ease-out;
+}
+
+/* ---------- panel ---------- */
+
+.mt-modal-panel {
+  position: relative;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: var(--modal-padding);
+  border: 1px solid var(--modal-border);
+  border-radius: var(--modal-radius);
+  background: var(--modal-surface);
+  box-shadow: var(--modal-shadow);
+  color: var(--modal-text);
+  animation: mt-modal-panel-in 0.22s ease-out;
+}
+
+.mt-modal-panel:focus {
+  outline: none;
+}
+
+.mt-modal-panel--sm { max-width: 420px; }
+.mt-modal-panel--md { max-width: 560px; }
+.mt-modal-panel--lg { max-width: 760px; }
+.mt-modal-panel--xl { max-width: 1200px; }
+
+.mt-modal-panel--danger {
+  border-color: var(--modal-border-danger);
+}
+
+/* ---------- panel scrollbar ---------- */
+
+.mt-modal-panel {
+  scrollbar-width: thin;
+  scrollbar-color: #333 transparent;
+}
+
+.mt-modal-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.mt-modal-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mt-modal-panel::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}
+
+/* ---------- close button ---------- */
+
+.mt-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--brand-muted);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.mt-modal-close:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--brand-ivory);
+}
+
+.mt-modal-close:focus-visible {
+  outline: 2px solid var(--brand-gold);
+  outline-offset: 2px;
+}
+
+/* ---------- title ---------- */
+
+.mt-modal-title {
+  margin: 0 42px 18px 0;
+  color: var(--brand-ivory);
+  font-family: var(--font-serif);
+  font-size: 1.45rem;
+  font-weight: 500;
+}
+
+/* ---------- motion ---------- */
+
+@keyframes mt-modal-scrim-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes mt-modal-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mt-modal-overlay,
+  .mt-modal-panel {
+    animation: none;
+  }
+}
+
+/* ---------- mobile ---------- */
+
+@media (max-width: 768px) {
+  .mt-modal-overlay {
+    padding: 12px 12px calc(84px + env(safe-area-inset-bottom));
+  }
+
+  .mt-modal-panel {
+    padding: 22px 18px;
+  }
+
+  .mt-modal-title {
+    font-size: 1.25rem;
+  }
+}

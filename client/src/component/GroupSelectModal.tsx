@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { FaTimes, FaArrowLeft, FaArrowRight } from "react-icons/fa";
+import { FaArrowLeft, FaArrowRight } from "react-icons/fa";
 import apiClient from "../api/apiClient";
 import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
+import Modal from "./Modal/Modal";
 import "./GroupSelectModal.css";
 
 interface GroupOption {
@@ -121,16 +122,14 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
     });
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="group-select-overlay" onClick={onClose}>
-      <div className="group-select-content" onClick={(e) => e.stopPropagation()}>
-        <button className="group-select-close" onClick={onClose}>
-          <FaTimes />
-        </button>
-
-        {/* ── Step 1: Select Group ── */}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="sm"
+      ariaLabel="Mark as watched"
+    >
+      {/* ── Step 1: Select Group ── */}
         {step === 1 && (
           <>
             <h2 className="group-select-heading">Mark as Watched</h2>
@@ -280,8 +279,7 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
             </div>
           </>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 };
 
