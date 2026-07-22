@@ -56,7 +56,7 @@ const webServer = [
     },
   },
   {
-    command: "npm start",
+    command: "npm run dev",
     cwd: "./client",
     url: baseURL,
     reuseExistingServer: true,
@@ -66,8 +66,9 @@ const webServer = [
     env: {
       ...process.env,
       PORT: clientPort,
-      BROWSER: "none",
-      REACT_APP_API_URL: apiURL,
+      VITE_API_BASE_URL: apiURL,
+      VITE_SOCKET_URL: apiURL,
+      VITE_DEV_API_PROXY: apiURL,
     },
   },
 ];

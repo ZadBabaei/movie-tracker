@@ -32,7 +32,7 @@ const SuggestionsCarousel: React.FC<SuggestionsCarouselProps> = ({ onAddToWatchl
   const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
 
   useEffect(() => {
-    const apiKey = process.env.REACT_APP_TMDB_API_KEY;
+    const apiKey = import.meta.env.VITE_TMDB_API_KEY;
     if (!apiKey) return;
 
     axios

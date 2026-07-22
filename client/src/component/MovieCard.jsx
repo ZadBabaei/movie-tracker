@@ -91,7 +91,7 @@ const MovieCard = ({
   useEffect(() => {
     const existingImdbUrl = getImdbUrlFromMovie(movie);
     const tmdbMovieId = getTmdbMovieId(movie);
-    const apiKey = process.env.REACT_APP_TMDB_API_KEY;
+    const apiKey = import.meta.env.VITE_TMDB_API_KEY;
 
     setImdbUrl("");
     if (existingImdbUrl) {

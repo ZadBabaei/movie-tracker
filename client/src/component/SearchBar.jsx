@@ -7,7 +7,7 @@ const SearchBar = ({ onMovieSelect }) => {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const apiKey = process.env.REACT_APP_TMDB_API_KEY; 
+  const apiKey = import.meta.env.VITE_TMDB_API_KEY;
   const baseUrl = "https://api.themoviedb.org/3/search/movie";
 
   const fetchMovies = async (q, signal) => {

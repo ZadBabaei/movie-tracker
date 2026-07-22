@@ -5,7 +5,7 @@ import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
 import Modal from "./Modal/Modal";
 import "./MovieDetailModal.css";
 
-const TMDB_KEY = process.env.REACT_APP_TMDB_API_KEY;
+const TMDB_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
 const getPosterUrl = (path) => {
   if (!path) return "/default-avatar.png";

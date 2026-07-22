@@ -69,7 +69,7 @@ const emptyBugReport = {
 };
 
 const About = () => {
-  const bugReportsEnabled = process.env.REACT_APP_ENABLE_BUG_REPORTS === "true";
+  const bugReportsEnabled = import.meta.env.VITE_ENABLE_BUG_REPORTS === "true";
   const [showBugModal, setShowBugModal] = useState(false);
   const [bugReport, setBugReport] = useState(emptyBugReport);
   const [submittingBugReport, setSubmittingBugReport] = useState(false);
