@@ -158,33 +158,44 @@
 }
 
 .group-select-btn {
-  padding: 10px 24px;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 600;
+  min-height: 40px;
+  padding: 11px 24px;
+  border: 1px solid transparent;
+  border-radius: var(--brand-radius);
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease,
+    transform 0.14s ease;
 }
 
 .group-select-btn--skip {
-  background: rgba(255, 255, 255, 0.08);
-  color: #aaa;
+  background: transparent;
+  color: var(--brand-muted);
+  border-color: var(--brand-hairline-soft);
 }
 
 .group-select-btn--skip:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
+  background: rgba(243, 238, 228, 0.07);
+  color: var(--brand-ivory);
 }
 
 .group-select-btn--done {
-  background: linear-gradient(135deg, #d3ac6c, #ff6b6b);
-  color: white;
+  background: var(--brand-gold);
+  color: var(--brand-gold-ink);
+  border-color: var(--brand-gold);
 }
 
 .group-select-btn--done:hover {
-  background: linear-gradient(135deg, #ff3333, #ff5555);
-  transform: translateY(-1px);
+  background: var(--brand-gold-bright);
+  border-color: var(--brand-gold-bright);
+}
+
+.group-select-btn:active {
+  transform: scale(0.97);
 }
 
 /* ── Step Indicator ─────────────────── */
@@ -234,7 +245,7 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #d3ac6c, #ff6b6b);
+  background: var(--brand-charcoal);
   display: flex;
   align-items: center;
   justify-content: center;

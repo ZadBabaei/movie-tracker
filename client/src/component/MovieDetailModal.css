@@ -171,21 +171,27 @@
 }
 
 .mdm-rate-btn {
-  border: 1px solid rgba(229, 9, 20, 0.5);
-  background: rgba(229, 9, 20, 0.12);
-  color: #f3eee4;
-  border-radius: 999px;
-  padding: 7px 12px;
-  font-size: 0.82rem;
-  font-weight: 800;
+  border: 1px solid var(--brand-gold);
+  background: var(--brand-gold);
+  color: var(--brand-gold-ink);
+  border-radius: var(--brand-radius);
+  padding: 10px 16px;
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.14s ease;
 }
 
 .mdm-rate-btn:hover {
-  background: rgba(229, 9, 20, 0.22);
-  border-color: rgba(229, 9, 20, 0.75);
-  transform: translateY(-1px);
+  background: var(--brand-gold-bright);
+  border-color: var(--brand-gold-bright);
+}
+
+.mdm-rate-btn:active {
+  transform: scale(0.97);
 }
 
 .mdm-rating-panel {
@@ -254,22 +260,44 @@
 
 .mdm-rating-cancel,
 .mdm-rating-submit {
-  border: none;
-  border-radius: 999px;
-  padding: 8px 12px;
-  font-size: 0.8rem;
-  font-weight: 800;
+  border: 1px solid transparent;
+  border-radius: var(--brand-radius);
+  padding: 10px 16px;
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease,
+    transform 0.14s ease;
+}
+
+.mdm-rating-cancel:active,
+.mdm-rating-submit:active {
+  transform: scale(0.97);
 }
 
 .mdm-rating-cancel {
-  background: rgba(255, 255, 255, 0.08);
-  color: #cfcfcf;
+  background: transparent;
+  color: var(--brand-muted);
+  border-color: var(--brand-hairline-soft);
+}
+
+.mdm-rating-cancel:hover {
+  background: rgba(243, 238, 228, 0.07);
+  color: var(--brand-ivory);
 }
 
 .mdm-rating-submit {
-  background: #e50914;
-  color: #fff;
+  background: var(--brand-gold);
+  color: var(--brand-gold-ink);
+  border-color: var(--brand-gold);
+}
+
+.mdm-rating-submit:hover {
+  background: var(--brand-gold-bright);
+  border-color: var(--brand-gold-bright);
 }
 
 .mdm-rating-cancel:disabled,

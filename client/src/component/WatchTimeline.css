@@ -211,7 +211,7 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #d3ac6c, #818cf8);
+  background: var(--brand-charcoal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -237,19 +237,27 @@
 .watch-timeline-info-btn {
   align-self: center;
   margin-top: auto;
-  padding: 7px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #ddd;
-  font-size: 0.75rem;
+  padding: 9px 14px;
+  border: 1px solid var(--brand-hairline-soft);
+  border-radius: var(--brand-radius);
+  background: transparent;
+  color: var(--brand-muted);
+  font-family: var(--font-sans);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.14s ease;
 }
 
 .watch-timeline-info-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  transform: translateY(-1px);
+  background: rgba(243, 238, 228, 0.07);
+  color: var(--brand-ivory);
+}
+
+.watch-timeline-info-btn:active {
+  transform: scale(0.97);
 }
 
 /* Animated line */

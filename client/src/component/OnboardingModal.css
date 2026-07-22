@@ -91,20 +91,21 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 14px 32px;
-  border: none;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  color: white;
+  padding: 13px 32px;
+  border: 1px solid transparent;
+  border-radius: var(--brand-radius);
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--brand-gold-ink);
   cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: filter 0.2s ease, transform 0.14s ease;
 }
 
-.Onboarding-action-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+.Onboarding-action-btn:active {
+  transform: scale(0.97);
 }
 
 .Onboarding-skip-btn {

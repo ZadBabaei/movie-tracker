@@ -74,29 +74,45 @@ margin-inline-start: 40%;
 }
 
 .modal-buttons button {
-  width: 130px;
-  height: 45px;
-  background: linear-gradient(135deg, #f4c542, #ff9800);
-  color: white;
-  border: none;
-  font-size: 14px;
-  font-weight: bold;
+  min-width: 130px;
+  min-height: 40px;
+  padding: 11px 20px;
+  background: var(--brand-gold);
+  color: var(--brand-gold-ink);
+  border: 1px solid var(--brand-gold);
+  border-radius: var(--brand-radius);
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   cursor: pointer;
-  border-radius: 25px;
-  transition: 0.3s ease-in-out;
-  box-shadow: 0 4px 8px rgba(255, 152, 0, 0.3);
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease,
+    transform 0.14s ease;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .modal-buttons button:hover {
-  transform: scale(1.05);
-  background: linear-gradient(135deg, #ff9800, #f4c542);
+  background: var(--brand-gold-bright);
+  border-color: var(--brand-gold-bright);
+}
+
+.modal-buttons button:active {
+  transform: scale(0.97);
 }
 
 .modal-buttons button:last-child {
-  background: rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: var(--brand-muted);
+  border-color: var(--brand-hairline-soft);
+}
+
+.modal-buttons button:last-child:hover {
+  background: rgba(243, 238, 228, 0.07);
+  color: var(--brand-ivory);
+  border-color: var(--brand-hairline-soft);
 }
 .modal-close-btn {
   position: absolute;

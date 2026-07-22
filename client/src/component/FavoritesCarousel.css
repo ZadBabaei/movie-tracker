@@ -22,6 +22,6 @@
 }
 
 .favorites-remove-btn:hover {
-  background: linear-gradient(135deg, #d3ac6c, #c9184a) !important;
-  box-shadow: 0 4px 12px rgba(255, 77, 109, 0.4) !important;
+  background: var(--brand-danger) !important;
+  color: var(--brand-ivory) !important;
 }

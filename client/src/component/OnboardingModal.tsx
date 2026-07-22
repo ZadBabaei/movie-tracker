@@ -118,7 +118,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) => {
         <div className="Onboarding-actions">
           <button
             className="Onboarding-action-btn"
-            style={{ background: `linear-gradient(135deg, ${step.color}, ${step.color}dd)` }}
+            style={{ background: step.color }}
             onClick={handleAction}
           >
             <span>{currentStep === steps.length - 1 ? "Get Started" : step.action}</span>

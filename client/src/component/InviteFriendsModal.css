@@ -190,18 +190,26 @@
 
 .InviteFriendsModal-generate-btn {
   padding: 12px 28px;
-  background: linear-gradient(135deg, #d3ac6c, #b8945a);
-  color: #0d1117;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
+  background: var(--brand-gold);
+  color: var(--brand-gold-ink);
+  border: 1px solid var(--brand-gold);
+  border-radius: var(--brand-radius);
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
   font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.14s ease;
 }
 
 .InviteFriendsModal-generate-btn:hover {
-  background: #f0c52c;
+  background: var(--brand-gold-bright);
+  border-color: var(--brand-gold-bright);
+}
+
+.InviteFriendsModal-generate-btn:active {
+  transform: scale(0.97);
 }
 
 .InviteFriendsModal-generate-btn:disabled {
@@ -211,14 +219,15 @@
 
 .InviteFriendsModal-regenerate-btn {
   background: transparent;
-  color: #d8d2c4;
-  border: 1px solid rgba(234, 177, 20, 0.4);
-  font-size: 13px;
-  padding: 8px 20px;
+  color: var(--brand-muted);
+  border: 1px solid var(--brand-hairline-soft);
+  padding: 10px 20px;
 }
 
 .InviteFriendsModal-regenerate-btn:hover {
-  background: rgba(234, 177, 20, 0.1);
+  background: rgba(243, 238, 228, 0.07);
+  color: var(--brand-ivory);
+  border-color: var(--brand-hairline-soft);
 }
 
 .InviteFriendsModal-link-display {
@@ -240,19 +249,27 @@
 
 .InviteFriendsModal-copy-btn {
   padding: 10px 18px;
-  background: linear-gradient(135deg, #d3ac6c, #b8945a);
-  color: #0d1117;
-  border: none;
-  border-radius: 8px;
+  background: var(--brand-gold);
+  color: var(--brand-gold-ink);
+  border: 1px solid var(--brand-gold);
+  border-radius: var(--brand-radius);
+  font-family: var(--font-sans);
   font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   cursor: pointer;
-  font-size: 13px;
   white-space: nowrap;
-  transition: background 0.2s;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.14s ease;
 }
 
 .InviteFriendsModal-copy-btn:hover {
-  background: #f0c52c;
+  background: var(--brand-gold-bright);
+  border-color: var(--brand-gold-bright);
+}
+
+.InviteFriendsModal-copy-btn:active {
+  transform: scale(0.97);
 }
 
 .InviteFriendsModal-link-expiry {
@@ -270,30 +287,44 @@
 
 .InviteFriendsModal-btns-container button {
   flex: 1;
-  padding: 12px 0;
-  border: none;
-  border-radius: 6px;
+  min-height: 40px;
+  padding: 11px 0;
+  border: 1px solid transparent;
+  border-radius: var(--brand-radius);
   cursor: pointer;
-  font-weight: bold;
-  font-size: 14px;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease,
+    transform 0.14s ease;
+}
+
+.InviteFriendsModal-btns-container button:active {
+  transform: scale(0.97);
 }
 
 .InviteFriendsModal-btn-submit {
-  background: linear-gradient(135deg, #d3ac6c, #b8945a);
-  color: #0d1117;
+  background: var(--brand-gold);
+  color: var(--brand-gold-ink);
+  border-color: var(--brand-gold);
 }
 
 .InviteFriendsModal-btn-submit:hover {
-  background: #f0c52c;
+  background: var(--brand-gold-bright);
+  border-color: var(--brand-gold-bright);
 }
 
 .InviteFriendsModal-btn-cancel {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: transparent;
+  color: var(--brand-muted);
+  border-color: var(--brand-hairline-soft);
 }
 
 .InviteFriendsModal-btn-cancel:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(243, 238, 228, 0.07);
+  color: var(--brand-ivory);
 }
 
 @media (max-width: 768px) {

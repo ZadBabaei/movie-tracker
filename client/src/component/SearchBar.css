@@ -33,20 +33,26 @@
 
 .search-btn-glass {
   padding: 12px 28px;
-  font-size: 16px;
-  background: linear-gradient(135deg, #d3ac6c, #b8945a);
-  border: none;
-  color: #052211;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
   font-weight: 700;
-  border-radius: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: var(--brand-gold);
+  border: 1px solid var(--brand-gold);
+  color: var(--brand-gold-ink);
+  border-radius: var(--brand-radius);
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(211, 172, 108, 0.2);
-  transition: all 0.3s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.14s ease;
 }
 
 .search-btn-glass:hover {
-  transform: scale(1.03);
-  filter: brightness(1.05);
+  background: var(--brand-gold-bright);
+  border-color: var(--brand-gold-bright);
+}
+
+.search-btn-glass:active {
+  transform: scale(0.97);
 }
 
 /* Anchored with left/right rather than width:100% so the list always matches

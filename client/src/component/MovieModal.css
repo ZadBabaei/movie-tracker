@@ -37,12 +37,23 @@
 
 .movie-modal-content button {
   margin-top: auto;
-  padding: 10px 20px;
-  background: #d3ac6c;
-  color: white;
-  border: none;
-  border-radius: 10px;
+  padding: 11px 20px;
+  background: var(--brand-gold);
+  color: var(--brand-gold-ink);
+  border: 1px solid var(--brand-gold);
+  border-radius: var(--brand-radius);
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.movie-modal-content button:hover {
+  background: var(--brand-gold-bright);
+  border-color: var(--brand-gold-bright);
 }
 
 @media (max-width: 768px) {

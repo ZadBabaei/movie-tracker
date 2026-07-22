@@ -277,28 +277,35 @@
 .VoteModal-vote-btn {
   margin-top: 10px;
   width: 100%;
-  padding: 8px;
-  font-size: 14px;
-  font-weight: bold;
-  background: linear-gradient(to right, #e50914, #b31217);
-  color: white;
-  border: none;
-  border-radius: 10px;
+  min-height: 40px;
+  padding: 11px;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: var(--brand-gold);
+  color: var(--brand-gold-ink);
+  border: 1px solid var(--brand-gold);
+  border-radius: var(--brand-radius);
   cursor: pointer;
-  box-shadow: 0 0 12px rgba(229, 9, 20, 0.5);
-  transition: transform 0.2s ease, background-color 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.14s ease;
 }
 
 .VoteModal-vote-btn:hover {
-  transform: scale(1.05);
-  background-color: #d3ac6c;
+  background: var(--brand-gold-bright);
+  border-color: var(--brand-gold-bright);
+}
+
+.VoteModal-vote-btn:active {
+  transform: scale(0.97);
 }
 
 .VoteModal-vote-btn:disabled {
   background: #666;
+  border-color: #666;
   cursor: not-allowed;
   transform: none;
-  box-shadow: none;
 }
 
 .VoteModal-voter-list {
@@ -482,19 +489,25 @@
 }
 
 .VoteModal-vote-btn.cancel {
-  background: linear-gradient(to right, #666, #444);
+  background: transparent;
+  color: var(--brand-muted);
+  border-color: var(--brand-hairline-soft);
 }
 
 .VoteModal-vote-btn.cancel:hover {
-  background: linear-gradient(to right, #777, #555);
+  background: rgba(243, 238, 228, 0.07);
+  color: var(--brand-ivory);
+  border-color: var(--brand-hairline-soft);
 }
 
 .VoteModal-vote-btn.create-new {
-  background: linear-gradient(to right, #d3ac6c, #b8945a);
+  background: var(--brand-gold);
+  border-color: var(--brand-gold);
 }
 
 .VoteModal-vote-btn.create-new:hover {
-  background: linear-gradient(to right, #3dd882, #d3ac6c);
+  background: var(--brand-gold-bright);
+  border-color: var(--brand-gold-bright);
 }
 
 .VoteModal-error {
@@ -527,39 +540,48 @@
 
 .VoteModal-submit-btn,
 .VoteModal-reset-btn {
-  padding: 12px 24px;
-  font-size: 14px;
-  font-weight: 600;
-  border: none;
-  border-radius: 8px;
+  min-height: 40px;
+  padding: 11px 24px;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  border-radius: var(--brand-radius);
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease,
+    transform 0.14s ease;
   min-width: 140px;
   position: relative;
   overflow: hidden;
 }
 
+.VoteModal-submit-btn:active:not(:disabled),
+.VoteModal-reset-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
 .VoteModal-submit-btn {
-  background: linear-gradient(135deg, #e50914, #b31217);
-  color: white;
-  box-shadow: 0 4px 12px rgba(229, 9, 20, 0.3);
+  background: var(--brand-gold);
+  color: var(--brand-gold-ink);
+  border-color: var(--brand-gold);
 }
 
 .VoteModal-submit-btn:hover:not(:disabled) {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 6px 16px rgba(229, 9, 20, 0.4);
-  background: linear-gradient(135deg, #ff0a17, #d41418);
-}
-
-.VoteModal-submit-btn:active:not(:disabled) {
-  transform: translateY(1px);
-  box-shadow: 0 2px 8px rgba(229, 9, 20, 0.3);
+  background: var(--brand-gold-bright);
+  border-color: var(--brand-gold-bright);
 }
 
 .VoteModal-reset-btn {
-  background: linear-gradient(135deg, #666, #444);
-  color: white;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  background: transparent;
+  color: var(--brand-muted);
+  border-color: var(--brand-hairline-soft);
+}
+
+.VoteModal-reset-btn:hover:not(:disabled) {
+  background: rgba(243, 238, 228, 0.07);
+  color: var(--brand-ivory);
 }
 
 .VoteModal-reset-btn:hover:not(:disabled) {

@@ -37,15 +37,18 @@
 }
 
 .comment-submit-btn {
-  background: linear-gradient(135deg, #d3ac6c, #818cf8);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
+  background: var(--brand-gold);
+  color: var(--brand-gold-ink);
+  border: 1px solid var(--brand-gold);
+  border-radius: var(--brand-radius);
   padding: 10px 18px;
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.14s ease;
   white-space: nowrap;
 }
 
@@ -55,7 +58,12 @@
 }
 
 .comment-submit-btn:hover:not(:disabled) {
-  opacity: 0.85;
+  background: var(--brand-gold-bright);
+  border-color: var(--brand-gold-bright);
+}
+
+.comment-submit-btn:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .comment-cancel-btn {
