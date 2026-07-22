@@ -12,7 +12,7 @@ import {
 } from "react-icons/fa6";
 import { FaEyeSlash } from "react-icons/fa";
 import apiClient from "../api/apiClient";
-import brandLogo from "../assets/Logo 2 PM.png";
+import brandLogo from "../assets/movie-tracker-logo-full.svg";
 import "./AuthPage.css";
 
 const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
