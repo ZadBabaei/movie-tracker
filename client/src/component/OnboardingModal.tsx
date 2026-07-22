@@ -4,6 +4,7 @@ import { FaUsers, FaFilm, FaUserPlus, FaArrowRight, FaCheck } from "react-icons/
 import { useUserStore } from "../store/useUserStore";
 import { useModalStore } from "../store/useModalStore";
 import { useGroupStore } from "../store/useGroupStore";
+import Modal from "./Modal/Modal";
 import "./OnboardingModal.css";
 
 interface OnboardingModalProps {
@@ -70,7 +71,14 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) => {
   const step = steps[currentStep];
 
   return (
-    <div className="Onboarding-overlay">
+    <Modal
+      isOpen
+      onClose={handleSkip}
+      bare
+      closeOnEscape={false}
+      closeOnOverlayClick={false}
+      ariaLabel="Getting started"
+    >
       <motion.div
         className="Onboarding-content"
         initial={{ opacity: 0, scale: 0.9 }}
@@ -128,7 +136,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) => {
           Step {currentStep + 1} of {steps.length}
         </p>
       </motion.div>
-    </div>
+    </Modal>
   );
 };
 

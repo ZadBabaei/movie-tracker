@@ -5,6 +5,7 @@ import { useModalStore } from "../store/useModalStore";
 import { PollMovie, PollRanking, usePollStore } from "../store/usePollStore";
 import { useSocket } from "../hooks/useSocket";
 import SearchBar from "./SearchBar";
+import Modal from "./Modal/Modal";
 import { FaCrown, FaMedal, FaStar, FaTrophy } from "react-icons/fa";
 import { HiSparkles } from "react-icons/hi2";
 import { toast } from "react-toastify";
@@ -372,7 +373,7 @@ const VoteModal: React.FC<VoteModalProps> = ({ groupId, onPollStatusChange }) =>
     ];
 
     return (
-      <div className="VoteModal-overlay">
+      <Modal bare isOpen onClose={closeVoteModal} ariaLabel="Poll results">
         <div className="VoteModal-content results-cinematic" data-testid="poll-results-modal">
           <button className="VoteModal-close-btn" onClick={closeVoteModal}>x</button>
 
@@ -484,7 +485,7 @@ const VoteModal: React.FC<VoteModalProps> = ({ groupId, onPollStatusChange }) =>
             <button className="results-close-btn" onClick={closeVoteModal}>Close</button>
           </div>
         </div>
-      </div>
+      </Modal>
     );
   }
 
@@ -496,7 +497,7 @@ const VoteModal: React.FC<VoteModalProps> = ({ groupId, onPollStatusChange }) =>
     const waitingCount = pendingMembers.length;
 
     return (
-      <div className="VoteModal-overlay">
+      <Modal bare isOpen onClose={closeVoteModal} ariaLabel={currentPoll.name || "Poll"}>
         <div className="VoteModal-content">
           <button className="VoteModal-close-btn" onClick={closeVoteModal}>x</button>
           <h2 className="VoteModal-title">
@@ -628,12 +629,12 @@ const VoteModal: React.FC<VoteModalProps> = ({ groupId, onPollStatusChange }) =>
             )}
           </div>
         </div>
-      </div>
+      </Modal>
     );
   }
 
   return (
-    <div className="VoteModal-overlay">
+    <Modal bare isOpen onClose={closeVoteModal} ariaLabel="Create a new poll">
       <div className="VoteModal-content">
         <button className="VoteModal-close-btn" onClick={closeVoteModal}>x</button>
         <h2 className="VoteModal-title">Create a New Poll</h2>
@@ -748,7 +749,7 @@ const VoteModal: React.FC<VoteModalProps> = ({ groupId, onPollStatusChange }) =>
           </>
         )}
       </div>
-    </div>
+    </Modal>
   );
 };
 

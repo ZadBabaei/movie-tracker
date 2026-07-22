@@ -7,12 +7,12 @@ import {
   FaComments,
   FaFilm,
   FaHeart,
-  FaTimes,
   FaUsers,
   FaVoteYea,
 } from "react-icons/fa";
 import { SiReact, SiNodedotjs, SiMongodb, SiSocketdotio } from "react-icons/si";
 import apiClient from "../api/apiClient";
+import Modal from "../component/Modal/Modal";
 import "./About.css";
 
 const features = [
@@ -233,17 +233,13 @@ const About = () => {
       </main>
 
       {bugReportsEnabled && showBugModal && (
-        <div className="bug-report-overlay" onClick={closeBugModal}>
-          <form className="bug-report-modal" onSubmit={handleBugReportSubmit} onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              className="bug-report-close"
-              onClick={closeBugModal}
-              aria-label="Close bug report form"
-            >
-              <FaTimes />
-            </button>
-
+        <Modal
+          isOpen={showBugModal}
+          onClose={closeBugModal}
+          size="lg"
+          ariaLabel="Report a bug"
+        >
+          <form onSubmit={handleBugReportSubmit}>
             <div className="bug-report-header">
               <span className="bug-report-icon"><FaBug /></span>
               <div>
@@ -357,7 +353,7 @@ const About = () => {
               </button>
             </div>
           </form>
-        </div>
+        </Modal>
       )}
     </div>
   );

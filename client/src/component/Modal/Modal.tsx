@@ -21,6 +21,13 @@ interface ModalProps {
   closeOnOverlayClick?: boolean;
   closeOnEscape?: boolean;
   showCloseButton?: boolean;
+  /**
+   * Skip the panel chrome (surface, border, padding, close button, title) and
+   * render children straight into the shared scrim. For modals that bring their
+   * own card styling — onboarding, the cinematic vote results — so they keep
+   * the shared behaviour, scrim and stacking without a card-in-a-card look.
+   */
+  bare?: boolean;
   /** Extra class on the panel, for per-modal layout tweaks. */
   className?: string;
 }
@@ -73,6 +80,7 @@ const Modal: React.FC<ModalProps> = ({
   closeOnOverlayClick = true,
   closeOnEscape = true,
   showCloseButton = true,
+  bare = false,
   className = "",
 }) => {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -138,6 +146,27 @@ const Modal: React.FC<ModalProps> = ({
   }, [isOpen, onClose, closeOnEscape, handleTabKey]);
 
   if (!isOpen) return null;
+
+  if (bare) {
+    return createPortal(
+      <div
+        className="mt-modal-overlay"
+        onClick={closeOnOverlayClick ? onClose : undefined}
+      >
+        <div
+          ref={panelRef}
+          className={`mt-modal-bare ${className}`.trim()}
+          role="dialog"
+          aria-modal="true"
+          aria-label={ariaLabel}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {children}
+        </div>
+      </div>,
+      document.body
+    );
+  }
 
   return createPortal(
     <div

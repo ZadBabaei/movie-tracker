@@ -76,6 +76,12 @@
   border-color: var(--modal-border-danger);
 }
 
+/* Bare mode: no panel box of our own. `display: contents` lets the modal's
+   own card sit directly in the overlay's flex centering. */
+.mt-modal-bare {
+  display: contents;
+}
+
 /* ---------- panel scrollbar ---------- */
 
 .mt-modal-panel {

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { FaTimes } from "react-icons/fa";
 import apiClient from "../api/apiClient";
 import CommentSection from "./CommentSection";
 import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
+import Modal from "./Modal/Modal";
 import "./MovieDetailModal.css";
 
 const TMDB_KEY = process.env.REACT_APP_TMDB_API_KEY;
@@ -235,12 +235,7 @@ const MovieDetailModal = ({ movie, groupId = null, onRatingSaved = null, onClose
   );
 
   return (
-    <div className="mdm-overlay" onClick={onClose}>
-      <div className="mdm-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="mdm-close-btn" onClick={onClose}>
-          <FaTimes />
-        </button>
-
+    <Modal isOpen onClose={onClose} size="lg" ariaLabel={movie.title || "Movie details"}>
         <div className="mdm-top">
           <img
             className="mdm-poster"
@@ -460,8 +455,7 @@ const MovieDetailModal = ({ movie, groupId = null, onRatingSaved = null, onClose
             <CommentSection movieId={mongoId} />
           </div>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 };
 

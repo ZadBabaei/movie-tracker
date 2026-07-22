@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import Modal from "./Modal/Modal";
 import "./GroupsModal.css";
 import { useModalStore } from "../store/useModalStore";
 import { useNavigate } from "react-router-dom";
@@ -21,8 +22,6 @@ const GroupsModal: React.FC<GroupsModalProps> = ({ isOpen, onClose, groups }) =>
     }
   }, [isOpen, fetchGroups]);
 
-  if (!isOpen) return null;
-
   const handleCreateGroupClick = () => {
     onClose();
     openGroupNameModal();
@@ -34,39 +33,33 @@ const GroupsModal: React.FC<GroupsModalProps> = ({ isOpen, onClose, groups }) =>
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content groups-slide-in">
-        <button className="modal-close-btn" onClick={onClose}>
-          &times;
-        </button>
-        <h3>Select a Group</h3>
-        <ul className="group-list">
-          {groups.length > 0 ? (
-            groups.map((group) => (
-              <li
-                key={group._id}
-                className="group-item"
-                onClick={() => {
-                  navigate(`/group/${group.slug || group._id}`);
-                  onClose();
-                }}
-              >
-                {group.name}
-              </li>
-            ))
-          ) : (
-            <li key="no-groups" className="group-item">
-              No groups found
+    <Modal isOpen={isOpen} onClose={onClose} size="sm" title="Select a Group">
+      <ul className="group-list">
+        {groups.length > 0 ? (
+          groups.map((group) => (
+            <li
+              key={group._id}
+              className="group-item"
+              onClick={() => {
+                navigate(`/group/${group.slug || group._id}`);
+                onClose();
+              }}
+            >
+              {group.name}
             </li>
-          )}
-        </ul>
+          ))
+        ) : (
+          <li key="no-groups" className="group-item">
+            No groups found
+          </li>
+        )}
+      </ul>
 
-        <div className="modal-buttons">
-          <button onClick={handleCreateGroupClick}>Create Group</button>
-          <button onClick={handleShowAll}>Show All</button>
-        </div>
+      <div className="modal-buttons">
+        <button onClick={handleCreateGroupClick}>Create Group</button>
+        <button onClick={handleShowAll}>Show All</button>
       </div>
-    </div>
+    </Modal>
   );
 };
 

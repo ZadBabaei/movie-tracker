@@ -8,6 +8,7 @@ import SearchBar from "../component/SearchBar";
 import InviteModal from "../component/InviteFriendsModal";
 import VerticalNavbar from "../component/VerticalNavbar";
 import MovieDetailModal from "../component/MovieDetailModal";
+import Modal from "../component/Modal/Modal";
 import WatchTimeline from "../component/WatchTimeline";
 import { useGroupStore } from "../store/useGroupStore";
 import { jwtDecode } from "jwt-decode";
@@ -451,17 +452,12 @@ const GroupPage: React.FC = () => {
       </div>
 
       {pendingMovie && (
-        <div className="watched-details-overlay" onClick={closeWatchDetailsModal}>
-          <div className="watched-details-modal" onClick={(e) => e.stopPropagation()}>
-            <button
-              className="watched-details-close"
-              onClick={closeWatchDetailsModal}
-              aria-label="Close watched details"
-            >
-              <FaTimes />
-            </button>
-
-            <h2>Add to Watch History</h2>
+        <Modal
+          isOpen={!!pendingMovie}
+          onClose={closeWatchDetailsModal}
+          size="md"
+          title="Add to Watch History"
+        >
             <p className="watched-details-subtitle">
               Add details for <strong>{pendingMovie.title}</strong>.
             </p>
@@ -549,21 +545,17 @@ const GroupPage: React.FC = () => {
                 {savingWatchedMovie ? "Saving..." : "Save"}
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {deleteTarget && (
-        <div className="history-delete-overlay" onClick={closeDeleteModal}>
-          <div className="history-delete-modal" onClick={(e) => e.stopPropagation()}>
-            <button
-              className="history-delete-close"
-              onClick={closeDeleteModal}
-              aria-label="Close delete confirmation"
-            >
-              <FaTimes />
-            </button>
-
+        <Modal
+          isOpen={!!deleteTarget}
+          onClose={closeDeleteModal}
+          size="md"
+          variant="danger"
+          ariaLabel="Delete watch history item"
+        >
             <div className="history-delete-kicker">Destructive action</div>
             <h2>Delete watch history item?</h2>
             <p>
@@ -609,8 +601,7 @@ const GroupPage: React.FC = () => {
                 {deletingHistoryItem ? "Deleting..." : "Delete history item"}
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {showInviteModal && (
