@@ -190,6 +190,37 @@
   min-width: 0;
 }
 
+.GroupChatPage-poll-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.GroupChatPage-poll-active-badge {
+  flex-shrink: 0;
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #7ee2a8;
+  background: rgba(78, 226, 168, 0.14);
+  border: 1px solid rgba(78, 226, 168, 0.35);
+  border-radius: 999px;
+  padding: 2px 7px;
+  line-height: 1.4;
+}
+
+.GroupChatPage-poll-card--active {
+  border-color: rgba(78, 226, 168, 0.28);
+  background: rgba(78, 226, 168, 0.06);
+}
+
+.GroupChatPage-poll-card--active:hover {
+  background: rgba(78, 226, 168, 0.1);
+}
+
 .GroupChatPage-poll-card-title {
   font-weight: 700;
   color: #f0f0f0;
@@ -221,6 +252,10 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.GroupChatPage-poll-card-result--active {
+  color: #7ee2a8;
 }
 
 .GroupChatPage-poll-card-menu {

@@ -70,7 +70,7 @@ const getRunoffCounts = (poll: any): Record<string, number> => {
 };
 
 const VoteModal: React.FC<VoteModalProps> = ({ groupId, onPollStatusChange }) => {
-  const { closeVoteModal } = useModalStore();
+  const { closeVoteModal, voteModalMode } = useModalStore();
   const {
     currentPoll,
     setCurrentPoll,
@@ -78,7 +78,6 @@ const VoteModal: React.FC<VoteModalProps> = ({ groupId, onPollStatusChange }) =>
     handleMovieSelectForVote,
     clearVoteSelections,
     createPoll,
-    fetchCurrentPoll,
     fetchPollResults,
     completePoll,
     cancelPoll,
@@ -99,7 +98,7 @@ const VoteModal: React.FC<VoteModalProps> = ({ groupId, onPollStatusChange }) =>
 
   const socket = useSocket(groupId);
   const [userId, setUserId] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [validationMessage, setValidationMessage] = useState("");
   const [runoffMessage, setRunoffMessage] = useState("");
@@ -136,13 +135,14 @@ const VoteModal: React.FC<VoteModalProps> = ({ groupId, onPollStatusChange }) =>
   }, []);
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      await fetchCurrentPoll(groupId);
-      setLoading(false);
-    };
-    load();
-  }, [fetchCurrentPoll, groupId]);
+    // "create" mode: start from a blank form, ignoring any active poll so a new
+    // poll can always be created. "view" mode: the poll was already loaded by
+    // the caller (a click on a specific poll card in the list).
+    if (voteModalMode === "create") {
+      setCurrentPoll(null);
+    }
+    setLoading(false);
+  }, [voteModalMode, groupId, setCurrentPoll]);
 
   useEffect(() => {
     if (!loading && !currentPoll) {

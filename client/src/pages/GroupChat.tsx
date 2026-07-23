@@ -5,17 +5,24 @@ import VoteModal from "../component/VoteModal";
 import ChatBox from "../component/ChatBox";
 import apiClient from "../api/apiClient";
 import { useModalStore } from "../store/useModalStore";
-import { usePollStore } from "../store/usePollStore";
+import { usePollStore, PollHistoryItem } from "../store/usePollStore";
 import { useParams } from "react-router-dom";
 import { useSocket } from "../hooks/useSocket";
 
 const GroupChat: React.FC = () => {
   const { isVoteModalOpen, openVoteModal } = useModalStore();
-  const { clearVoteSelections, pollHistory, fetchPollHistory, fetchPollResults, deletePoll } = usePollStore();
+  const {
+    clearVoteSelections,
+    setCurrentPoll,
+    pollHistory,
+    fetchPollHistory,
+    fetchPollResults,
+    fetchPollById,
+    deletePoll,
+  } = usePollStore();
   const { slug } = useParams<{ slug: string }>();
   const [groupName, setGroupName] = useState("Loading...");
   const [groupId, setGroupId] = useState("");
-  const [pollStatus, setPollStatus] = useState("none");
   const [userId, setUserId] = useState("");
   const [menuOpenPollId, setMenuOpenPollId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -37,7 +44,6 @@ const GroupChat: React.FC = () => {
         });
         setGroupName(res.data.name);
         setGroupId(res.data._id);
-        setPollStatus(res.data.hasActivePoll ? "active" : "none");
       } catch (error) {
         console.error("Failed to fetch group info:", error);
         setGroupName("Unknown Group");
@@ -54,27 +60,21 @@ const GroupChat: React.FC = () => {
   }, [fetchPollHistory, groupId]);
 
   useEffect(() => {
-    socket.on("poll:created", () => {
-      setPollStatus("active");
+    // Every poll lifecycle event just refreshes the list, so a new poll appears
+    // (with its Active badge) and finished ones update in real time.
+    const refresh = () => {
       if (groupId) fetchPollHistory(groupId);
-    });
-    socket.on("poll:completed", () => {
-      setPollStatus("completed");
-      if (groupId) fetchPollHistory(groupId);
-    });
-    socket.on("poll:runoff", () => {
-      setPollStatus("active");
-    });
-    socket.on("poll:cancelled", () => {
-      setPollStatus("none");
-      if (groupId) fetchPollHistory(groupId);
-    });
+    };
+    socket.on("poll:created", refresh);
+    socket.on("poll:completed", refresh);
+    socket.on("poll:runoff", refresh);
+    socket.on("poll:cancelled", refresh);
 
     return () => {
-      socket.off("poll:created");
-      socket.off("poll:completed");
-      socket.off("poll:runoff");
-      socket.off("poll:cancelled");
+      socket.off("poll:created", refresh);
+      socket.off("poll:completed", refresh);
+      socket.off("poll:runoff", refresh);
+      socket.off("poll:cancelled", refresh);
     };
   }, [fetchPollHistory, socket, groupId]);
 
@@ -89,37 +89,31 @@ const GroupChat: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleVoteButtonClick = () => {
-    if (pollStatus === "completed") {
-      clearVoteSelections();
-      setPollStatus("none");
-    }
-    openVoteModal();
+  // "Create a Poll" always opens a blank create form, regardless of whether
+  // other polls are currently active — groups may run several polls at once.
+  const handleCreateClick = () => {
+    clearVoteSelections();
+    setCurrentPoll(null);
+    openVoteModal("create");
   };
 
-  const handlePollStatusChange = (newStatus: string) => {
-    setPollStatus(newStatus);
-    if (newStatus === "completed" || newStatus === "none") {
-      if (groupId) fetchPollHistory(groupId);
-    }
+  const handlePollStatusChange = () => {
+    if (groupId) fetchPollHistory(groupId);
   };
 
-  const handlePollCardClick = async (pollId: string) => {
-    await fetchPollResults(pollId);
-    openVoteModal();
+  const handlePollCardClick = async (poll: PollHistoryItem) => {
+    // Active polls open the voting view; finished ones open their results.
+    if (poll.status === "active") {
+      await fetchPollById(poll._id);
+    } else {
+      await fetchPollResults(poll._id);
+    }
+    openVoteModal("view");
   };
 
   const handleDeletePoll = async (pollId: string) => {
     await deletePoll(pollId);
     setMenuOpenPollId(null);
-  };
-
-  const getButtonText = () => {
-    switch (pollStatus) {
-      case "active": return "Check Current Poll";
-      case "completed": return "Create New Poll";
-      default: return "Create a Poll";
-    }
   };
 
   const formatDate = (dateStr: string) => {
@@ -149,8 +143,8 @@ const GroupChat: React.FC = () => {
           </section>
         </div>
         <div className="GroupChatPage-search-section">
-          <button className="GroupChatPage-vote-btn" onClick={handleVoteButtonClick}>
-            {getButtonText()}
+          <button className="GroupChatPage-vote-btn" onClick={handleCreateClick}>
+            Create a Poll
           </button>
 
           <h3 className="GroupChatPage-polls-title">Polls · Last 30 Days</h3>
@@ -162,21 +156,32 @@ const GroupChat: React.FC = () => {
               pollHistory.map((poll) => (
                 <div
                   key={poll._id}
-                  className="GroupChatPage-poll-card"
+                  className={`GroupChatPage-poll-card${poll.status === "active" ? " GroupChatPage-poll-card--active" : ""}`}
                   data-testid="poll-history-card"
-                  onClick={() => handlePollCardClick(poll._id)}
+                  onClick={() => handlePollCardClick(poll)}
                 >
                   <div className="GroupChatPage-poll-card-info">
                     <div className="GroupChatPage-poll-name-wrapper">
-                      <span className="GroupChatPage-poll-card-title">{poll.name}</span>
+                      <div className="GroupChatPage-poll-name-row">
+                        <span className="GroupChatPage-poll-card-title">{poll.name}</span>
+                        {poll.status === "active" && (
+                          <span className="GroupChatPage-poll-active-badge">Active</span>
+                        )}
+                      </div>
                       <span className="GroupChatPage-poll-card-date">{formatDate(poll.createdAt)}</span>
                     </div>
-                    <span className="GroupChatPage-poll-card-result">
-                      {poll.status === "cancelled"
-                        ? "Cancelled"
-                        : poll.winnerTitle
-                          ? `🏆 ${poll.winnerTitle}`
-                          : "In progress"
+                    <span
+                      className={`GroupChatPage-poll-card-result${poll.status === "active" ? " GroupChatPage-poll-card-result--active" : ""}`}
+                    >
+                      {poll.status === "active"
+                        ? poll.hasCurrentUserVoted
+                          ? "Voted"
+                          : "Vote now"
+                        : poll.status === "cancelled"
+                          ? "Cancelled"
+                          : poll.winnerTitle
+                            ? `🏆 ${poll.winnerTitle}`
+                            : "In progress"
                       }
                     </span>
                   </div>

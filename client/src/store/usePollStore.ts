@@ -68,6 +68,7 @@ export interface PollHistoryItem {
   randomTieBreak?: boolean;
   createdAt: string;
   creator?: { _id: string; name: string };
+  hasCurrentUserVoted?: boolean;
 }
 
 interface PollState {
@@ -89,6 +90,7 @@ interface PollState {
   clearVoteRankings: () => void;
   createPoll: (groupId: string) => Promise<Poll>;
   fetchCurrentPoll: (groupId: string) => Promise<Poll | null>;
+  fetchPollById: (pollId: string) => Promise<Poll | null>;
   completePoll: (pollId: string) => Promise<Poll>;
   cancelPoll: (pollId: string) => Promise<void>;
   addMovieToCurrentPoll: (movie: PollMovie) => Promise<void>;
@@ -169,6 +171,20 @@ export const usePollStore = create<PollState>((set, get) => ({
       return res.data;
     } catch {
       set({ currentPoll: null });
+      return null;
+    }
+  },
+
+  fetchPollById: async (pollId: string): Promise<Poll | null> => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await apiClient.get(`/api/polls/${pollId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      set({ currentPoll: res.data });
+      return res.data;
+    } catch (err) {
+      console.error("Error fetching poll:", err);
       return null;
     }
   },

@@ -328,12 +328,6 @@ router.post("/create", authenticate, async (req: Request, res: Response) => {
       return;
     }
 
-    const existingPoll = await Poll.findOne({ groupId, status: "active" });
-    if (existingPoll) {
-      res.status(400).json({ msg: "An active poll already exists for this group" });
-      return;
-    }
-
     let expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     if (deadline) {
       const parsedDeadline = new Date(deadline);
@@ -589,19 +583,26 @@ router.get("/:pollId/results", authenticate, async (req: Request, res: Response)
 
 router.get("/group/:groupId/history", authenticate, async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.id;
     // Display window only — older polls stay in the database but are not listed.
+    // Active polls are included so a running poll is visible in the list the
+    // moment it is created, alongside finished ones.
     const windowStart = new Date(Date.now() - POLL_HISTORY_WINDOW_DAYS * 24 * 60 * 60 * 1000);
     const polls = await Poll.find({
       groupId: req.params.groupId,
-      status: { $in: ["completed", "cancelled"] },
+      status: { $in: ["active", "completed", "cancelled"] },
       createdAt: { $gte: windowStart },
     })
-      .sort({ createdAt: -1 })
       .populate("creator", "name")
       .lean();
 
     const history = polls.map((poll) => {
       const winnerMovie = poll.movies.find((movie: any) => movie.tmdbId === poll.winningMovieTmdbId);
+      const hasCurrentUserVoted = (poll.votes || []).some(
+        (vote: any) =>
+          (typeof vote.userId === "object" ? vote.userId?._id : vote.userId)?.toString() ===
+          userId.toString()
+      );
       return {
         _id: poll._id,
         name: poll.name,
@@ -613,12 +614,46 @@ router.get("/group/:groupId/history", authenticate, async (req: Request, res: Re
         randomTieBreak: poll.result?.randomTieBreak || false,
         createdAt: poll.createdAt,
         creator: poll.creator,
+        hasCurrentUserVoted,
       };
+    });
+
+    // Active polls float to the top; most-recent first within each group.
+    history.sort((a, b) => {
+      const activeDelta = Number(b.status === "active") - Number(a.status === "active");
+      if (activeDelta !== 0) return activeDelta;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
     res.json(history);
   } catch (error) {
     console.error("Error fetching poll history:", error);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
+
+// Fetch a single poll (with live voting progress) so a specific active poll
+// can be opened from the list for voting. Registered after the literal GET
+// routes above so it never shadows them.
+router.get("/:pollId", authenticate, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const poll = await Poll.findById(req.params.pollId);
+    if (!poll) {
+      res.status(404).json({ msg: "Poll not found" });
+      return;
+    }
+
+    // Auto-close an active poll that has passed its deadline.
+    if (poll.status === "active" && poll.expiresAt && new Date(poll.expiresAt) <= new Date()) {
+      const completed = await completeOrRunoff(poll, userId);
+      res.json(completed.poll);
+      return;
+    }
+
+    res.json(await getPopulatedPoll(poll._id, userId));
+  } catch (error) {
+    console.error("Error fetching poll:", error);
     res.status(500).json({ msg: "Server error" });
   }
 });
