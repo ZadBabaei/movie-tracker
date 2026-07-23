@@ -113,11 +113,19 @@
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.06);
   color: #fff;
-  padding: 12px 14px;
+  padding: 12px 34px 12px 14px;
   font: inherit;
   font-weight: 400;
   outline: none;
   cursor: pointer;
+  /* Custom chevron so the control reads as a picker and matches the theme. */
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23e9c98d' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  /* Tints the option highlight toward gold where the browser supports it. */
+  accent-color: #d3ac6c;
 }
 
 .watched-location-suggest:focus {
@@ -125,12 +133,28 @@
   box-shadow: 0 0 0 3px rgba(211, 172, 108, 0.12);
 }
 
-/* Force a readable light background for the native option list, which would
-   otherwise inherit the white select text and become unreadable. */
+/* Theme the native option list to match the dark modal instead of the default
+   stark-white popup. Chromium honours these; other engines fall back to their
+   native list, which stays readable thanks to the light-on-dark contrast. */
 .watched-location-suggest option,
 .watched-location-suggest optgroup {
-  background: #fff;
-  color: #111;
+  background: #05240e;
+  color: #e7e7e7;
+}
+
+.watched-location-suggest optgroup {
+  font-weight: 700;
+  color: #e9c98d;
+}
+
+.watched-location-suggest option {
+  font-weight: 400;
+  padding: 6px 10px;
+}
+
+.watched-location-suggest option:checked {
+  background: #0e3a1c;
+  color: #fff;
 }
 
 .watched-details-members {
