@@ -94,6 +94,45 @@
   box-shadow: 0 0 0 3px rgba(211, 172, 108, 0.12);
 }
 
+.watched-location-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.watched-location-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.watched-location-suggest {
+  flex-shrink: 0;
+  max-width: 45%;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  padding: 12px 14px;
+  font: inherit;
+  font-weight: 400;
+  outline: none;
+  cursor: pointer;
+}
+
+.watched-location-suggest:focus {
+  border-color: rgba(211, 172, 108, 0.7);
+  box-shadow: 0 0 0 3px rgba(211, 172, 108, 0.12);
+}
+
+/* Force a readable light background for the native option list, which would
+   otherwise inherit the white select text and become unreadable. */
+.watched-location-suggest option,
+.watched-location-suggest optgroup {
+  background: #fff;
+  color: #111;
+}
+
 .watched-details-members {
   display: flex;
   flex-wrap: wrap;

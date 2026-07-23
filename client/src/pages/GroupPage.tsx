@@ -74,6 +74,25 @@ const DEFAULT_GROUP_HERO_IMAGE =
 
 const getTodayInputValue = () => new Date().toISOString().split("T")[0];
 
+// Quick-pick suggestions for the "Watched location" field. The text input stays
+// free-form; the dropdown just fills it in with a common place or platform.
+const WATCH_LOCATION_SUGGESTIONS: { label: string; options: string[] }[] = [
+  { label: "Places", options: ["At home", "At a friend's place", "Theater"] },
+  {
+    label: "Streaming",
+    options: [
+      "Netflix",
+      "Amazon Prime Video",
+      "Disney+",
+      "Max (HBO)",
+      "Hulu",
+      "Apple TV+",
+      "Paramount+",
+      "Peacock",
+    ],
+  },
+];
+
 const getGroupHeroBackdrop = (movies: Movie[]) => {
   const withPoster = movies.find((movie) => movie.poster_path);
   const path = withPoster?.poster_path;
@@ -474,12 +493,37 @@ const GroupPage: React.FC = () => {
 
             <label className="watched-details-field">
               <span>Watched location</span>
-              <input
-                type="text"
-                value={watchDetails.watchedLocation}
-                onChange={(e) => handleWatchDetailsChange("watchedLocation", e.target.value)}
-                placeholder="Ahoora's place"
-              />
+              <div className="watched-location-row">
+                <input
+                  type="text"
+                  value={watchDetails.watchedLocation}
+                  onChange={(e) => handleWatchDetailsChange("watchedLocation", e.target.value)}
+                  placeholder="At home or At a friend's place"
+                />
+                <select
+                  className="watched-location-suggest"
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      handleWatchDetailsChange("watchedLocation", e.target.value);
+                    }
+                  }}
+                  aria-label="Suggested locations"
+                >
+                  <option value="" disabled>
+                    Suggestions
+                  </option>
+                  {WATCH_LOCATION_SUGGESTIONS.map((group) => (
+                    <optgroup key={group.label} label={group.label}>
+                      {group.options.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
             </label>
 
             <div className="watched-details-field">
