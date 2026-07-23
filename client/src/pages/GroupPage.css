@@ -415,11 +415,6 @@
   margin: 0 10px;
 }
 
-.group-member-btn:active {
-  position: relative;
-  top: 1px;
-}
-
 .group-movie-search-container {
   width: 100%;
   max-width: 1200px;
@@ -471,20 +466,26 @@
   margin-top: 30px;
 }
 .group-member-btn {
-  background-color: #d3ac6c;
-  color: white;
+  background-color: var(--brand-gold);
+  color: var(--brand-gold-ink);
   font-size: 16px;
+  font-weight: 700;
   padding: 12px 28px;
-  border-radius: 30px;
+  border-radius: 999px;
   margin: 0;
   border: none;
-  box-shadow: 0 4px 20px rgba(211, 172, 108, 0.6);
-  transition: all 0.3s ease-in-out;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(211, 172, 108, 0.24);
+  transition: filter 0.2s ease, transform 0.15s ease;
 }
 
 .group-member-btn:hover {
-  transform: scale(1.05);
-  background-color: #ff6161;
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.group-member-btn:active {
+  transform: scale(0.97);
 }
 .member-card-glow {
   position: relative;
