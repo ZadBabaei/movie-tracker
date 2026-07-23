@@ -90,7 +90,7 @@ const getInitials = (name = "") =>
     .slice(0, 2)
     .toUpperCase() || "?";
 
-const MovieDetailModal = ({ movie, groupId = null, onRatingSaved = null, onClose }) => {
+const MovieDetailModal = ({ movie, groupId = null, onRatingSaved = null, onEdit = null, onClose }) => {
   const [details, setDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(true);
   const [imdbUrl, setImdbUrl] = useState("");
@@ -112,6 +112,7 @@ const MovieDetailModal = ({ movie, groupId = null, onRatingSaved = null, onClose
   const watchedNotes = movie.watchedNotes;
   const hasWatchMetadata = watchedDate || watchedLocation || watchedWith || watchedNotes;
   const canRateHistoryItem = Boolean(groupId && movie.historyItemId);
+  const canEditHistoryItem = Boolean(groupId && movie.historyItemId && onEdit);
 
   useEffect(() => {
     setAverageRating(movie.averageRating ?? null);
@@ -316,8 +317,20 @@ const MovieDetailModal = ({ movie, groupId = null, onRatingSaved = null, onClose
         </div>
 
         {/* Watch metadata bar (shown on group pages) */}
-        {hasWatchMetadata && (
+        {(hasWatchMetadata || canEditHistoryItem) && (
           <div className="mdm-watch-meta">
+            {canEditHistoryItem && (
+              <div className="mdm-watch-meta-header">
+                <span className="mdm-watch-meta-heading">Watch details</span>
+                <button
+                  type="button"
+                  className="mdm-edit-details-btn"
+                  onClick={() => onEdit(movie)}
+                >
+                  Edit details
+                </button>
+              </div>
+            )}
             {watchedDate && (
               <span className="mdm-watch-meta-item">
                 <span className="mdm-label">Watched on:</span> {watchedDate}

@@ -484,6 +484,40 @@
   line-height: 1.5;
 }
 
+.mdm-watch-meta-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mdm-watch-meta-heading {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #8a8a8a;
+}
+
+.mdm-edit-details-btn {
+  flex-shrink: 0;
+  border: 1px solid rgba(211, 172, 108, 0.5);
+  background: rgba(211, 172, 108, 0.12);
+  color: #e9c98d;
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.mdm-edit-details-btn:hover {
+  background: rgba(211, 172, 108, 0.2);
+  border-color: rgba(211, 172, 108, 0.75);
+}
+
 .mdm-comments {
   margin-top: 28px;
 }

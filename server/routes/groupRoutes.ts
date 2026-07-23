@@ -543,6 +543,81 @@ router.post("/:groupId/history/:historyItemId/rating", authenticate, async (req:
   }
 });
 
+router.patch("/:groupId/history/:historyItemId", authenticate, async (req: Request, res: Response) => {
+  try {
+    const groupId = String(req.params.groupId);
+    const historyItemId = String(req.params.historyItemId);
+    const userId = req.user!.id;
+    const {
+      watchedAt,
+      watchedDate,
+      watchedLocation,
+      watchedWhere,
+      watchedWith,
+      watchedNotes,
+    } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(groupId) || !mongoose.Types.ObjectId.isValid(historyItemId)) {
+      res.status(400).json({ msg: "Invalid history item." });
+      return;
+    }
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      res.status(404).json({ msg: "Group not found" });
+      return;
+    }
+
+    const isMember = group.members.some((memberId) => memberId.toString() === userId);
+    if (!isMember) {
+      res.status(403).json({ msg: "Only group members can edit watch history items." });
+      return;
+    }
+
+    const historyItem = (group.movies as any).id(historyItemId);
+    if (!historyItem) {
+      res.status(404).json({ msg: "History item not found." });
+      return;
+    }
+
+    const parsedWatchedAt = watchedAt || watchedDate ? new Date(watchedAt || watchedDate) : null;
+    if (!parsedWatchedAt || Number.isNaN(parsedWatchedAt.getTime())) {
+      res.status(400).json({ msg: "Invalid watched date." });
+      return;
+    }
+
+    const watchedWithIds = Array.isArray(watchedWith)
+      ? watchedWith.filter((memberId: string) => mongoose.Types.ObjectId.isValid(memberId))
+      : [];
+    const groupMemberIds = new Set(group.members.map((memberId) => memberId.toString()));
+    const validWatchedWith = watchedWithIds.filter((memberId: string) => groupMemberIds.has(memberId));
+    if (validWatchedWith.length === 0) {
+      res.status(400).json({ msg: "Select at least one person who watched." });
+      return;
+    }
+
+    const locationPayload = String(watchedLocation ?? watchedWhere ?? "").trim();
+    const notesPayload = String(watchedNotes ?? "").trim();
+
+    historyItem.watchedAt = parsedWatchedAt;
+    historyItem.watchedDate = parsedWatchedAt;
+    historyItem.watchedLocation = locationPayload;
+    historyItem.watchedWhere = locationPayload;
+    historyItem.watchedWith = validWatchedWith as any;
+    historyItem.watchedNotes = notesPayload;
+
+    await group.save();
+    await group.populate({ path: "movies.watchedWith", select: "_id name avatar" });
+
+    const updatedHistoryItem = (group.movies as any).id(historyItemId) || historyItem;
+    getIO().to(groupId).emit("group:history_updated", { historyItemId });
+    res.json({ msg: "History item updated", historyItem: updatedHistoryItem });
+  } catch (error) {
+    console.error("Error updating history item:", error);
+    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+  }
+});
+
 router.delete("/:groupId/history/:historyItemId", authenticate, async (req: Request, res: Response) => {
   try {
     const groupId = String(req.params.groupId);

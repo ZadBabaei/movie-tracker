@@ -74,6 +74,16 @@ const DEFAULT_GROUP_HERO_IMAGE =
 
 const getTodayInputValue = () => new Date().toISOString().split("T")[0];
 
+// Format a stored date into the YYYY-MM-DD value a <input type="date"> expects,
+// using local time so the day doesn't shift when pre-filling the edit form.
+const toDateInputValue = (value?: string) => {
+  if (!value) return getTodayInputValue();
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return getTodayInputValue();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+
 // Quick-pick suggestions for the "Watched location" field. The text input stays
 // free-form; the dropdown just fills it in with a common place or platform.
 const WATCH_LOCATION_SUGGESTIONS: { label: string; options: string[] }[] = [
@@ -155,6 +165,7 @@ const GroupPage: React.FC = () => {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [pendingMovie, setPendingMovie] = useState<any | null>(null);
+  const [editMovie, setEditMovie] = useState<Movie | null>(null);
   const [watchDetails, setWatchDetails] = useState<WatchDetailsForm>({
     watchedAt: getTodayInputValue(),
     watchedLocation: "",
@@ -190,6 +201,7 @@ const GroupPage: React.FC = () => {
       .map(buildTimelineMovie)
       .filter((movie: Movie | null): movie is Movie => Boolean(movie));
     setTimelineMovies(timeline);
+    return timeline as Movie[];
   };
 
   const handleMovieAdd = (movie: any) => {
@@ -227,9 +239,24 @@ const GroupPage: React.FC = () => {
     }));
   };
 
+  // Open the same details form pre-filled to edit an already-saved history item.
+  const handleEditWatchDetails = (movie: Movie) => {
+    setSelectedMovie(null);
+    setEditMovie(movie);
+    setWatchDetails({
+      watchedAt: toDateInputValue(movie.watchedAt || movie.watchedDate),
+      watchedLocation: movie.watchedLocation || movie.watchedWhere || "",
+      watchedWith: (movie.watchedWith || []).map((member) => member._id),
+      watchedNotes: movie.watchedNotes || "",
+    });
+    setHasEditedWatchedWith(true);
+    setWatchDetailsError("");
+  };
+
   const closeWatchDetailsModal = () => {
     if (savingWatchedMovie) return;
     setPendingMovie(null);
+    setEditMovie(null);
     setHasEditedWatchedWith(false);
     setWatchDetailsError("");
   };
@@ -244,7 +271,8 @@ const GroupPage: React.FC = () => {
   }, [pendingMovie, hasEditedWatchedWith, group?.members]);
 
   const handleSaveWatchedMovie = async () => {
-    if (!pendingMovie) return;
+    const target = pendingMovie || editMovie;
+    if (!target) return;
     if (!watchDetails.watchedAt) {
       setWatchDetailsError("Watched date is required.");
       return;
@@ -256,20 +284,34 @@ const GroupPage: React.FC = () => {
 
     setSavingWatchedMovie(true);
     const token = localStorage.getItem("token");
+    const watchPayload = {
+      watchedAt: watchDetails.watchedAt,
+      watchedLocation: watchDetails.watchedLocation.trim(),
+      watchedWith: watchDetails.watchedWith,
+      watchedNotes: watchDetails.watchedNotes.trim(),
+    };
     try {
-      await apiClient.post(
-        `/api/groups/${group!._id}/add-movie`,
-        {
-          movie: pendingMovie,
-          watchedAt: watchDetails.watchedAt,
-          watchedLocation: watchDetails.watchedLocation.trim(),
-          watchedWith: watchDetails.watchedWith,
-          watchedNotes: watchDetails.watchedNotes.trim(),
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setPendingMovie(null);
-      await fetchGroupDetails();
+      if (editMovie?.historyItemId) {
+        await apiClient.patch(
+          `/api/groups/${group!._id}/history/${editMovie.historyItemId}`,
+          watchPayload,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const historyItemId = editMovie.historyItemId;
+        setEditMovie(null);
+        const timeline = await fetchGroupDetails();
+        const refreshed = timeline.find((movie) => movie.historyItemId === historyItemId);
+        if (refreshed) setSelectedMovie(refreshed);
+        toast.success("Watch details updated.");
+      } else {
+        await apiClient.post(
+          `/api/groups/${group!._id}/add-movie`,
+          { movie: pendingMovie, ...watchPayload },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setPendingMovie(null);
+        await fetchGroupDetails();
+      }
     } catch (err: any) {
       setWatchDetailsError(err.response?.data?.msg || "Failed to save watched movie.");
     } finally {
@@ -470,15 +512,16 @@ const GroupPage: React.FC = () => {
         )}
       </div>
 
-      {pendingMovie && (
+      {(pendingMovie || editMovie) && (
         <Modal
-          isOpen={!!pendingMovie}
+          isOpen={!!(pendingMovie || editMovie)}
           onClose={closeWatchDetailsModal}
           size="md"
-          title="Add to Watch History"
+          title={editMovie ? "Edit Watch History" : "Add to Watch History"}
         >
             <p className="watched-details-subtitle">
-              Add details for <strong>{pendingMovie.title}</strong>.
+              {editMovie ? "Edit details for " : "Add details for "}
+              <strong>{(pendingMovie || editMovie)?.title}</strong>.
             </p>
 
             <label className="watched-details-field">
@@ -586,7 +629,7 @@ const GroupPage: React.FC = () => {
                 onClick={handleSaveWatchedMovie}
                 disabled={savingWatchedMovie}
               >
-                {savingWatchedMovie ? "Saving..." : "Save"}
+                {savingWatchedMovie ? "Saving..." : editMovie ? "Save changes" : "Save"}
               </button>
             </div>
         </Modal>
@@ -660,6 +703,7 @@ const GroupPage: React.FC = () => {
           movie={selectedMovie}
           groupId={group._id}
           onRatingSaved={handleHistoryRatingSaved}
+          onEdit={handleEditWatchDetails}
           onClose={() => setSelectedMovie(null)}
         />
       )}
