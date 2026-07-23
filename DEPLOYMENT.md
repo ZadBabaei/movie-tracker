@@ -1,168 +1,203 @@
-# Movie Tracker Staging Deployment
+# zadprogramming.com Deployment
 
-Target staging stack:
+Last reviewed: 2026-07-06
 
-- Frontend: Vercel
-- Backend: Railway
-- Database: MongoDB Atlas staging DB
-- Domain: `https://movieTracker.zadprogramming.com`
+Related documents:
 
-Do not commit `.env` files or provider secrets. Use `client/.env.example` and `server/.env.example` only as variable-name references.
+- [ARCHITECTURE.md](./ARCHITECTURE.md)
+- [DNS.md](./DNS.md)
+- [INFRASTRUCTURE_RECOVERY.md](./INFRASTRUCTURE_RECOVERY.md)
 
-## Railway Backend
+## Deployment Model
 
-Create a Railway service from this repository and set the service root to `server`.
+| Application | Provider | Source path | Build | Runtime |
+|---|---|---|---|---|
+| Portfolio | Vercel | portfolio repository root | Vercel Next.js build | Vercel |
+| Movie Tracker frontend | Vercel | `client` | `npm run build` | Vercel static/frontend hosting |
+| Movie Tracker backend | Railway | `server` | `npm install && npm run build` | Railway Node service |
 
-Build command:
+The frontend and backend are deployed independently. DNS changes should be made only after the target platform reports the domain or service is ready.
 
-```bash
-npm install && npm run build
-```
+## Deployment Prerequisites
 
-Start command:
+| Area | Requirement |
+|---|---|
+| Cloudflare | Access to the `zadprogramming.com` zone with DNS edit permissions |
+| Vercel | Access to the team/account containing `portfolio-app` and `movie-tracker` |
+| Railway | Access to the `pacific-warmth` project and `movie-tracker` service |
+| MongoDB Atlas | Valid `MONGODB_URI` configured in Railway |
+| OAuth | Google OAuth credentials configured in the appropriate providers |
+| Email | Resend/SMTP credentials configured in Railway and email DNS records present in Cloudflare |
+| Secrets | All secrets stored in platform environment variables, not in documentation or source control |
 
-```bash
-npm start
-```
+## Local Development
 
-The backend already listens on `process.env.PORT` with a local fallback:
+Use the repository's normal local setup. Do not copy production secrets into local files unless explicitly required and protected.
 
-```ts
-const PORT = process.env.PORT || 5000;
-```
+Suggested local flow:
 
-Set these Railway variables:
+1. Install dependencies in the frontend/client directory.
+2. Install dependencies in the backend/server directory.
+3. Create local environment files from safe examples.
+4. Use local values for database, OAuth, email, and API integrations.
+5. Run backend locally.
+6. Run frontend locally with API and Socket.IO URLs pointing to the local backend.
 
-```env
-NODE_ENV=staging
-PORT=5000
-MONGODB_URI=
-JWT_SECRET=
-CLIENT_URL=https://movieTracker.zadprogramming.com
-APP_URL=https://movieTracker.zadprogramming.com
-CORS_ORIGINS=https://movieTracker.zadprogramming.com
-GOOGLE_CLIENT_ID=
-SMTP_HOST=
-SMTP_PORT=
-SMTP_USER=
-SMTP_PASS=
-ENABLE_BUG_REPORTS=true
-ENABLE_BUG_REPORT_EMAILS=true
-BUG_REPORT_NOTIFY_EMAIL=
-ENABLE_GITHUB_BUG_ISSUES=true
-GITHUB_TOKEN=
-GITHUB_REPO_OWNER=ZadBabaei
-GITHUB_REPO_NAME=movie-tracker
-```
+Common local variable placeholders:
 
-Also set these if the related features are enabled in staging:
+| Variable | Example placeholder |
+|---|---|
+| `REACT_APP_API_BASE_URL` | `<LOCAL_API_URL>` |
+| `REACT_APP_SOCKET_URL` | `<LOCAL_SOCKET_URL>` |
+| `MONGODB_URI` | `<MONGODB_URI>` |
+| `JWT_SECRET` | `<JWT_SECRET>` |
+| `GOOGLE_CLIENT_ID` | `<GOOGLE_CLIENT_ID>` |
+| `OPENAI_API_KEY` | `<OPENAI_API_KEY>` |
 
-```env
-STREAM_API_KEY=
-STREAM_API_SECRET=
-OPENAI_API_KEY=
-OPENAI_MODEL=
-CLOUDINARY_CLOUD_NAME=
-CLOUDINARY_API_KEY=
-CLOUDINARY_API_SECRET=
-```
+## Vercel Deployment
 
-After deployment, verify:
+### Portfolio
 
-- `https://YOUR-RAILWAY-BACKEND-DOMAIN/api/health` returns `{ "ok": true }`.
-- Railway logs show MongoDB connected to the staging database.
-- Railway logs do not show CORS blocks for `https://movieTracker.zadprogramming.com`.
+| Field | Value |
+|---|---|
+| Project | `portfolio-app` |
+| Repository | `ZadBabaei/portfolio` |
+| Production branch | `main` |
+| Framework | Next.js |
+| Node.js | 24.x |
+| Custom domain | `portfolio.zadprogramming.com` |
+| Required DNS | See [DNS.md](./DNS.md) |
 
-## Vercel Frontend
+### Movie Tracker Frontend
 
-Create a Vercel project from this repository and set the root directory to `client`.
+| Field | Value |
+|---|---|
+| Project | `movie-tracker` |
+| Repository | `ZadBabaei/movie-tracker` |
+| Production branch | `main` |
+| Root directory | `client` |
+| Install command | `npm install --legacy-peer-deps` |
+| Build command | `npm run build` |
+| Output directory | `build` |
+| Node.js | 24.x |
+| Custom domain | `movietracker.zadprogramming.com` |
+| Required DNS | See [DNS.md](./DNS.md) |
 
-Build command:
+### Vercel Environment Variables
 
-```bash
-npm run build
-```
+Values must stay in Vercel. Only names are documented.
 
-Output directory:
+| Project | Variable names |
+|---|---|
+| `movie-tracker` | `REACT_APP_API_BASE_URL`, `REACT_APP_SOCKET_URL`, `CI`, `REACT_APP_TMDB_API_KEY`, `REACT_APP_TMDB_API_URL`, `SKIP_PREFLIGHT_CHECK`, `REACT_APP_GOOGLE_CLIENT_ID`, `REACT_APP_ENABLE_BUG_REPORTS` |
+| `portfolio-app` | `ADMIN_PASSWORD`, `BLOB_READ_WRITE_TOKEN` |
 
-```text
-build
-```
+## Railway Deployment
 
-Set these Vercel variables:
+| Field | Value |
+|---|---|
+| Project | `pacific-warmth` |
+| Environment | `production` |
+| Service | `movie-tracker` |
+| Repository | `ZadBabaei/movie-tracker` |
+| Root directory | `server` |
+| Build command | `npm install && npm run build` |
+| Start command | `npm start` |
+| Runtime | Node on Railway |
+| Public backend URL | `<RAILWAY_BACKEND_URL>` |
+| Target port | `<RAILWAY_TARGET_PORT>` |
+| Custom domain | None currently required |
 
-```env
-REACT_APP_API_BASE_URL=https://YOUR-RAILWAY-BACKEND-DOMAIN
-REACT_APP_GOOGLE_CLIENT_ID=
-REACT_APP_ENABLE_BUG_REPORTS=true
-```
+### Railway Environment Variables
 
-Recommended for full app behavior:
+Values must stay in Railway. Only names are documented.
 
-```env
-REACT_APP_SOCKET_URL=https://YOUR-RAILWAY-BACKEND-DOMAIN
-REACT_APP_TMDB_API_KEY=
-REACT_APP_TMDB_API_URL=https://api.themoviedb.org/3/search/movie
-```
+| Category | Variable names |
+|---|---|
+| App URLs/CORS | `APP_URL`, `CLIENT_URL`, `CORS_ORIGINS` |
+| Runtime | `NODE_ENV`, `PORT`, `RAILWAY_ENVIRONMENT`, `RAILWAY_ENVIRONMENT_NAME`, `RAILWAY_PROJECT_NAME`, `RAILWAY_PUBLIC_DOMAIN`, `RAILWAY_SERVICE_NAME`, `RAILWAY_STATIC_URL` |
+| Database | `MONGODB_URI` |
+| Auth | `JWT_SECRET`, `GOOGLE_CLIENT_ID` |
+| Email | `EMAIL_FROM`, `RESEND_API_KEY`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` |
+| Media | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` |
+| AI | `OPENAI_API_KEY` |
+| Movie data | `TMDB_API_KEY`, `WATCHMODE_API_KEY`, `WATCHMODE_REGION` |
+| Realtime/other integrations | `STREAM_API_KEY`, `STREAM_API_SECRET` |
+| Bug reporting | `ENABLE_BUG_REPORTS`, `ENABLE_BUG_REPORT_EMAILS`, `ENABLE_GITHUB_BUG_ISSUES`, `BUG_REPORT_NOTIFY_EMAIL`, `GITHUB_REPO_OWNER`, `GITHUB_REPO_NAME`, `GITHUB_TOKEN` |
 
-Frontend backend calls use `REACT_APP_API_BASE_URL` through `client/src/api/apiClient.ts`. If `REACT_APP_API_BASE_URL` is empty during local development, HTTP calls fall back to same-origin `/api` paths, which work through the CRA proxy. Socket.io uses `REACT_APP_SOCKET_URL`, then `REACT_APP_API_BASE_URL`, then `http://127.0.0.1:5000`.
+## Cloudflare DNS Setup
 
-The Vercel project uses `client/vercel.json` to send this header on every route:
+Cloudflare is authoritative for `zadprogramming.com`. App records should generally be DNS-only unless a Cloudflare proxy decision has been tested.
 
-```text
-Cross-Origin-Opener-Policy: same-origin-allow-popups
-```
+Required app routing:
 
-This is required for the current Google popup flow. If `/manifest.json` or other public assets return `401` on Vercel, Deployment Protection is blocking public access. Disable Vercel Deployment Protection for public staging, or test through the custom domain after it is configured and publicly accessible.
+| Hostname | Platform |
+|---|---|
+| `zadprogramming.com` | Vercel |
+| `portfolio.zadprogramming.com` | Vercel |
+| `movietracker.zadprogramming.com` | Vercel |
+| `vpn.zadprogramming.com` | Hetzner VPN only |
 
-## MongoDB Atlas Staging DB
+See [DNS.md](./DNS.md) for exact records and recovery rules.
 
-1. Create an Atlas M0 free cluster.
-2. Create a dedicated staging database user.
-3. Create a database such as `movie_tracker_staging`.
-4. Add the Atlas connection string to Railway as `MONGODB_URI`.
-5. For quick staging, allow Railway network access with `0.0.0.0/0`; restrict this later if your plan/setup supports stable outbound IPs.
-6. Do not reuse the production database for staging.
+## Production Deployment Checklist
 
-## Custom Domain
+1. Confirm the intended platform for the hostname.
+2. Confirm build and runtime environment variables exist.
+3. Deploy backend first if the frontend depends on backend changes.
+4. Verify Railway service status is healthy.
+5. Deploy frontend to Vercel.
+6. Verify Vercel production deployment is ready.
+7. Verify custom domain status in Vercel.
+8. Verify DNS in Cloudflare.
+9. Test browser URL, API calls, auth, Socket.IO, and email paths.
 
-1. In Vercel, add `movieTracker.zadprogramming.com` to the frontend project.
-2. Add the DNS record Vercel provides in the DNS host for `zadprogramming.com`.
-3. Keep the backend on Railway's generated domain unless you create a separate API subdomain.
-4. In Railway, set:
+## Rollback Procedure
 
-```env
-CLIENT_URL=https://movieTracker.zadprogramming.com
-APP_URL=https://movieTracker.zadprogramming.com
-CORS_ORIGINS=https://movieTracker.zadprogramming.com
-```
+### Vercel
 
-5. Redeploy Railway after CORS/domain env changes.
-6. Redeploy Vercel after backend URL env changes.
+1. Identify the previous known-good production deployment in Vercel.
+2. Promote or roll back to that deployment from Vercel.
+3. Verify custom domain aliases still point to the production deployment.
+4. Test the public hostname.
 
-## Google OAuth Domain Update
+### Railway
 
-In Google Cloud Console, update the OAuth client used by staging:
+1. Identify the previous known-good Railway deployment.
+2. Redeploy or roll back using Railway controls.
+3. Verify the service reaches a running state.
+4. Test `<RAILWAY_BACKEND_URL>` health and Socket.IO endpoints.
+5. Confirm Vercel frontend env vars still point to the intended backend.
 
-- Authorized JavaScript origins:
-  - `https://movieTracker.zadprogramming.com`
-  - `http://localhost:3000` for local development
+### DNS
 
-Use the stable custom domain for Google OAuth testing. Random Vercel preview URLs change per deployment and should not be treated as reliable OAuth origins unless you explicitly add each preview origin to Google Cloud for that specific test. Do not rely on random Vercel preview URLs for regular OAuth validation.
+1. Restore records from [DNS.md](./DNS.md).
+2. Keep `vpn.zadprogramming.com` unchanged unless recovering VPN.
+3. Verify records with Cloudflare and a public resolver.
+4. Re-check Vercel domain configuration.
 
-The current frontend Google sign-in uses the implicit OAuth flow and sends the Google access token to `/api/auth/google`, so no redirect URI is required unless you change the auth flow later.
+## Disaster Recovery
 
-## Staging Test Checklist
+Use [INFRASTRUCTURE_RECOVERY.md](./INFRASTRUCTURE_RECOVERY.md) for full rebuild steps.
 
-1. Open `https://movieTracker.zadprogramming.com`.
-2. Confirm the frontend can call `GET /api/health` through the Railway backend URL.
-3. Register a local account.
-4. Sign in with Google.
-5. Request a forgot-password email and complete a reset.
-6. Create a group and invite a user.
-7. Open group chat and confirm Socket.io connects.
-8. Create and complete a poll.
-9. Add/remove watchlist items.
-10. Mark a movie watched with a group.
-11. Submit a bug report and verify email/GitHub issue integrations if enabled.
-12. Check browser console and Railway logs for CORS, Socket.io, auth, and MongoDB errors.
+Minimum recovery order:
+
+1. Restore Cloudflare zone and nameservers.
+2. Restore Vercel project domain attachments.
+3. Restore Railway service and environment variables.
+4. Restore MongoDB Atlas connectivity.
+5. Restore email provider DNS and env vars.
+6. Verify app request, auth, Socket.IO, and email flows.
+
+## Common Deployment Issues
+
+| Symptom | Likely cause | First check |
+|---|---|---|
+| Vercel says domain misconfigured | Missing or wrong Cloudflare DNS record | [DNS.md](./DNS.md) |
+| Frontend loads but API fails | Wrong `REACT_APP_API_BASE_URL` or backend down | Vercel env vars, Railway service status |
+| Socket.IO does not connect | Wrong `REACT_APP_SOCKET_URL`, CORS, or backend Socket.IO issue | Railway logs and CORS variables |
+| Login fails | OAuth config mismatch | Google OAuth redirect/origin config and backend auth vars |
+| Emails fail | Missing email credentials or DNS auth | `RESEND_API_KEY`, `SMTP_*`, SPF/DKIM/DMARC |
+| Database errors | MongoDB URI or network/access issue | `MONGODB_URI`, Atlas network access |
+| DNS points to Hetzner unexpectedly | Bad recovery/migration record | Cloudflare DNS records |
+
