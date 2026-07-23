@@ -88,6 +88,15 @@ const Modal: React.FC<ModalProps> = ({
   const generatedId = useId();
   const titleId = `modal-title-${generatedId}`;
 
+  // Keep the latest onClose in a ref so the focus effect below doesn't depend on
+  // its identity. Parents often pass an inline handler that changes on every
+  // render; without this, each keystroke re-ran the effect and stole focus back
+  // to the first focusable element (the close button).
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   // Focus trap: keep Tab cycling inside the panel. Elements are re-queried on
   // every keypress because modal content can change (e.g. multi-step flows).
   const handleTabKey = useCallback((event: KeyboardEvent) => {
@@ -125,7 +134,7 @@ const Modal: React.FC<ModalProps> = ({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && closeOnEscape) {
         event.stopPropagation();
-        onClose();
+        onCloseRef.current();
       } else if (event.key === "Tab") {
         handleTabKey(event);
       }
@@ -143,7 +152,7 @@ const Modal: React.FC<ModalProps> = ({
       releaseBodyScroll();
       lastFocusedRef.current?.focus();
     };
-  }, [isOpen, onClose, closeOnEscape, handleTabKey]);
+  }, [isOpen, closeOnEscape, handleTabKey]);
 
   if (!isOpen) return null;
 
