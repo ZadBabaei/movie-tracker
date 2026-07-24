@@ -1178,6 +1178,173 @@
   margin: 0 auto;
 }
 
+/* ── Watchlist Source Button + Picker ─────────────────────────── */
+
+/* Extra spacing between the search input, the Search button, and the
+   My Watchlist button, scoped so plain SearchBar usages elsewhere are
+   unaffected (they never render a .VoteModal-watchlist-btn). */
+.search-bar-glass:has(.VoteModal-watchlist-btn) {
+  gap: 10px;
+}
+
+.VoteModal-watchlist-btn {
+  padding: 12px 22px;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: transparent;
+  border: 1px solid var(--brand-gold);
+  color: var(--brand-gold);
+  border-radius: var(--brand-radius);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.14s ease;
+}
+
+.VoteModal-watchlist-btn:hover {
+  background: rgba(211, 172, 108, 0.14);
+  border-color: var(--brand-gold-bright);
+  color: var(--brand-gold-bright);
+}
+
+.VoteModal-watchlist-btn:active {
+  transform: scale(0.97);
+}
+
+.VoteModal-watchlist-btn-active {
+  background: var(--brand-gold);
+  color: var(--brand-gold-ink);
+}
+
+.VoteModal-watchlist-btn-active:hover {
+  background: var(--brand-gold-bright);
+  color: var(--brand-gold-ink);
+}
+
+.VoteModal-watchlist-picker {
+  margin: 16px 0;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+}
+
+.VoteModal-watchlist-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px 0;
+  color: #ccc;
+  font-size: 14px;
+}
+
+.VoteModal-watchlist-empty {
+  text-align: center;
+  padding: 20px 12px;
+  color: #ccc;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.VoteModal-watchlist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 12px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.VoteModal-watchlist-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+}
+
+.VoteModal-watchlist-item:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.VoteModal-watchlist-item:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.VoteModal-watchlist-item-selected {
+  border-color: var(--brand-gold);
+  box-shadow: 0 0 0 2px var(--brand-gold);
+}
+
+.VoteModal-watchlist-poster {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #04230c;
+}
+
+.VoteModal-watchlist-item-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #eee;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.VoteModal-watchlist-item-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--brand-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+@media (max-width: 768px) {
+  /* Stack the search input full-width, with Search + My Watchlist
+     below it, only when the watchlist button is present. */
+  .search-bar-glass:has(.VoteModal-watchlist-btn) {
+    flex-wrap: wrap;
+  }
+
+  .search-bar-glass:has(.VoteModal-watchlist-btn) input {
+    flex: 1 1 100%;
+  }
+
+  .search-bar-glass:has(.VoteModal-watchlist-btn) .search-btn-glass,
+  .search-bar-glass:has(.VoteModal-watchlist-btn) .VoteModal-watchlist-btn {
+    flex: 1 1 0;
+  }
+
+  .VoteModal-watchlist-grid {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    max-height: 300px;
+  }
+}
+
 /* ── Selected Movie Chips ─────────────────────────────────────── */
 
 .VoteModal-selected-chips {

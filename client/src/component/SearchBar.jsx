@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./SearchBar.css";
 
-const SearchBar = ({ onMovieSelect }) => {
+const SearchBar = ({ onMovieSelect, extraAction = null }) => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -87,6 +87,7 @@ const SearchBar = ({ onMovieSelect }) => {
         <button onClick={handleSearchClick} className="search-btn-glass">
           {loading ? "Searching..." : "Search"}
         </button>
+        {extraAction}
       </div>
 
       {results.length > 0 && (

@@ -2,9 +2,10 @@ import { create } from "zustand";
 import apiClient from "../api/apiClient";
 
 export interface PollMovie {
-  id?: string;
+  id?: string | number;
   movieId?: string;
   tmdbId?: string;
+  imdbID?: string;
   title: string;
   poster_path?: string;
   vote_average?: number;

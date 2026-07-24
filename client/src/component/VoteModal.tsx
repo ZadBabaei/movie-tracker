@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import "./VoteModal.css";
 import { useModalStore } from "../store/useModalStore";
 import { PollMovie, PollRanking, usePollStore } from "../store/usePollStore";
+import { useWatchlistStore, WatchlistMovie } from "../store/useWatchlistStore";
 import { useSocket } from "../hooks/useSocket";
 import SearchBar from "./SearchBar";
 import Modal from "./Modal/Modal";
@@ -21,6 +22,17 @@ const getMovieId = (movie: PollMovie): string =>
 const getPosterUrl = (path?: string) => {
   if (!path) return "/default-avatar.png";
   return path.startsWith("http") ? path : `https://image.tmdb.org/t/p/w500${path}`;
+};
+
+const mapWatchlistMovieToPollMovie = (movie: WatchlistMovie): PollMovie => {
+  const rawId = String(movie.imdbID || "").replace(/^tmdb-/, "");
+  return {
+    id: Number(rawId) || rawId,
+    imdbID: movie.imdbID,
+    title: movie.title,
+    poster_path: movie.poster,
+    vote_average: movie.vote_average || 0,
+  };
 };
 
 const getLocalDateTimeInputValue = (date: Date) => {
@@ -96,6 +108,8 @@ const VoteModal: React.FC<VoteModalProps> = ({ groupId, onPollStatusChange }) =>
     deletePoll,
   } = usePollStore();
 
+  const { movies: watchlistMovies, loading: watchlistLoading, fetchWatchlist } = useWatchlistStore();
+
   const socket = useSocket(groupId);
   const [userId, setUserId] = useState("");
   const [loading, setLoading] = useState(false);
@@ -103,6 +117,7 @@ const VoteModal: React.FC<VoteModalProps> = ({ groupId, onPollStatusChange }) =>
   const [validationMessage, setValidationMessage] = useState("");
   const [runoffMessage, setRunoffMessage] = useState("");
   const [menuOpenPollId, setMenuOpenPollId] = useState<string | null>(null);
+  const [showWatchlistPicker, setShowWatchlistPicker] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const minDeadline = useMemo(() => getLocalDateTimeInputValue(new Date()), []);
   const deadlineDate = pollDeadline.split("T")[0] || "";
@@ -337,6 +352,16 @@ const VoteModal: React.FC<VoteModalProps> = ({ groupId, onPollStatusChange }) =>
     clearVoteSelections();
     setPollName("");
     setPollDeadline("");
+  };
+
+  const handleToggleWatchlistPicker = () => {
+    setShowWatchlistPicker((prev) => {
+      const next = !prev;
+      if (next && watchlistMovies.length === 0 && !watchlistLoading) {
+        fetchWatchlist();
+      }
+      return next;
+    });
   };
 
   const handleDeletePoll = async (pollId: string) => {
@@ -683,7 +708,69 @@ const VoteModal: React.FC<VoteModalProps> = ({ groupId, onPollStatusChange }) =>
                 </div>
               </label>
 
-              <SearchBar onMovieSelect={handleMovieSelectForVote} />
+              <SearchBar
+                onMovieSelect={handleMovieSelectForVote}
+                extraAction={
+                  <button
+                    type="button"
+                    className={`VoteModal-watchlist-btn ${showWatchlistPicker ? "VoteModal-watchlist-btn-active" : ""}`}
+                    onClick={handleToggleWatchlistPicker}
+                  >
+                    {showWatchlistPicker ? "Hide Watchlist" : "My Watchlist"}
+                  </button>
+                }
+              />
+
+              {showWatchlistPicker && (
+                <div className="VoteModal-watchlist-picker">
+                  {watchlistLoading ? (
+                    <div className="VoteModal-watchlist-loading">
+                      <div className="VoteModal-spinner" />
+                      <span>Loading your watchlist...</span>
+                    </div>
+                  ) : watchlistMovies.length === 0 ? (
+                    <div className="VoteModal-watchlist-empty">
+                      Your watchlist is empty. Add movies to your watchlist first.
+                    </div>
+                  ) : (
+                    <div className="VoteModal-watchlist-grid">
+                      {watchlistMovies.map((movie: WatchlistMovie) => {
+                        const pollMovie = mapWatchlistMovieToPollMovie(movie);
+                        const isSelected = selectedMoviesForVote.some(
+                          (m) =>
+                            (pollMovie.id && m.id === pollMovie.id) ||
+                            (pollMovie.imdbID && m.imdbID === pollMovie.imdbID)
+                        );
+                        const atCap = selectedMoviesForVote.length >= 6 && !isSelected;
+                        return (
+                          <button
+                            type="button"
+                            key={movie._id}
+                            className={`VoteModal-watchlist-item ${isSelected ? "VoteModal-watchlist-item-selected" : ""}`}
+                            onClick={() => handleMovieSelectForVote(pollMovie)}
+                            disabled={atCap}
+                            title={movie.title}
+                          >
+                            <img
+                              src={getPosterUrl(movie.poster)}
+                              alt={movie.title}
+                              className="VoteModal-watchlist-poster"
+                            />
+                            <span className="VoteModal-watchlist-item-title">{movie.title}</span>
+                            {isSelected && (
+                              <div className="VoteModal-watchlist-item-check">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {selectedMoviesForVote.length > 0 && (
                 <div className="VoteModal-selected-chips">
