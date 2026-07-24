@@ -90,7 +90,8 @@ const getInitials = (name = "") =>
     .slice(0, 2)
     .toUpperCase() || "?";
 
-const MovieDetailModal = ({ movie, groupId = null, onRatingSaved = null, onEdit = null, onClose }) => {
+const MovieDetailModal = ({ movie, groupId = null, variant = "history", onRatingSaved = null, onEdit = null, onClose }) => {
+  const isWatchlist = variant === "watchlist";
   const [details, setDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(true);
   const [imdbUrl, setImdbUrl] = useState("");
@@ -333,7 +334,7 @@ const MovieDetailModal = ({ movie, groupId = null, onRatingSaved = null, onEdit 
             )}
             {watchedDate && (
               <span className="mdm-watch-meta-item">
-                <span className="mdm-label">Watched on:</span> {watchedDate}
+                <span className="mdm-label">{isWatchlist ? "Added on:" : "Watched on:"}</span> {watchedDate}
               </span>
             )}
             {watchedLocation && (
@@ -463,7 +464,7 @@ const MovieDetailModal = ({ movie, groupId = null, onRatingSaved = null, onEdit 
           </section>
         )}
 
-        {mongoId && (
+        {mongoId && !isWatchlist && (
           <div className="mdm-comments">
             <CommentSection movieId={mongoId} />
           </div>

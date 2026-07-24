@@ -448,6 +448,7 @@ const Watchlist: React.FC = () => {
       {selectedMovie && (
         <MovieDetailModal
           movie={selectedMovie}
+          variant="watchlist"
           onClose={() => setSelectedMovie(null)}
         />
       )}
