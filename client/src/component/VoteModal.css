@@ -114,6 +114,17 @@
   object-fit: cover;
   border-radius: 10px;
   background: #04230c;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease;
+}
+
+.VoteModal-rank-poster:hover,
+.VoteModal-rank-poster:focus-visible {
+  box-shadow: 0 0 0 3px rgba(211, 172, 108, 0.55);
+}
+
+.VoteModal-rank-poster:focus-visible {
+  outline: none;
 }
 
 .VoteModal-rank-title {

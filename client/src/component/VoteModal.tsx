@@ -7,6 +7,7 @@ import { useWatchlistStore, WatchlistMovie } from "../store/useWatchlistStore";
 import { useSocket } from "../hooks/useSocket";
 import SearchBar from "./SearchBar";
 import Modal from "./Modal/Modal";
+import MovieDetailModal from "./MovieDetailModal";
 import { FaCrown, FaMedal, FaStar, FaTrophy } from "react-icons/fa";
 import { HiSparkles } from "react-icons/hi2";
 import { toast } from "react-toastify";
@@ -118,6 +119,7 @@ const VoteModal: React.FC<VoteModalProps> = ({ groupId, onPollStatusChange }) =>
   const [runoffMessage, setRunoffMessage] = useState("");
   const [menuOpenPollId, setMenuOpenPollId] = useState<string | null>(null);
   const [showWatchlistPicker, setShowWatchlistPicker] = useState(false);
+  const [detailMovie, setDetailMovie] = useState<PollMovie | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const minDeadline = useMemo(() => getLocalDateTimeInputValue(new Date()), []);
   const deadlineDate = pollDeadline.split("T")[0] || "";
@@ -522,6 +524,7 @@ const VoteModal: React.FC<VoteModalProps> = ({ groupId, onPollStatusChange }) =>
     const waitingCount = pendingMembers.length;
 
     return (
+      <>
       <Modal bare isOpen onClose={closeVoteModal} ariaLabel={currentPoll.name || "Poll"}>
         <div className="VoteModal-content">
           <button className="VoteModal-close-btn" onClick={closeVoteModal}>x</button>
@@ -585,7 +588,25 @@ const VoteModal: React.FC<VoteModalProps> = ({ groupId, onPollStatusChange }) =>
                     onClick={() => isRunoff && setRunoffSelection(movieId)}
                   >
                     <div className="VoteModal-rank-card">
-                      <img src={getPosterUrl(movie.poster_path)} alt={movie.title} className="VoteModal-rank-poster" />
+                      <img
+                        src={getPosterUrl(movie.poster_path)}
+                        alt={movie.title}
+                        className="VoteModal-rank-poster"
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`View details for ${movie.title}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDetailMovie(movie);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setDetailMovie(movie);
+                          }
+                        }}
+                      />
                       <h3 className="VoteModal-rank-title">{movie.title}</h3>
                       {isRunoff ? (
                         <button
@@ -655,6 +676,14 @@ const VoteModal: React.FC<VoteModalProps> = ({ groupId, onPollStatusChange }) =>
           </div>
         </div>
       </Modal>
+      {detailMovie && (
+        <MovieDetailModal
+          movie={detailMovie}
+          variant="poll"
+          onClose={() => setDetailMovie(null)}
+        />
+      )}
+      </>
     );
   }
 

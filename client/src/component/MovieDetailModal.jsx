@@ -92,6 +92,7 @@ const getInitials = (name = "") =>
 
 const MovieDetailModal = ({ movie, groupId = null, variant = "history", onRatingSaved = null, onEdit = null, onClose }) => {
   const isWatchlist = variant === "watchlist";
+  const isPoll = variant === "poll";
   const [details, setDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(true);
   const [imdbUrl, setImdbUrl] = useState("");
@@ -104,6 +105,9 @@ const MovieDetailModal = ({ movie, groupId = null, variant = "history", onRating
   const [showAllRatings, setShowAllRatings] = useState(false);
   const [savingRating, setSavingRating] = useState(false);
   const [ratingError, setRatingError] = useState("");
+  const [trailerKey, setTrailerKey] = useState(null);
+  const [loadingTrailer, setLoadingTrailer] = useState(false);
+  const [showTrailerPlayer, setShowTrailerPlayer] = useState(false);
 
   const poster = movie.poster_path || movie.poster;
   const tmdbId = getTmdbMovieId(movie);
@@ -148,6 +152,44 @@ const MovieDetailModal = ({ movie, groupId = null, variant = "history", onRating
 
     fetchDetails();
   }, [tmdbId]);
+
+  useEffect(() => {
+    setTrailerKey(null);
+    setShowTrailerPlayer(false);
+
+    if (!isPoll || !tmdbId) {
+      setLoadingTrailer(false);
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    setLoadingTrailer(true);
+
+    fetch(
+      `https://api.themoviedb.org/3/movie/${tmdbId}/videos?api_key=${TMDB_KEY}&language=en-US`,
+      { signal: controller.signal }
+    )
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        const results = data?.results || [];
+        const youtubeVideos = results.filter((video) => video.site === "YouTube");
+        const officialTrailer = youtubeVideos.find(
+          (video) => video.type === "Trailer" && video.official === true
+        );
+        const anyTrailer = youtubeVideos.find((video) => video.type === "Trailer");
+        const teaserOrAny = youtubeVideos.find((video) => video.type === "Teaser") || youtubeVideos[0];
+        const chosen = officialTrailer || anyTrailer || teaserOrAny;
+        setTrailerKey(chosen?.key || null);
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError") setTrailerKey(null);
+      })
+      .finally(() => {
+        setLoadingTrailer(false);
+      });
+
+    return () => controller.abort();
+  }, [isPoll, tmdbId]);
 
   useEffect(() => {
     const existingImdbUrl = getImdbUrlFromMovie(movie);
@@ -464,7 +506,51 @@ const MovieDetailModal = ({ movie, groupId = null, variant = "history", onRating
           </section>
         )}
 
-        {mongoId && !isWatchlist && (
+        {isPoll && (
+          <section className="mdm-trailer">
+            <h3 className="mdm-trailer-heading">Trailer</h3>
+
+            {loadingTrailer && (
+              <p className="mdm-trailer-loading">Loading trailer...</p>
+            )}
+
+            {!loadingTrailer && trailerKey && !showTrailerPlayer && (
+              <button
+                type="button"
+                className="mdm-trailer-btn"
+                onClick={() => setShowTrailerPlayer(true)}
+              >
+                Watch Trailer
+              </button>
+            )}
+
+            {!loadingTrailer && trailerKey && showTrailerPlayer && (
+              <div className="mdm-trailer-player-wrap">
+                <div className="mdm-trailer-player">
+                  <iframe
+                    src={`https://www.youtube.com/embed/${trailerKey}?rel=0`}
+                    title="Movie trailer"
+                    allow="accelerated-sensors; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="mdm-trailer-hide-btn"
+                  onClick={() => setShowTrailerPlayer(false)}
+                >
+                  Hide trailer
+                </button>
+              </div>
+            )}
+
+            {!loadingTrailer && !trailerKey && (
+              <p className="mdm-trailer-unavailable">No trailer available.</p>
+            )}
+          </section>
+        )}
+
+        {mongoId && variant !== "poll" && !isWatchlist && (
           <div className="mdm-comments">
             <CommentSection movieId={mongoId} />
           </div>
