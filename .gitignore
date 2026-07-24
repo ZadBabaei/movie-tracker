@@ -28,6 +28,7 @@ design-alternatives/
 .agents/
 .codex/
 skills-lock.json
+CLAUDE.md
 
 # Agent skills/hooks installed into harness folders (keep .github/workflows tracked)
 .github/hooks/
