@@ -185,5 +185,11 @@ export const useWatchlistStore = create<WatchlistState>((set) => ({
   },
 }));
 
+// Stable reference for the empty case — returning a fresh [] here would make the
+// zustand snapshot differ on every render and trigger an infinite update loop.
+const EMPTY_LIST: WatchlistMovie[] = [];
+
 export const selectVisibleMovies = (state: WatchlistState): WatchlistMovie[] =>
-  state.activeTab === "personal" ? state.movies : (state.byGroup[state.activeTab] ?? []);
+  state.activeTab === "personal"
+    ? state.movies
+    : (state.byGroup[state.activeTab] ?? EMPTY_LIST);
