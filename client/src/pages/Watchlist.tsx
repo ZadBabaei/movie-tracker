@@ -24,9 +24,11 @@ import {
   selectVisibleMovies,
 } from "../store/useWatchlistStore";
 import { useGroupStore } from "../store/useGroupStore";
+import { useUserStore } from "../store/useUserStore";
 import { useSocket } from "../hooks/useSocket";
 import { toast } from "react-toastify";
 import apiClient from "../api/apiClient";
+import { fetchGroupFavorites as fetchGroupFavoritesApi } from "../api/watchlistApi";
 import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
 
 type FilterMode = "all" | "top" | "recent";
@@ -69,6 +71,7 @@ const Watchlist: React.FC = () => {
   const activeList = useWatchlistStore(selectVisibleMovies);
 
   const { groupList, fetchGroups } = useGroupStore();
+  const { profile, fetchProfile } = useUserStore();
   const [searchParams] = useSearchParams();
 
   const isPersonalTab = activeTab === "personal";
@@ -84,6 +87,7 @@ const Watchlist: React.FC = () => {
   const [pendingMovie, setPendingMovie] = useState<WatchlistMovie | null>(null);
   const [favorites, setFavorites] = useState<any[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [groupFavorites, setGroupFavorites] = useState<any[]>([]);
 
   const [filterQuery, setFilterQuery] = useState("");
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
@@ -93,6 +97,7 @@ const Watchlist: React.FC = () => {
   const [markingWatched, setMarkingWatched] = useState(false);
 
   const deepLinkAppliedRef = useRef(false);
+  const favoritesGroupRef = useRef("");
 
   const fetchFavorites = useCallback(async () => {
     try {
@@ -130,11 +135,53 @@ const Watchlist: React.FC = () => {
     }
   };
 
+  const fetchGroupFavorites = useCallback(async (groupId: string) => {
+    favoritesGroupRef.current = groupId;
+    try {
+      const data = await fetchGroupFavoritesApi(groupId);
+      // Ignore a response that arrived after the user moved to another tab,
+      // otherwise one group's favorites render under another group's heading.
+      if (favoritesGroupRef.current !== groupId) return;
+      setGroupFavorites(data);
+    } catch (err) {
+      console.error("Failed to fetch group favorites:", err);
+    }
+  }, []);
+
+  // The heart always means "I love this" — a group tab only ever toggles the
+  // current user's own personal favorite. This keeps favorites/favoriteIds in
+  // sync (so the grid hearts stay correct) and then refetches the group's
+  // aggregate view so lovedBy reflects the change.
+  const handleGroupFavoriteToggle = async (movieId: string) => {
+    const movie = groupFavorites.find((m) => m._id === movieId);
+    if (!movie) return;
+    await handleFavoriteToggle({
+      _id: movie._id,
+      title: movie.title,
+      imdbID: movie.imdbID,
+      poster: movie.poster,
+      vote_average: movie.vote_average,
+    });
+    fetchGroupFavorites(activeTab);
+  };
+
   useEffect(() => {
     fetchWatchlist();
     fetchGroups();
     fetchFavorites();
   }, [fetchWatchlist, fetchGroups, fetchFavorites]);
+
+  useEffect(() => {
+    if (!profile) fetchProfile();
+  }, [profile, fetchProfile]);
+
+  // Fetch the active group's aggregate favorites whenever a group tab is active,
+  // and refetch when the active group changes.
+  useEffect(() => {
+    if (isPersonalTab) return;
+    setGroupFavorites([]);
+    fetchGroupFavorites(activeTab);
+  }, [isPersonalTab, activeTab, fetchGroupFavorites]);
 
   // Resolve the initial tab: honor a ?group=<slug> deep link once groups are
   // loaded, otherwise fall back to "personal" if the persisted tab's group no
@@ -592,12 +639,22 @@ const Watchlist: React.FC = () => {
           )}
         </section>
 
-        <FavoritesCarousel
-          favorites={favorites}
-          onRemoveFavorite={(movieId) =>
-            handleFavoriteToggle({ _id: movieId })
-          }
-        />
+        {isPersonalTab ? (
+          <FavoritesCarousel
+            favorites={favorites}
+            onRemoveFavorite={(movieId) =>
+              handleFavoriteToggle({ _id: movieId })
+            }
+          />
+        ) : (
+          <FavoritesCarousel
+            favorites={groupFavorites}
+            title={`What ${activeGroup?.name ?? "this group"} Loves`}
+            currentUserId={profile?._id}
+            onRemoveFavorite={handleGroupFavoriteToggle}
+            onAddFavorite={handleGroupFavoriteToggle}
+          />
+        )}
 
         <SuggestionsCarousel onAddToWatchlist={handleAddMovie} />
       </div>

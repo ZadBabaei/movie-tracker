@@ -386,6 +386,67 @@ router.get("/favorites", authenticate, async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/watchlist/favorites/group/:groupId — aggregate favorites of every group member
+router.get("/favorites/group/:groupId", authenticate, async (req: Request, res: Response) => {
+  try {
+    const groupId = String(req.params.groupId);
+    if (!mongoose.Types.ObjectId.isValid(groupId)) {
+      res.status(400).json({ msg: "Invalid group id." });
+      return;
+    }
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      res.status(404).json({ msg: "Group not found" });
+      return;
+    }
+
+    const userId = req.user!.id;
+    const groupMemberIds = new Set(group.members.map((memberId) => memberId.toString()));
+    if (!groupMemberIds.has(userId)) {
+      res.status(403).json({ msg: "Only group members can view this group's favorites." });
+      return;
+    }
+
+    const members = await User.find({ _id: { $in: group.members } })
+      .populate("favorites")
+      .select("name avatar favorites");
+
+    const aggregated = new Map<string, any>();
+
+    for (const member of members) {
+      const memberInfo = { _id: member._id, name: member.name, avatar: member.avatar };
+      for (const movie of member.favorites as any[]) {
+        if (!movie || !movie._id) continue;
+        const key = movie._id.toString();
+        const existing = aggregated.get(key);
+        if (existing) {
+          existing.lovedBy.push(memberInfo);
+        } else {
+          aggregated.set(key, {
+            _id: movie._id,
+            title: movie.title,
+            imdbID: movie.imdbID,
+            poster: movie.poster,
+            vote_average: movie.vote_average,
+            lovedBy: [memberInfo],
+          });
+        }
+      }
+    }
+
+    const result = Array.from(aggregated.values()).sort((a, b) => {
+      if (b.lovedBy.length !== a.lovedBy.length) return b.lovedBy.length - a.lovedBy.length;
+      return String(a.title).localeCompare(String(b.title));
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error("Error fetching group favorites:", err);
+    res.status(500).json({ msg: "Failed to fetch group favorites" });
+  }
+});
+
 // POST /api/watchlist/favorites/:movieId — toggle favorite
 router.post("/favorites/:movieId", authenticate, async (req: Request, res: Response) => {
   try {

@@ -82,3 +82,11 @@ export const removeFromGroupWatchlist = async (groupId: string, movieId: string)
   );
   return res.data;
 };
+
+export const fetchGroupFavorites = async (groupId: string) => {
+  const res = await apiClient.get(
+    `/api/watchlist/favorites/group/${groupId}`,
+    getAuthHeaders()
+  );
+  return res.data;
+};
