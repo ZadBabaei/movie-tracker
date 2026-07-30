@@ -94,6 +94,7 @@ router.post("/:movieId/mark-watched", authenticate, async (req: Request, res: Re
       watchedWhere,
       watchedWith,
       watchedNotes,
+      source,
     } = req.body;
     if (!groupId) {
       res.status(400).json({ msg: "groupId is required" });
@@ -181,11 +182,20 @@ router.post("/:movieId/mark-watched", authenticate, async (req: Request, res: Re
     }
     await group.save();
 
-    // Remove from user's watchlist
-    user.watchlist = user.watchlist.filter(
-      (id) => id.toString() !== movieId
-    );
-    await user.save();
+    if (source === "group") {
+      // Remove from this group's shared watchlist
+      group.watchlist = group.watchlist.filter(
+        (item) => item.movieId.toString() !== movieId
+      );
+      await group.save();
+      getIO().to(groupIdValue).emit("group:watchlist_updated", { groupId: groupIdValue });
+    } else {
+      // Remove from user's personal watchlist
+      user.watchlist = user.watchlist.filter(
+        (id) => id.toString() !== movieId
+      );
+      await user.save();
+    }
 
     getIO().to(groupIdValue).emit("group:movie_added", { movie });
 
@@ -193,6 +203,171 @@ router.post("/:movieId/mark-watched", authenticate, async (req: Request, res: Re
   } catch (err) {
     console.error("Error marking as watched:", err);
     res.status(500).json({ msg: "Failed to mark as watched" });
+  }
+});
+
+// GET /api/watchlist/group/:groupId — fetch a group's shared watchlist
+router.get("/group/:groupId", authenticate, async (req: Request, res: Response) => {
+  try {
+    const groupId = String(req.params.groupId);
+    if (!mongoose.Types.ObjectId.isValid(groupId)) {
+      res.status(400).json({ msg: "Invalid group id." });
+      return;
+    }
+
+    const group = await Group.findById(groupId)
+      .populate("watchlist.movieId")
+      .populate("watchlist.addedBy", "name avatar");
+    if (!group) {
+      res.status(404).json({ msg: "Group not found" });
+      return;
+    }
+
+    const userId = req.user!.id;
+    const groupMemberIds = new Set(group.members.map((memberId) => memberId.toString()));
+    if (!groupMemberIds.has(userId)) {
+      res.status(403).json({ msg: "Only group members can view this watchlist." });
+      return;
+    }
+
+    const items = (group.watchlist || [])
+      .filter((item: any) => item.movieId && item.movieId._id)
+      .map((item: any) => {
+        const movie = item.movieId;
+        const addedBy = item.addedBy;
+        return {
+          _id: movie._id,
+          title: movie.title,
+          imdbID: movie.imdbID,
+          poster: movie.poster,
+          vote_average: movie.vote_average,
+          addedAt: item.addedAt,
+          addedBy: addedBy
+            ? { _id: addedBy._id, name: addedBy.name, avatar: addedBy.avatar }
+            : undefined,
+        };
+      });
+
+    res.json(items);
+  } catch (err) {
+    console.error("Error fetching group watchlist:", err);
+    res.status(500).json({ msg: "Failed to fetch group watchlist" });
+  }
+});
+
+// POST /api/watchlist/group/:groupId — add movie to a group's shared watchlist
+router.post("/group/:groupId", authenticate, async (req: Request, res: Response) => {
+  try {
+    const groupId = String(req.params.groupId);
+    if (!mongoose.Types.ObjectId.isValid(groupId)) {
+      res.status(400).json({ msg: "Invalid group id." });
+      return;
+    }
+
+    const { movie } = req.body;
+    if (!movie || !movie.imdbID || !movie.title) {
+      res.status(400).json({ msg: "Invalid movie data" });
+      return;
+    }
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      res.status(404).json({ msg: "Group not found" });
+      return;
+    }
+
+    const userId = req.user!.id;
+    const groupMemberIds = new Set(group.members.map((memberId) => memberId.toString()));
+    if (!groupMemberIds.has(userId)) {
+      res.status(403).json({ msg: "Only group members can add to this watchlist." });
+      return;
+    }
+
+    let existingMovie = await Movie.findOne({ imdbID: movie.imdbID });
+    if (!existingMovie) {
+      existingMovie = new Movie({
+        title: movie.title,
+        imdbID: movie.imdbID,
+        poster: movie.poster_path,
+        vote_average: movie.vote_average || 0,
+        addedBy: userId,
+      });
+      await existingMovie.save();
+    }
+
+    const existingItem = group.watchlist.find(
+      (item) => item.movieId.toString() === existingMovie!._id.toString()
+    );
+
+    let addedAt = existingItem?.addedAt || new Date();
+    let addedById = existingItem?.addedBy?.toString() || userId;
+
+    if (!existingItem) {
+      group.watchlist.push({
+        movieId: existingMovie._id as any,
+        addedBy: userId as any,
+        addedAt,
+      } as any);
+      await group.save();
+      getIO().to(groupId).emit("group:watchlist_updated", { groupId });
+    }
+
+    const addedByUser = await User.findById(addedById).select("name avatar");
+
+    res.json({
+      msg: "Movie added to group watchlist",
+      movie: {
+        _id: existingMovie._id,
+        title: existingMovie.title,
+        imdbID: existingMovie.imdbID,
+        poster: existingMovie.poster,
+        vote_average: existingMovie.vote_average,
+        addedAt,
+        addedBy: addedByUser
+          ? { _id: addedByUser._id, name: addedByUser.name, avatar: addedByUser.avatar }
+          : undefined,
+      },
+    });
+  } catch (err) {
+    console.error("Error adding to group watchlist:", err);
+    res.status(500).json({ msg: "Failed to add to group watchlist" });
+  }
+});
+
+// DELETE /api/watchlist/group/:groupId/:movieId — remove movie from a group's shared watchlist
+router.delete("/group/:groupId/:movieId", authenticate, async (req: Request, res: Response) => {
+  try {
+    const groupId = String(req.params.groupId);
+    const movieId = String(req.params.movieId);
+    if (!mongoose.Types.ObjectId.isValid(groupId) || !mongoose.Types.ObjectId.isValid(movieId)) {
+      res.status(400).json({ msg: "Invalid group or movie id." });
+      return;
+    }
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      res.status(404).json({ msg: "Group not found" });
+      return;
+    }
+
+    const userId = req.user!.id;
+    const groupMemberIds = new Set(group.members.map((memberId) => memberId.toString()));
+    if (!groupMemberIds.has(userId)) {
+      res.status(403).json({ msg: "Only group members can remove from this watchlist." });
+      return;
+    }
+
+    group.watchlist = group.watchlist.filter(
+      (item) => item.movieId.toString() !== movieId
+    );
+    await group.save();
+
+    getIO().to(groupId).emit("group:watchlist_updated", { groupId });
+
+    res.json({ msg: "Movie removed from group watchlist" });
+  } catch (err) {
+    console.error("Error removing from group watchlist:", err);
+    res.status(500).json({ msg: "Failed to remove from group watchlist" });
   }
 });
 

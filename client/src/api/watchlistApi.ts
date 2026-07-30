@@ -32,17 +32,52 @@ export const markAsWatched = async (
     watchedDate?: string;
     watchedWhere?: string;
     watchedWith?: string[];
-  }
+  },
+  source?: "personal" | "group"
 ) => {
   const payload = {
     groupId,
     ...metadata,
     watchedAt: metadata?.watchedDate,
     watchedLocation: metadata?.watchedWhere,
+    source,
   };
   const res = await apiClient.post(
     `/api/watchlist/${movieId}/mark-watched`,
     payload,
+    getAuthHeaders()
+  );
+  return res.data;
+};
+
+export const fetchGroupWatchlist = async (groupId: string) => {
+  const res = await apiClient.get(
+    `/api/watchlist/group/${groupId}`,
+    getAuthHeaders()
+  );
+  return res.data;
+};
+
+export const addToGroupWatchlist = async (
+  groupId: string,
+  movie: {
+    imdbID: string;
+    title: string;
+    poster_path?: string;
+    vote_average?: number;
+  }
+) => {
+  const res = await apiClient.post(
+    `/api/watchlist/group/${groupId}`,
+    { movie },
+    getAuthHeaders()
+  );
+  return res.data;
+};
+
+export const removeFromGroupWatchlist = async (groupId: string, movieId: string) => {
+  const res = await apiClient.delete(
+    `/api/watchlist/group/${groupId}/${movieId}`,
     getAuthHeaders()
   );
   return res.data;

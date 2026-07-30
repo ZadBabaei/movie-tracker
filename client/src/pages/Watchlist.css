@@ -107,6 +107,49 @@
   margin-inline: auto;
 }
 
+/* ---------- Whose-watchlist tab strip ---------- */
+
+.wl2-grouptab-strip {
+  display: flex;
+  gap: 8px;
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.wl2-grouptab-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.wl2-grouptab {
+  padding: 10px 4px 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--wl2-muted);
+  font-family: var(--wl2-serif);
+  font-weight: 500;
+  font-size: 1rem;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.25s ease, border-color 0.25s ease;
+}
+
+.wl2-grouptab + .wl2-grouptab {
+  margin-left: 22px;
+}
+
+.wl2-grouptab:hover {
+  color: var(--wl2-ivory);
+}
+
+.wl2-grouptab--active {
+  color: var(--wl2-gold-bright);
+  border-bottom-color: var(--wl2-gold);
+}
+
 /* ---------- Toolbar ---------- */
 
 .wl2-panel {
@@ -511,6 +554,26 @@
   color: var(--wl2-muted);
 }
 
+/* ---------- Added-by badge (group tabs) ---------- */
+
+.wl2-added-by {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--wl2-dim);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.wl2-added-by-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--wl2-hairline-soft);
+}
+
 /* ---------- Carousels (scoped restyle) ---------- */
 
 .watchlist-page .suggestions-title,
@@ -661,6 +724,10 @@
     margin-left: 0;
     gap: 38px;
     padding: 26px 20px calc(120px + env(safe-area-inset-bottom));
+  }
+
+  .wl2-grouptab-strip {
+    width: 100%;
   }
 
   .wl2-toolbar {

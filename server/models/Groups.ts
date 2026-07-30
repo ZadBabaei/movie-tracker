@@ -21,6 +21,12 @@ export interface IWatchedMovie {
   }[];
 }
 
+export interface IGroupWatchlistItem {
+  movieId: Types.ObjectId;
+  addedBy?: Types.ObjectId;
+  addedAt?: Date;
+}
+
 export interface IGroup extends Document {
   name: string;
   slug?: string;
@@ -28,6 +34,7 @@ export interface IGroup extends Document {
   members: Types.ObjectId[];
   pendingInvitations: IGroupInvitation[];
   movies: IWatchedMovie[];
+  watchlist: IGroupWatchlistItem[];
   currentPoll?: Types.ObjectId;
   pollHistory: Types.ObjectId[];
   hasActivePoll(): Promise<boolean>;
@@ -62,6 +69,13 @@ const groupSchema = new Schema<IGroup>(
             updatedAt: { type: Date, default: Date.now },
           },
         ],
+      },
+    ],
+    watchlist: [
+      {
+        movieId: { type: Schema.Types.ObjectId, ref: "Movie", required: true },
+        addedBy: { type: Schema.Types.ObjectId, ref: "User" },
+        addedAt: { type: Date, default: Date.now },
       },
     ],
     currentPoll: { type: Schema.Types.ObjectId, ref: "Poll" },
