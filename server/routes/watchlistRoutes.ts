@@ -466,6 +466,24 @@ router.post("/favorites/:movieId", authenticate, async (req: Request, res: Respo
     }
 
     await user.save();
+
+    // Favorites are personal, but they feed the aggregate "What <group> Loves"
+    // view of every group this user belongs to, so notify all of those rooms.
+    // The favorite is already persisted — never let a socket failure fail it.
+    try {
+      const groups = await Group.find({ members: req.user!.id }).select("_id");
+      const io = getIO();
+      for (const group of groups) {
+        const groupId = group._id.toString();
+        io.to(groupId).emit("group:favorites_updated", {
+          groupId,
+          userId: req.user!.id,
+        });
+      }
+    } catch (emitErr) {
+      console.error("Failed to broadcast favorites update:", emitErr);
+    }
+
     res.json({ favorited: !isFav });
   } catch (err) {
     console.error("Error toggling favorite:", err);

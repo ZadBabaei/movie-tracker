@@ -98,6 +98,7 @@ const Watchlist: React.FC = () => {
 
   const deepLinkAppliedRef = useRef(false);
   const favoritesGroupRef = useRef("");
+  const profileIdRef = useRef<string | undefined>(undefined);
 
   const fetchFavorites = useCallback(async () => {
     try {
@@ -175,6 +176,12 @@ const Watchlist: React.FC = () => {
     if (!profile) fetchProfile();
   }, [profile, fetchProfile]);
 
+  // Kept in a ref so the socket handler below always sees the current id
+  // without needing to resubscribe (and without capturing a stale one).
+  useEffect(() => {
+    profileIdRef.current = profile?._id;
+  }, [profile?._id]);
+
   // Fetch the active group's aggregate favorites whenever a group tab is active,
   // and refetch when the active group changes.
   useEffect(() => {
@@ -226,6 +233,20 @@ const Watchlist: React.FC = () => {
       socket.off("group:watchlist_updated", handleUpdate);
     };
   }, [isPersonalTab, activeTab, socket, fetchGroupWatchlist]);
+
+  // Live updates for "What <group> Loves" when another member hearts something.
+  useEffect(() => {
+    if (isPersonalTab) return;
+    const handleFavoritesUpdate = (payload?: { userId?: string }) => {
+      // Our own toggle already refetches inline — skip the echo.
+      if (payload?.userId && payload.userId === profileIdRef.current) return;
+      fetchGroupFavorites(activeTab);
+    };
+    socket.on("group:favorites_updated", handleFavoritesUpdate);
+    return () => {
+      socket.off("group:favorites_updated", handleFavoritesUpdate);
+    };
+  }, [isPersonalTab, activeTab, socket, fetchGroupFavorites]);
 
   const handleAddMovie = (movie: {
     imdbID: string;
