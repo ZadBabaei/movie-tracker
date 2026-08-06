@@ -24,6 +24,9 @@ build/
 # Local design mockups
 design-alternatives/
 
+# Local scratch spreadsheets
+*.xlsx
+
 # Agent tooling state
 .agents/
 .codex/
