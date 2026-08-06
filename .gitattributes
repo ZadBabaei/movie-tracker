@@ -1,0 +1,26 @@
+# Normalize line endings: store LF in the repo, check out LF everywhere.
+# Without this, Windows checkouts pick up CRLF and every file shows as
+# modified even when nothing changed.
+* text=auto eol=lf
+
+# Windows-native scripts keep CRLF
+*.ps1  text eol=crlf
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+
+# Binary assets - never touch these
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.webp  binary
+*.avif  binary
+*.pdf   binary
+*.xlsx  binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.eot   binary
+*.zip   binary
+*.mp4   binary
