@@ -3,8 +3,9 @@ import { CorsOptions } from "cors";
 const fallbackOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:3000",
+  "https://movietrk.com",
+  "https://www.movietrk.com",
   "https://movietracker.zadprogramming.com",
-  "https://movieTracker.zadprogramming.com",
 ];
 
 const normalizeOrigin = (origin: string) => {

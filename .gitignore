@@ -30,6 +30,7 @@ design-alternatives/
 # Agent tooling state
 .agents/
 .codex/
+.codex-remote-attachments/
 skills-lock.json
 CLAUDE.md
 

@@ -1,6 +1,6 @@
-# zadprogramming.com Deployment
+# Movie Tracker Deployment
 
-Last reviewed: 2026-07-06
+Last reviewed: 2026-08-21
 
 Related documents:
 
@@ -22,7 +22,8 @@ The frontend and backend are deployed independently. DNS changes should be made 
 
 | Area | Requirement |
 |---|---|
-| Cloudflare | Access to the `zadprogramming.com` zone with DNS edit permissions |
+| Namecheap | Access to the `movietrk.com` Advanced DNS page |
+| Cloudflare | Access to the `zadprogramming.com` zone while the transition domain remains active |
 | Vercel | Access to the team/account containing `portfolio-app` and `movie-tracker` |
 | Railway | Access to the `pacific-warmth` project and `movie-tracker` service |
 | MongoDB Atlas | Valid `MONGODB_URI` configured in Railway |
@@ -78,9 +79,11 @@ Common local variable placeholders:
 | Root directory | `client` |
 | Install command | `npm install --legacy-peer-deps` |
 | Build command | `npm run build` |
-| Output directory | `build` |
+| Output directory | `dist` (from `client/vercel.json`; project dashboard still shows legacy `build`) |
 | Node.js | 24.x |
-| Custom domain | `movietracker.zadprogramming.com` |
+| Canonical domain | `movietrk.com` |
+| Redirect domain | `www.movietrk.com` -> `movietrk.com` (308) |
+| Transition domain | `movietracker.zadprogramming.com` (must remain attached until final acceptance) |
 | Required DNS | See [DNS.md](./DNS.md) |
 
 ### Vercel Environment Variables
@@ -125,18 +128,17 @@ Values must stay in Railway. Only names are documented.
 | Realtime/other integrations | `STREAM_API_KEY`, `STREAM_API_SECRET` |
 | Bug reporting | `ENABLE_BUG_REPORTS`, `ENABLE_BUG_REPORT_EMAILS`, `ENABLE_GITHUB_BUG_ISSUES`, `BUG_REPORT_NOTIFY_EMAIL`, `GITHUB_REPO_OWNER`, `GITHUB_REPO_NAME`, `GITHUB_TOKEN` |
 
-## Cloudflare DNS Setup
+## DNS Setup
 
-Cloudflare is authoritative for `zadprogramming.com`. App records should generally be DNS-only unless a Cloudflare proxy decision has been tested.
+Namecheap BasicDNS is authoritative for `movietrk.com`. Cloudflare remains authoritative for the old `zadprogramming.com` zone during the transition.
 
 Required app routing:
 
 | Hostname | Platform |
 |---|---|
-| `zadprogramming.com` | Vercel |
-| `portfolio.zadprogramming.com` | Vercel |
-| `movietracker.zadprogramming.com` | Vercel |
-| `vpn.zadprogramming.com` | Hetzner VPN only |
+| `movietrk.com` | Vercel canonical frontend |
+| `www.movietrk.com` | Vercel 308 redirect to the canonical frontend |
+| `movietracker.zadprogramming.com` | Vercel transition frontend; retain until migration acceptance |
 
 See [DNS.md](./DNS.md) for exact records and recovery rules.
 
@@ -149,7 +151,7 @@ See [DNS.md](./DNS.md) for exact records and recovery rules.
 5. Deploy frontend to Vercel.
 6. Verify Vercel production deployment is ready.
 7. Verify custom domain status in Vercel.
-8. Verify DNS in Cloudflare.
+8. Verify DNS in Namecheap and with public resolvers.
 9. Test browser URL, API calls, auth, Socket.IO, and email paths.
 
 ## Rollback Procedure
@@ -171,10 +173,10 @@ See [DNS.md](./DNS.md) for exact records and recovery rules.
 
 ### DNS
 
-1. Restore records from [DNS.md](./DNS.md).
-2. Keep `vpn.zadprogramming.com` unchanged unless recovering VPN.
-3. Verify records with Cloudflare and a public resolver.
-4. Re-check Vercel domain configuration.
+1. If the new domain is unhealthy, restore the prior Namecheap parking records only if abandoning the migration; otherwise keep the Vercel records and troubleshoot before changing aliases.
+2. Restore Railway `APP_URL`, `CLIENT_URL`, and `CORS_ORIGINS` to their pre-migration values if backend URL generation or CORS regresses.
+3. Keep `movietracker.zadprogramming.com` attached and unchanged so users retain a known-good entry point.
+4. Verify records with Namecheap and public resolvers, then re-check Vercel domain configuration.
 
 ## Disaster Recovery
 
@@ -193,7 +195,7 @@ Minimum recovery order:
 
 | Symptom | Likely cause | First check |
 |---|---|---|
-| Vercel says domain misconfigured | Missing or wrong Cloudflare DNS record | [DNS.md](./DNS.md) |
+| Vercel says domain misconfigured | Missing or wrong Namecheap DNS record | [DNS.md](./DNS.md) |
 | Frontend loads but API fails | Wrong `REACT_APP_API_BASE_URL` or backend down | Vercel env vars, Railway service status |
 | Socket.IO does not connect | Wrong `REACT_APP_SOCKET_URL`, CORS, or backend Socket.IO issue | Railway logs and CORS variables |
 | Login fails | OAuth config mismatch | Google OAuth redirect/origin config and backend auth vars |

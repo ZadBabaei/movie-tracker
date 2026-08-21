@@ -5,7 +5,8 @@ This staging setup is designed for mostly free-tier hosting:
 - Frontend: Vercel
 - Backend: Render Web Service
 - Database: MongoDB Atlas M0 staging cluster
-- Domain: `movieTracker.zadprogramming.com`
+- Canonical domain: `movietrk.com`
+- Transition domain: `movietracker.zadprogramming.com`
 
 ## Required Frontend Env Vars
 
@@ -38,9 +39,9 @@ NODE_ENV=production
 PORT=10000
 MONGODB_URI=mongodb+srv://...
 JWT_SECRET=long-random-secret
-CLIENT_URL=https://movieTracker.zadprogramming.com
-APP_URL=https://movieTracker.zadprogramming.com
-CORS_ORIGINS=https://movieTracker.zadprogramming.com,http://localhost:3000
+CLIENT_URL=https://movietrk.com
+APP_URL=https://movietrk.com
+CORS_ORIGINS=https://movietrk.com,https://www.movietrk.com,https://movietracker.zadprogramming.com,http://localhost:3000
 VERCEL_PREVIEW_ORIGINS=https://your-preview-url.vercel.app
 GOOGLE_CLIENT_ID=your-google-oauth-client-id
 STREAM_API_KEY=your-stream-api-key
@@ -115,18 +116,18 @@ This header is required for the current Google popup sign-in flow. If Vercel ret
 
 ## Domain
 
-1. In Vercel, add `movieTracker.zadprogramming.com` to the frontend project domains.
-2. Add the DNS record Vercel provides at the DNS host for `zadprogramming.com`.
+1. In Vercel, attach `movietrk.com` and `www.movietrk.com` while retaining `movietracker.zadprogramming.com` during migration.
+2. Add the exact DNS records Vercel provides in Namecheap Advanced DNS.
 3. In Render, keep the backend on the Render subdomain unless you want a separate backend subdomain such as `api.zadprogramming.com`.
 4. Add the final frontend origin to backend CORS:
 
 ```env
-CLIENT_URL=https://movieTracker.zadprogramming.com
-APP_URL=https://movieTracker.zadprogramming.com
-CORS_ORIGINS=https://movieTracker.zadprogramming.com,http://localhost:3000
+CLIENT_URL=https://movietrk.com
+APP_URL=https://movietrk.com
+CORS_ORIGINS=https://movietrk.com,https://www.movietrk.com,https://movietracker.zadprogramming.com,http://localhost:3000
 ```
 
-Use `https://movieTracker.zadprogramming.com` as the stable origin for Google OAuth testing. Random Vercel preview URLs change and should not be relied on for OAuth unless each exact preview URL is added to Google Cloud for that temporary test.
+Use `https://movietrk.com` as the canonical stable origin for Google OAuth testing. Keep the old origin authorized until migration acceptance. Random Vercel preview URLs change and should not be relied on for OAuth unless each exact preview URL is added to Google Cloud for that temporary test.
 
 ## Manual Deployment Checklist
 
@@ -137,7 +138,7 @@ Use `https://movieTracker.zadprogramming.com` as the stable origin for Google OA
 5. Confirm `/api/health` works.
 6. Create Vercel frontend project from `client`.
 7. Add frontend env vars in Vercel.
-8. Add `movieTracker.zadprogramming.com` in Vercel domains and configure DNS.
+8. Add the apex and `www` domains in Vercel, configure Namecheap DNS, and retain the old domain during verification.
 9. Add the Vercel production and preview URLs to Render CORS env vars.
 10. Re-deploy backend after CORS env changes.
 11. Re-deploy frontend after backend URL env changes.

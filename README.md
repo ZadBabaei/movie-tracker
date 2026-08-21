@@ -2,7 +2,9 @@
 
 Movie Tracker is a full-stack social movie-night app for groups that want one shared place to plan what to watch, vote on options, track watched movies, and keep the conversation around each group.
 
-Live app: https://movietracker.zadprogramming.com/
+Live app: https://movietrk.com/
+
+Transition URL: https://movietracker.zadprogramming.com/ remains available during the domain migration verification window.
 
 ## What it demonstrates
 

@@ -1,6 +1,6 @@
-# zadprogramming.com Architecture
+# Movie Tracker Production Architecture
 
-Last reviewed: 2026-07-06
+Last reviewed: 2026-08-21
 
 Related documents:
 
@@ -10,13 +10,14 @@ Related documents:
 
 ## Summary
 
-`zadprogramming.com` is split across specialized providers:
+Movie Tracker is split across specialized providers. The canonical frontend is migrating to `movietrk.com`; the old hostname remains a parallel production entry point during verification.
 
 | Layer | Provider | Responsibility |
 |---|---|---|
-| DNS | Cloudflare | Authoritative DNS for `zadprogramming.com` |
+| Canonical DNS | Namecheap BasicDNS | Authoritative DNS for `movietrk.com` |
+| Transition DNS | Cloudflare | Authoritative DNS for `zadprogramming.com` |
 | Portfolio frontend | Vercel | Hosts `portfolio.zadprogramming.com` |
-| Movie Tracker frontend | Vercel | Hosts `movietracker.zadprogramming.com` |
+| Movie Tracker frontend | Vercel | Hosts canonical `movietrk.com`, redirects `www`, and retains the old hostname |
 | Movie Tracker backend/API | Railway | Hosts API and Socket.IO service |
 | Database | MongoDB Atlas | Stores Movie Tracker application data |
 | VPN | Hetzner VPS | Hosts only `vpn.zadprogramming.com` |
@@ -28,9 +29,11 @@ Sensitive values are intentionally omitted. Use placeholders such as `<RAILWAY_B
 
 ```mermaid
 flowchart TD
-    User[User Browser] --> Cloudflare[Cloudflare DNS]
+    User[User Browser] --> Namecheap[Namecheap DNS: movietrk.com]
+    User --> Cloudflare[Cloudflare DNS: transition hostname]
     Cloudflare --> VercelPortfolio[Vercel: portfolio-app]
-    Cloudflare --> VercelMovieTracker[Vercel: movie-tracker frontend]
+    Namecheap --> VercelMovieTracker[Vercel: movie-tracker frontend]
+    Cloudflare --> VercelMovieTracker
     Cloudflare --> VPN[vpn.zadprogramming.com]
     VPN --> Hetzner[Hetzner VPS]
 
@@ -53,9 +56,10 @@ flowchart TD
 
 | Component | Responsibility | Notes |
 |---|---|---|
-| Cloudflare DNS | Routes production hostnames to the correct platform | DNS is authoritative; Cloudflare proxy is currently not required for these app records |
+| Namecheap BasicDNS | Routes `movietrk.com` and `www.movietrk.com` to Vercel | Canonical DNS authority |
+| Cloudflare DNS | Routes the old Movie Tracker hostname and other `zadprogramming.com` services | Retained during migration |
 | Vercel `portfolio-app` | Builds and serves the portfolio frontend | Uses `portfolio.zadprogramming.com` |
-| Vercel `movie-tracker` | Builds and serves the Movie Tracker frontend | Uses `movietracker.zadprogramming.com` |
+| Vercel `movie-tracker` | Builds and serves the Movie Tracker frontend | Canonical `movietrk.com`; `www` redirects; old hostname retained temporarily |
 | Railway `movie-tracker` | Runs backend API and Socket.IO server | Uses Railway-generated public backend URL |
 | MongoDB Atlas | Stores users, movies, watchlists, groups, and app data | Accessed through `MONGODB_URI` |
 | Google OAuth | User sign-in provider | Client IDs only are public; secrets must stay out of docs |
@@ -71,7 +75,7 @@ flowchart TD
 2. Railway builds the backend, starts it with the configured start command, and exposes `<RAILWAY_BACKEND_URL>`.
 3. Vercel builds the Movie Tracker frontend from the client directory.
 4. Vercel frontend environment variables point API and Socket.IO traffic to `<RAILWAY_BACKEND_URL>`.
-5. Cloudflare DNS sends `movietracker.zadprogramming.com` to Vercel.
+5. Namecheap DNS sends `movietrk.com` to Vercel; Cloudflare continues sending the old hostname to the same project.
 6. Browser traffic loads the frontend from Vercel, then calls Railway for API and Socket.IO.
 
 Portfolio deployments are separate: Vercel builds the portfolio project and Cloudflare routes `portfolio.zadprogramming.com` to that Vercel project.
@@ -80,8 +84,8 @@ Portfolio deployments are separate: Vercel builds the portfolio project and Clou
 
 | Step | Flow |
 |---|---|
-| 1 | User opens `https://movietracker.zadprogramming.com` |
-| 2 | Cloudflare DNS resolves the hostname to Vercel |
+| 1 | User opens `https://movietrk.com` |
+| 2 | Namecheap DNS resolves the hostname to Vercel |
 | 3 | Vercel serves the static frontend |
 | 4 | Frontend reads `REACT_APP_API_BASE_URL` and calls `<RAILWAY_BACKEND_URL>` |
 | 5 | Railway backend handles API request |
@@ -165,5 +169,5 @@ AI-related backend features should run on Railway, never in browser-only code wi
 | DNS | `portfolio`, `movietracker`, and apex must not point to the Hetzner VPN IP |
 | Railway | Backend uses Railway-generated domain unless a dedicated API subdomain is intentionally added |
 | Vercel | Custom domains are attached to their respective Vercel projects |
-| CORS | Railway backend must allow `https://movietracker.zadprogramming.com` |
+| CORS | Railway backend must allow the apex, `www`, and old hostname during transition |
 

@@ -1,85 +1,89 @@
-# Movie Tracker — Bug Fix & Feature Implementation Plan
+# Movie Tracker Domain Migration Handoff
 
-## Context
+Last updated: 2026-08-21
 
-The Movie Tracker app has 8 active bugs (2 blockers, 3 high, 3 medium) and 6 planned features documented in the Obsidian vault. This plan addresses all bugs and features in 5 phases, ordered by severity and dependency.
+## Status
 
----
+Migration is in progress. The new domains are attached to Vercel and the repository changes are prepared, but Namecheap DNS and Railway environment changes are still blocked/manual. The old production hostname remains available and has not been redirected.
 
-## Phase 1 — P0 Blockers
+## Work Completed
 
-### BUG-03: Invite Friend Fails on Submit
-**Root cause:** `InviteFriendsModal.tsx:93` hardcodes `http://localhost:5000` instead of using `REACT_APP_API_URL`.
-- **File:** `client/src/component/InviteFriendsModal.tsx`
-- **Fix:** Replace hardcoded URL with `process.env.REACT_APP_API_URL` (use `apiClient` from `../api/apiClient` instead of raw axios)
+- Audited repository, git state, deployment docs, Vercel/Railway linkage, CORS, authentication, email URL generation, invitation URL generation, Socket.IO, metadata, and old-domain references.
+- Confirmed work is on `main`; the branch already contained three local commits ahead of `origin/main` before this migration.
+- Confirmed Vercel project `movie-tracker`, root `client`, production deployment `dpl_GDrdZDZABVKbHYH4sbYKTswbX9iq`, and old-domain alias.
+- Confirmed Railway project `pacific-warmth`, production service `movie-tracker`, and successful deployment `0d6fa0ca-8b09-46a3-bbfc-243d5b3e362b`.
+- Confirmed the deployed frontend API and Socket.IO origin is the Railway production service.
+- Attached `movietrk.com` and `www.movietrk.com` to the existing Vercel project.
+- Configured `www.movietrk.com` as a Vercel-managed 308 redirect to `movietrk.com`.
+- Kept `movietracker.zadprogramming.com` attached without a redirect.
+- Added the apex, `www`, and old origins to the repository CORS fallback shared by Express and Socket.IO.
+- Added canonical and social URL metadata for `https://movietrk.com/`.
+- Updated README, deployment, architecture, DNS, staging, and recovery documentation.
+- Added `.codex-remote-attachments/` to `.gitignore`; no tooling files or secrets are included.
 
-### BUG-08: Chat Box Inconsistent Rendering
-**Root cause:** `chatRoutes.ts:48` only upserts the requesting user into Stream Chat. Other group members don't exist in Stream, so channel creation fails.
-- **File:** `server/routes/chatRoutes.ts` — upsert ALL group members into Stream Chat after line 48
-- **File:** `client/src/component/ChatBox.js` — add error state instead of infinite spinner, normalize member IDs to strings
+## DNS Records Required
 
----
+Namecheap BasicDNS remains authoritative. Replace only the existing parking records at `@` and `www`.
 
-## Phase 2 — P1 Layout & Visual Bugs
+| Type | Host | Value | TTL | Status |
+|---|---|---|---|---|
+| A | `@` | `216.198.79.1` | Automatic | Manual Namecheap change required |
+| A | `@` | `64.29.17.1` | Automatic | Manual Namecheap change required |
+| CNAME | `www` | `f314c7ae274be061.vercel-dns-017.com` | Automatic | Manual Namecheap change required |
 
-### BUG-01: Sign-Up Page Layout Broken
-- **File:** `client/src/pages/Signup.css` — ensure `.wrapper` has explicit `flex-direction: row`
+Observed records to remove or replace:
 
-### BUG-04: Tick Icons Overlapping Search Dropdown
-- **File:** `client/src/component/SearchBar.css` — increase `.search-bar-glass-wrapper` z-index to `50`+
+- Apex parking A record resolving to `162.255.119.27`.
+- `www` CNAME to `parkingpage.namecheap.com`.
+- Any additional Namecheap parking or URL Redirect Record that conflicts at exactly `@` or `www`.
 
-### BUG-05: Remove WatchTimeline from Watchlist Page
-- **File:** `client/src/pages/Watchlist.tsx` — remove `WatchTimeline` import and render block
+Do not change nameservers and do not remove unrelated MX/TXT records.
 
----
+## Environment Variables
 
-## Phase 3 — P2 UX Polish + Small Features
+Names requiring Railway changes:
 
-### BUG-02: Create Group Modal Missing Validation
-- **File:** `client/src/component/GroupNameModal.js` — add error state for empty group name
+- `APP_URL`
+- `CLIENT_URL`
+- `CORS_ORIGINS`
 
-### BUG-07: Group Page Button Alignment
-- **File:** `client/src/pages/GroupPage.css` — fix `.group-member-btn` margin and display
+`VERCEL_PREVIEW_ORIGINS` must be preserved if configured. No Railway environment variable was changed because variable reads return `Unauthorized`; current values could not be safely captured for rollback. Vercel frontend environment values were not changed.
 
-### Feature 1: Password Visibility Toggle
-- **File:** `client/src/pages/Signup.js` — add MUI eye icon toggle on password fields
+Target Railway configuration:
 
-### Feature 2: Terms of Service Page
-- **Create:** `client/src/pages/Terms.tsx`
-- **File:** `client/src/App.tsx` — add `/terms` route
-- **File:** `client/src/pages/Signup.js` — link checkbox to `/terms`
+- `APP_URL` and `CLIENT_URL` use the canonical apex.
+- `CORS_ORIGINS` retains existing localhost/preview entries and includes the apex, `www`, and old production hostname.
 
----
+## Tests Performed
 
-## Phase 4 — Favorite Groups + Navbar Sub-Menu
+| Check | Result |
+|---|---|
+| Server TypeScript build (`npm run build`) | Passed |
+| Client type-check and production build (`npm run build`) | Passed |
+| Client Vitest suite, one thread | Passed: 2 files, 7 tests |
+| Direct CORS assertions | Passed for apex, `www`, old hostname, localhost; unknown origin rejected |
+| Playwright E2E | Not run: `E2E_MONGODB_URI` is absent; safety guard forbids production DB use |
+| Old hostname HTTP/HTTPS | Passed before changes; Vercel returned 200 and valid HSTS response |
+| Railway health and old-origin CORS | Passed; health and Socket.IO polling returned 200 with old-origin CORS |
+| New-origin CORS before deployment | Expected failure confirmed; no allow-origin header yet |
 
-### Feature 4: Favorite Groups (max 2)
-- **Server:** `server/models/user.ts`, `server/routes/groupRoutes.ts` — add favoriteGroups field + endpoints
-- **Client:** `client/src/store/useGroupStore.ts`, `client/src/pages/MyGroupsPage.js` — star icon toggle
+The first Vitest run was attempted concurrently with both builds and its workers timed out before loading tests. The isolated one-thread rerun passed completely.
 
-### Feature 3: Navbar Group Sub-Menu
-- **File:** `client/src/component/VerticalNavbar.tsx` — hover dropdown with 2 favorite groups
-- **File:** `client/src/component/VerticalNavbar.css` — submenu styles
+## Manual Work Still Required
 
----
+1. Enter the exact DNS records above in Namecheap Advanced DNS.
+2. Restore Railway CLI/UI permission, record existing URL/CORS values securely, then update `APP_URL`, `CLIENT_URL`, and `CORS_ORIGINS` and redeploy.
+3. In Google Cloud Console, open Google Auth Platform -> Clients, select the Web application client used by `REACT_APP_GOOGLE_CLIENT_ID`, and add `https://movietrk.com` and `https://www.movietrk.com` under Authorized JavaScript origins. Keep the old origin.
+4. If Google Branding lists authorized domains, add and verify `movietrk.com` without removing `zadprogramming.com` during transition.
+5. After DNS propagation and backend deployment, run the full production checklist: homepage/routes, certificate, registration/login, Google login, API/CORS, Socket.IO, reset and invitation URLs, TMDB/search, chat, desktop/mobile, `www` redirect, and old hostname.
+6. Check Railway and Vercel logs after production verification.
+7. Do not push the migration commit until explicitly approved.
 
-## Phase 5 — Watch History Data + Group Chat in Navbar
+## Rollback Procedure
 
-### Feature 5: Watch History Data Collection (when/where/who)
-- **Server:** `server/models/Groups.ts` — extend movies to subdocuments with metadata
-- **Server:** `server/routes/watchlistRoutes.ts` — accept watch metadata in mark-watched
-- **Client:** `client/src/component/GroupSelectModal.tsx` — multi-step form (when/where/who)
-- **Client:** `client/src/pages/GroupPage.tsx` — render `WatchTimeline` with metadata
-
-### Feature 6: Group Chat in Navbar
-- **File:** `client/src/component/VerticalNavbar.tsx` — chat bubble icon with group dropdown + unread badge
-
----
-
-## Progress Tracker
-
-- [x] Phase 1 — P0 Blockers
-- [x] Phase 2 — P1 Layout Bugs
-- [x] Phase 3 — P2 UX Polish + Small Features
-- [x] Phase 4 — Favorite Groups + Navbar Sub-Menu
-- [x] Phase 5 — Watch History Data + Group Chat in Navbar
+1. Keep `movietracker.zadprogramming.com` attached and unchanged; use it as the known-good user entry point if the new hostname fails.
+2. If backend behavior regresses, restore the securely captured pre-migration values for `APP_URL`, `CLIENT_URL`, and `CORS_ORIGINS`, then redeploy the current Railway artifact.
+3. If only the new hostname fails, leave Railway and the old hostname unchanged and correct Namecheap/Vercel DNS or certificate state.
+4. Vercel can be rolled back to production deployment `dpl_GDrdZDZABVKbHYH4sbYKTswbX9iq` if a later frontend deployment regresses.
+5. Remove the new Vercel domains or restore Namecheap parking records only if the migration is explicitly abandoned.
+6. Do not redirect the old hostname until all critical verification checks pass and logs remain clean through an observation window.

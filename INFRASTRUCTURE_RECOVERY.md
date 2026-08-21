@@ -1,6 +1,6 @@
-# zadprogramming.com Infrastructure Recovery
+# Movie Tracker Infrastructure Recovery
 
-Last reviewed: 2026-07-06
+Last reviewed: 2026-08-21
 
 Related documents:
 
@@ -10,7 +10,7 @@ Related documents:
 
 ## Scope
 
-This guide restores the production infrastructure for `zadprogramming.com` without exposing secrets. It covers Cloudflare DNS, Vercel, Railway, MongoDB Atlas, SSL, domain migration, and production verification.
+This guide restores Movie Tracker without exposing secrets. It covers Namecheap DNS for the canonical domain, the retained Cloudflare transition domain, Vercel, Railway, MongoDB Atlas, SSL, and production verification.
 
 Use placeholders for sensitive values:
 
@@ -26,8 +26,8 @@ Use placeholders for sensitive values:
 
 ## Disaster Recovery Order
 
-1. Confirm domain nameservers point to Cloudflare.
-2. Rebuild Cloudflare DNS records from [DNS.md](./DNS.md).
+1. Confirm `movietrk.com` still uses Namecheap BasicDNS and the transition domain still uses Cloudflare.
+2. Rebuild the canonical records from [DNS.md](./DNS.md) without changing the old hostname.
 3. Confirm Vercel projects exist and custom domains are attached.
 4. Confirm Railway project and backend service exist.
 5. Restore environment variable names and values from the secure secret manager or provider UI.
@@ -53,6 +53,14 @@ Resolve-DnsName movietracker.zadprogramming.com -Type A -Server 1.1.1.1
 Resolve-DnsName vpn.zadprogramming.com -Type A -Server 1.1.1.1
 ```
 
+## Rebuilding Namecheap DNS
+
+1. Keep Namecheap BasicDNS nameservers in place.
+2. Remove only conflicting parking or URL redirect records at `@` and `www`.
+3. Add the two apex A records and the project-specific `www` CNAME from [DNS.md](./DNS.md).
+4. Leave unrelated MX and TXT records unchanged.
+5. Run Vercel domain verification and public DNS checks before testing application flows.
+
 ## Reconnecting Vercel
 
 ### Portfolio
@@ -71,11 +79,12 @@ Resolve-DnsName vpn.zadprogramming.com -Type A -Server 1.1.1.1
 2. Confirm repository connection to `ZadBabaei/movie-tracker`.
 3. Confirm root directory is `client`.
 4. Confirm production branch is `main`.
-5. Confirm custom domain `movietracker.zadprogramming.com` is attached.
-6. Confirm Cloudflare has the required Vercel DNS record.
-7. Confirm Vercel reports the domain as configured.
-8. Confirm SSL certificate is issued and auto-renewing.
-9. Confirm `REACT_APP_API_BASE_URL` and `REACT_APP_SOCKET_URL` point to `<RAILWAY_BACKEND_URL>`.
+5. Confirm `movietrk.com`, `www.movietrk.com`, and `movietracker.zadprogramming.com` are attached.
+6. Confirm Namecheap has the exact Vercel records from [DNS.md](./DNS.md).
+7. Confirm `www.movietrk.com` redirects to `movietrk.com` with status 308.
+8. Confirm Vercel reports both new domains as configured.
+9. Confirm SSL certificates are issued and auto-renewing.
+10. Confirm `REACT_APP_API_BASE_URL` and `REACT_APP_SOCKET_URL` point to `<RAILWAY_BACKEND_URL>`.
 
 ## Reconnecting Railway
 
@@ -174,7 +183,8 @@ Never store the connection string in documentation or source control.
 |---|---|
 | DNS | Public resolver returns expected records |
 | Vercel portfolio | `portfolio.zadprogramming.com` loads |
-| Vercel Movie Tracker | `movietracker.zadprogramming.com` loads |
+| Vercel Movie Tracker | `movietrk.com` loads and the old hostname remains available |
+| Canonical redirect | `www.movietrk.com` returns 308 to `movietrk.com` |
 | Railway API | `<RAILWAY_BACKEND_URL>` health endpoint responds |
 | Socket.IO | Polling or websocket handshake succeeds |
 | MongoDB | Authenticated database-backed route works |
@@ -190,4 +200,12 @@ Never store the connection string in documentation or source control.
 4. Verify after each change.
 5. Never paste secrets into tickets, docs, commits, or PR descriptions.
 6. Do not merge infrastructure documentation or recovery changes without review.
+
+## Domain Migration Rollback
+
+1. Keep the old Vercel domain attachment and Cloudflare DNS unchanged throughout the observation window.
+2. Before changing Railway, record the existing `APP_URL`, `CLIENT_URL`, and `CORS_ORIGINS` values in a secure location outside the repository.
+3. If the new origin breaks API or realtime traffic, restore those three Railway values and redeploy the current known-good backend artifact.
+4. If only the new frontend hostname fails, leave Railway unchanged and direct users to `https://movietracker.zadprogramming.com` while correcting Namecheap/Vercel DNS or certificates.
+5. Do not redirect the old hostname until registration, local and Google login, API/CORS, Socket.IO, password reset, invitations, search/TMDB, chat, mobile/desktop, and logs have all passed on the apex.
 
