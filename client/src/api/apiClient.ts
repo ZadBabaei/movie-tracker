@@ -37,8 +37,20 @@ const AUTH_PAGES = ["/", "/signup"];
 // The server now rejects sessions it has invalidated (password reset, deleted
 // account, rotated token format). Clear the stale credentials and send the
 // person back to sign in rather than leaving the UI in a broken state.
+// The server slides the session forward by handing back a renewed token, so a
+// device in regular use never gets signed out. Swap it in when it arrives.
+const storeRefreshedToken = (headers: unknown) => {
+  const refreshed = (headers as Record<string, string> | undefined)?.["x-refreshed-token"];
+  if (refreshed && localStorage.getItem("token")) {
+    localStorage.setItem("token", refreshed);
+  }
+};
+
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    storeRefreshedToken(response.headers);
+    return response;
+  },
   (error) => {
     const status = error?.response?.status;
     if (status === 401 && localStorage.getItem("token")) {

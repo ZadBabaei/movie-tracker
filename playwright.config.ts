@@ -52,6 +52,9 @@ const webServer = [
       MONGODB_URI: e2eMongoURI,
       E2E_MONGODB_URI: e2eMongoURI,
       JWT_SECRET: process.env.JWT_SECRET || "movie-tracker-e2e-secret",
+      // Renew on every request so the sliding session is testable without
+      // waiting out the real window.
+      JWT_RENEW_AFTER_SECONDS: "1",
       NODE_ENV: "test",
       ALLOWED_ORIGINS: baseURL,
       APP_URL: baseURL,

@@ -37,6 +37,8 @@ export const isOriginAllowed = (origin?: string) => {
 };
 
 export const corsOptions: CorsOptions = {
+  // The browser can only read a renewed session token if the header is exposed.
+  exposedHeaders: ["X-Refreshed-Token"],
   origin(origin, callback) {
     if (isOriginAllowed(origin)) {
       callback(null, true);
