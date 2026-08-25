@@ -1,4 +1,5 @@
 import express, { Request, Response } from "express";
+import { fetchWithTimeout, setCapped } from "../utils/http";
 
 const router = express.Router();
 
@@ -140,6 +141,24 @@ const SUPPORTED_TYPES = new Set<ComingSoonType>([
   "streaming",
 ]);
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+
+// The endpoint is unauthenticated and every cache miss costs TMDb/Watchmode
+// quota, so the key space must be finite: an arbitrary ?region= value used to
+// create a new entry (and a new upstream fan-out) on every request.
+const SUPPORTED_REGIONS = new Set([
+  "US", "CA", "GB", "IE", "AU", "NZ", "DE", "FR", "ES", "IT", "NL", "SE",
+  "NO", "DK", "FI", "PT", "BE", "AT", "CH", "PL", "BR", "MX", "AR", "JP",
+  "KR", "IN", "ZA",
+]);
+const DEFAULT_REGION = "US";
+const resolveRegion = (value: unknown) => {
+  const region = String(value || "").trim().toUpperCase();
+  return SUPPORTED_REGIONS.has(region) ? region : DEFAULT_REGION;
+};
+
+// Hard ceilings so the caches cannot grow without bound.
+const MAX_RESPONSE_CACHE_ENTRIES = 200;
+const MAX_DETAIL_CACHE_ENTRIES = 2000;
 const CACHE_VERSION = "release-event-window-v3-boxoffice";
 const WATCHMODE_BASE_URL = "https://api.watchmode.com/v1";
 const WATCHMODE_ENRICH_LIMIT = 24;
@@ -184,9 +203,9 @@ const buildWatchmodeUrl = (path: string, params: Record<string, string | number 
 };
 
 const fetchTmdb = async <T>(url: string): Promise<T> => {
-  const response = await fetch(url);
+  const response = await fetchWithTimeout(url);
   if (!response.ok) {
-    const body = await response.text();
+    const body = (await response.text()).slice(0, 200);
     throw new Error(`TMDb ${response.status}: ${body}`);
   }
   return response.json() as Promise<T>;
@@ -231,14 +250,14 @@ const logComingSoonDebug = (details: Record<string, unknown>) => {
 };
 
 const fetchWatchmode = async <T>(url: string, apiKey: string): Promise<T> => {
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     headers: {
       "X-API-Key": apiKey,
     },
   });
 
   if (!response.ok) {
-    const body = await response.text();
+    const body = (await response.text()).slice(0, 200);
     throw new Error(`Watchmode ${response.status}: ${body}`);
   }
 
@@ -326,10 +345,12 @@ const getWatchmodeDetails = async (apiKey: string, watchmodeId: number, region: 
     apiKey
   );
 
-  watchmodeDetailsCache.set(watchmodeId, {
-    expiresAt: Date.now() + CACHE_TTL_MS,
-    data: details,
-  });
+  setCapped(
+    watchmodeDetailsCache,
+    watchmodeId,
+    { expiresAt: Date.now() + CACHE_TTL_MS, data: details },
+    MAX_DETAIL_CACHE_ENTRIES
+  );
   return details;
 };
 
@@ -377,7 +398,7 @@ const normalizeWatchmodeMovie = (
     sources,
     sourceNames,
     sourceTypes,
-    webUrl: getPrimaryWebUrl(sources),
+    webUrl: getPrimaryWebUrl(sources) || undefined,
   };
 };
 
@@ -391,10 +412,12 @@ const getTmdbMovieDetails = async (apiKey: string, tmdbId: number) => {
     buildTmdbUrl(`/movie/${tmdbId}`, { api_key: apiKey, language: "en-US" })
   ).catch(() => null);
 
-  tmdbMovieDetailsCache.set(tmdbId, {
-    expiresAt: Date.now() + CACHE_TTL_MS,
-    data,
-  });
+  setCapped(
+    tmdbMovieDetailsCache,
+    tmdbId,
+    { expiresAt: Date.now() + CACHE_TTL_MS, data },
+    MAX_DETAIL_CACHE_ENTRIES
+  );
   return data;
 };
 
@@ -525,10 +548,12 @@ const getTmdbReleaseDates = async (apiKey: string, movieId: number) => {
   const data = await fetchTmdb<TmdbReleaseDatesResponse>(
     buildTmdbUrl(`/movie/${movieId}/release_dates`, { api_key: apiKey })
   );
-  tmdbReleaseDatesCache.set(movieId, {
-    expiresAt: Date.now() + CACHE_TTL_MS,
-    data,
-  });
+  setCapped(
+    tmdbReleaseDatesCache,
+    movieId,
+    { expiresAt: Date.now() + CACHE_TTL_MS, data },
+    MAX_DETAIL_CACHE_ENTRIES
+  );
   return data;
 };
 
@@ -708,10 +733,12 @@ router.get("/:tmdbId/imdb", async (req: Request, res: Response) => {
         }
       : null;
 
-    imdbLookupCache.set(tmdbId, {
-      expiresAt: Date.now() + CACHE_TTL_MS,
-      data: imdbLookup,
-    });
+    setCapped(
+      imdbLookupCache,
+      tmdbId,
+      { expiresAt: Date.now() + CACHE_TTL_MS, data: imdbLookup },
+      MAX_DETAIL_CACHE_ENTRIES
+    );
 
     if (!imdbLookup) {
       res.status(404).json({ msg: "IMDb page is not available for this movie yet." });
@@ -728,9 +755,7 @@ router.get("/:tmdbId/imdb", async (req: Request, res: Response) => {
 });
 
 router.get("/", async (req: Request, res: Response) => {
-  const region = String(req.query.region || process.env.WATCHMODE_REGION || "US")
-    .trim()
-    .toUpperCase() || "US";
+  const region = resolveRegion(req.query.region || process.env.WATCHMODE_REGION);
   const parsedDays = Number(req.query.days || 30);
   const days = Number.isFinite(parsedDays)
     ? Math.min(Math.max(Math.round(parsedDays), 1), 90)
@@ -757,10 +782,12 @@ router.get("/", async (req: Request, res: Response) => {
         await discoverMovies(tmdbApiKey, region, days, type),
         days
       );
-      cache.set(cacheKey, {
-        expiresAt: Date.now() + CACHE_TTL_MS,
-        data: movies,
-      });
+      setCapped(
+        cache,
+        cacheKey,
+        { expiresAt: Date.now() + CACHE_TTL_MS, data: movies },
+        MAX_RESPONSE_CACHE_ENTRIES
+      );
       res.json(movies);
       return;
     }
@@ -793,10 +820,12 @@ router.get("/", async (req: Request, res: Response) => {
       }
 
       const movies = filterComingSoonReleaseWindow(streamingMovies, days);
-      cache.set(cacheKey, {
-        expiresAt: Date.now() + CACHE_TTL_MS,
-        data: movies,
-      });
+      setCapped(
+        cache,
+        cacheKey,
+        { expiresAt: Date.now() + CACHE_TTL_MS, data: movies },
+        MAX_RESPONSE_CACHE_ENTRIES
+      );
       res.json(movies);
       return;
     }
@@ -835,10 +864,12 @@ router.get("/", async (req: Request, res: Response) => {
       normalizedCount: movies.length,
       filteredCount: movies.length,
     });
-    cache.set(cacheKey, {
-      expiresAt: Date.now() + CACHE_TTL_MS,
-      data: movies,
-    });
+    setCapped(
+      cache,
+      cacheKey,
+      { expiresAt: Date.now() + CACHE_TTL_MS, data: movies },
+      MAX_RESPONSE_CACHE_ENTRIES
+    );
     res.json(movies);
   } catch (error) {
     console.error("Failed to fetch coming soon movies:", error);
