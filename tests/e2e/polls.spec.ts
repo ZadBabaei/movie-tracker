@@ -61,6 +61,10 @@ test.describe("poll results", () => {
 
     await expect(page.getByTestId("poll-results-modal")).toBeVisible();
     await expect(page.getByText("Tonight's movie has been chosen")).toBeVisible();
-    await expect(page.getByText(pollMovies[0].title)).toBeVisible();
+    // The winner title also appears in the history card and the rank list, so
+    // target the results heading specifically rather than any matching text.
+    await expect(
+      page.getByTestId("poll-results-modal").getByRole("heading", { name: pollMovies[0].title })
+    ).toBeVisible();
   });
 });

@@ -41,7 +41,9 @@ const webServer = [
     cwd: "./server",
     url: `${apiURL}/api/health`,
     reuseExistingServer: true,
-    timeout: 30_000,
+    // ts-node compiles the backend on first boot; 30s is not enough on a cold
+    // CI runner.
+    timeout: 120_000,
     stdout: "pipe" as const,
     stderr: "pipe" as const,
     env: {
