@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import OpenAI from "openai";
 import { authenticate } from "../middleware/authMiddleware";
+import { assistantLimiter } from "../middleware/rateLimits";
 import User from "../models/user";
 import Group from "../models/Groups";
 
@@ -19,7 +20,7 @@ interface ChatMessage {
 }
 
 // POST /api/assistant/chat — send message to AI assistant
-router.post("/chat", authenticate, async (req: Request, res: Response) => {
+router.post("/chat", authenticate, assistantLimiter, async (req: Request, res: Response) => {
   try {
     const { message, history } = req.body as {
       message: string;

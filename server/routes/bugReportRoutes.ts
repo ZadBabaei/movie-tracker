@@ -3,6 +3,7 @@ import BugReport, { IBugReport } from "../models/BugReport";
 import User from "../models/user";
 import { authenticate } from "../middleware/authMiddleware";
 import { sendBugReportEmail } from "../utils/emailService";
+import { fetchWithTimeout } from "../utils/http";
 
 const router = express.Router();
 
@@ -63,7 +64,7 @@ const createGitHubIssue = async (bugReport: IBugReport) => {
     throw new Error("GitHub issue creation is enabled but GitHub env vars are incomplete.");
   }
 
-  const postIssue = async (includeLabels: boolean) => fetch(
+  const postIssue = async (includeLabels: boolean) => fetchWithTimeout(
     `https://api.github.com/repos/${encodeURIComponent(GITHUB_REPO_OWNER)}/${encodeURIComponent(GITHUB_REPO_NAME)}/issues`,
     {
       method: "POST",

@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import http from "http";
@@ -21,6 +22,8 @@ import bugReportRoutes from "./routes/bugReportRoutes";
 import comingSoonRoutes from "./routes/comingSoonRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
 import { corsOptions } from "./utils/corsConfig";
+import { analyticsLimiter, apiLimiter, publicDataLimiter } from "./middleware/rateLimits";
+import { securityEventLogger } from "./middleware/securityLog";
 import { analyticsResponseMiddleware } from "./utils/analytics";
 
 const app = express();
@@ -55,8 +58,24 @@ const getMongoUri = () => {
 
 initIO(httpServer);
 
+// Railway terminates TLS in front of the app; without this every request looks
+// like it comes from the proxy and rate limiting would bucket all users together.
+app.set("trust proxy", 1);
+
+app.use(
+  helmet({
+    // Browsers fetch this API cross-origin from the Vercel frontend.
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
 app.use(cors(corsOptions));
-app.use(express.json({ limit: "3mb" }));
+
+// Only bug reports carry a screenshot payload; everything else gets a small body.
+app.use("/api/bug-reports", express.json({ limit: "3mb" }));
+app.use(express.json({ limit: "100kb" }));
+
+app.use(securityEventLogger);
+app.use(apiLimiter);
 app.use(analyticsResponseMiddleware);
 
 app.get("/api/health", (_req, res) => {
@@ -74,23 +93,49 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/assistant", assistantRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/bug-reports", bugReportRoutes);
-app.use("/api/coming-soon", comingSoonRoutes);
-app.use("/api/analytics", analyticsRoutes);
-
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error("Global error handler:", err);
-  res.status(500).json({
-    msg: "Server error",
-    error: process.env.NODE_ENV === "development" ? err.message : "Internal server error",
-  });
-});
+app.use("/api/coming-soon", publicDataLimiter, comingSoonRoutes);
+app.use("/api/analytics", analyticsLimiter, analyticsRoutes);
 
 app.get("/", (_req, res) => {
   res.send("Hello from Movie Tracker Backend!");
 });
 
+// Registered after every route so it sees their errors. Client-side failures
+// (413 from the body limit, multer rejections) keep their real status and a
+// safe message; server-side failures never leak internals.
+app.use(
+  (
+    err: Error & { status?: number; statusCode?: number },
+    _req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction
+  ) => {
+    const status = err.status || err.statusCode || 500;
+
+    if (status >= 500) {
+      console.error("Global error handler:", err);
+    }
+
+    const msg =
+      status === 413
+        ? "Request body is too large."
+        : status >= 500
+          ? "Server error"
+          : err.message || "Request failed";
+
+    res.status(status).json({
+      msg,
+      ...(process.env.NODE_ENV === "development" ? { error: err.message } : {}),
+    });
+  }
+);
+
 mongoose
-  .connect(getMongoUri() as string)
+  .connect(getMongoUri() as string, {
+    maxPoolSize: Number(process.env.MONGO_MAX_POOL_SIZE) || 20,
+    serverSelectionTimeoutMS: 10_000,
+    socketTimeoutMS: 45_000,
+  })
   .then(async () => {
     console.log("MongoDB Connected to:", mongoose.connection.db!.databaseName);
     const collections = await mongoose.connection.db!.listCollections().toArray();
