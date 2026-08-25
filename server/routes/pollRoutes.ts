@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
 import { authenticate } from "../middleware/authMiddleware";
+import { loadGroupForMember, requireGroupMember } from "../middleware/groupAccess";
 import Poll from "../models/Poll";
 import Group from "../models/Groups";
 import { getIO } from "../socket";
@@ -308,7 +309,7 @@ router.get("/active-for-user", authenticate, async (req: Request, res: Response)
   }
 });
 
-router.post("/create", authenticate, async (req: Request, res: Response) => {
+router.post("/create", authenticate, requireGroupMember(), async (req: Request, res: Response) => {
   try {
     const { groupId, movies, name, deadline } = req.body;
     const userId = req.user!.id;
@@ -361,7 +362,7 @@ router.post("/create", authenticate, async (req: Request, res: Response) => {
   }
 });
 
-router.get("/group/:groupId/active", authenticate, async (req: Request, res: Response) => {
+router.get("/group/:groupId/active", authenticate, requireGroupMember(), async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
     const poll = await Poll.findOne({
@@ -405,6 +406,7 @@ router.post("/vote", authenticate, async (req: Request, res: Response) => {
       res.status(404).json({ msg: "Poll not found" });
       return;
     }
+    if (!(await loadGroupForMember(res, poll.groupId, userId))) return;
     if (poll.status !== "active") {
       res.status(400).json({ msg: "Poll is not active" });
       return;
@@ -459,6 +461,7 @@ router.post("/:pollId/cancel", authenticate, async (req: Request, res: Response)
       res.status(404).json({ msg: "Poll not found" });
       return;
     }
+    if (!(await loadGroupForMember(res, poll.groupId, userId))) return;
     const isPollCreator = poll.creator.toString() === userId;
     if (!isPollCreator) {
       res.status(403).json({ msg: "Only poll creator can cancel the poll" });
@@ -492,6 +495,7 @@ router.post("/:pollId/complete", authenticate, async (req: Request, res: Respons
       res.status(404).json({ msg: "Poll not found" });
       return;
     }
+    if (!(await loadGroupForMember(res, poll.groupId, userId))) return;
     if (poll.creator.toString() !== userId) {
       res.status(403).json({ msg: "Only poll creator can complete the poll" });
       return;
@@ -517,6 +521,7 @@ router.post("/:pollId/add-movie", authenticate, async (req: Request, res: Respon
       res.status(404).json({ msg: "Poll not found" });
       return;
     }
+    if (!(await loadGroupForMember(res, poll.groupId, req.user!.id))) return;
 
     const normalizedMovie = normalizeMovie(movie);
     const alreadyExists = poll.movies.some((m) => m.tmdbId === normalizedMovie.tmdbId);
@@ -542,6 +547,7 @@ router.get("/:pollId/results", authenticate, async (req: Request, res: Response)
       res.status(404).json({ msg: "Poll not found" });
       return;
     }
+    if (!(await loadGroupForMember(res, poll.groupId, req.user!.id))) return;
 
     const isRunoffResult = poll.result?.mode === "runoff" || poll.result?.mode === "randomTieBreak" || (poll.round || 1) > 1;
     const scoreMap = poll.result?.movies?.length
@@ -581,7 +587,7 @@ router.get("/:pollId/results", authenticate, async (req: Request, res: Response)
   }
 });
 
-router.get("/group/:groupId/history", authenticate, async (req: Request, res: Response) => {
+router.get("/group/:groupId/history", authenticate, requireGroupMember(), async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
     // Display window only — older polls stay in the database but are not listed.
@@ -593,6 +599,8 @@ router.get("/group/:groupId/history", authenticate, async (req: Request, res: Re
       status: { $in: ["active", "completed", "cancelled"] },
       createdAt: { $gte: windowStart },
     })
+      .sort({ createdAt: -1 })
+      .limit(100)
       .populate("creator", "name")
       .lean();
 
@@ -643,6 +651,7 @@ router.get("/:pollId", authenticate, async (req: Request, res: Response) => {
       res.status(404).json({ msg: "Poll not found" });
       return;
     }
+    if (!(await loadGroupForMember(res, poll.groupId, userId))) return;
 
     // Auto-close an active poll that has passed its deadline.
     if (poll.status === "active" && poll.expiresAt && new Date(poll.expiresAt) <= new Date()) {
@@ -666,6 +675,7 @@ router.delete("/:pollId", authenticate, async (req: Request, res: Response) => {
       res.status(404).json({ msg: "Poll not found" });
       return;
     }
+    if (!(await loadGroupForMember(res, poll.groupId, userId))) return;
 
     const group = await Group.findById(poll.groupId);
     const isPollCreator = poll.creator.toString() === userId;

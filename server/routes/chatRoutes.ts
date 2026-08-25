@@ -1,13 +1,20 @@
 import express, { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import net from "net";
+import dns from "dns";
 import { StreamChat } from "stream-chat";
 import User from "../models/user";
 import Group from "../models/Groups";
+import { loadGroupForMember } from "../middleware/groupAccess";
+import { setCapped } from "../utils/http";
+import { readBearerToken, verifyAuthToken } from "../utils/authToken";
 import { getDefaultAvatarUrl } from "../utils/avatar";
 
 const router = express.Router();
-const linkPreviewCache = new Map<string, LinkPreview>();
+const linkPreviewCache = new Map<string, { expiresAt: number; value: LinkPreview }>();
+const LINK_PREVIEW_CACHE_TTL_MS = 60 * 60 * 1000;
+const MAX_LINK_PREVIEW_CACHE_ENTRIES = 500;
+const MAX_PREVIEW_REDIRECTS = 3;
 
 interface LinkPreview {
   url: string;
@@ -32,15 +39,16 @@ const getStreamCredentials = () => {
 };
 
 const decodeAuthHeader = (authHeader?: string) => {
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  const token = readBearerToken(authHeader);
+  if (!token) {
     throw new Error("Unauthorized: No token provided");
   }
 
-  const token = authHeader.split(" ")[1];
-  return jwt.verify(token, process.env.JWT_SECRET as string) as {
-    id: string;
-    name: string;
-  };
+  try {
+    return verifyAuthToken(token);
+  } catch {
+    throw new Error("Unauthorized: Invalid token");
+  }
 };
 
 const isPrivateHostname = (hostname: string) => {
@@ -72,6 +80,23 @@ const isPrivateHostname = (hostname: string) => {
   }
 
   return false;
+};
+
+// A hostname can pass the literal check above and still resolve to a private
+// address, so resolve it and check where it actually points.
+const resolvesToPublicAddress = async (hostname: string) => {
+  if (isPrivateHostname(hostname)) return false;
+  if (net.isIP(hostname)) return true;
+
+  try {
+    const addresses = await dns.promises.lookup(hostname, { all: true });
+    return (
+      addresses.length > 0 &&
+      addresses.every(({ address }) => !isPrivateHostname(address))
+    );
+  } catch {
+    return false;
+  }
 };
 
 const sanitizePreviewUrl = (rawUrl: unknown) => {
@@ -147,22 +172,54 @@ const buildAbsoluteUrl = (value: string, baseUrl: string) => {
   }
 };
 
+// Redirects are followed by hand so every hop is re-validated. With
+// redirect: "follow" a public URL could bounce the request to 169.254.169.254
+// or any other internal address.
+const fetchPreviewResponse = async (startUrl: string, signal: AbortSignal) => {
+  let currentUrl = startUrl;
+
+  for (let hop = 0; hop <= MAX_PREVIEW_REDIRECTS; hop += 1) {
+    if (!(await resolvesToPublicAddress(new URL(currentUrl).hostname))) {
+      throw new Error("Preview target resolves to a private address");
+    }
+
+    const response = await fetch(currentUrl, {
+      headers: {
+        "User-Agent": "MovieTrackerBot/1.0",
+        Accept: "text/html,application/xhtml+xml",
+      },
+      redirect: "manual",
+      signal,
+    });
+
+    if (response.status < 300 || response.status >= 400) {
+      return { response, finalUrl: currentUrl };
+    }
+
+    const location = response.headers.get("location");
+    const nextUrl = location
+      ? sanitizePreviewUrl(new URL(location, currentUrl).toString())
+      : null;
+    if (!nextUrl) {
+      throw new Error("Preview redirect target is not allowed");
+    }
+    currentUrl = nextUrl;
+  }
+
+  throw new Error("Too many redirects while building the preview");
+};
+
 const fetchLinkPreview = async (url: string): Promise<LinkPreview> => {
   const cachedPreview = linkPreviewCache.get(url);
-  if (cachedPreview) return cachedPreview;
+  if (cachedPreview && cachedPreview.expiresAt > Date.now()) {
+    return cachedPreview.value;
+  }
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), LINK_PREVIEW_TIMEOUT_MS);
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "MovieTrackerBot/1.0",
-        Accept: "text/html,application/xhtml+xml",
-      },
-      redirect: "follow",
-      signal: controller.signal,
-    });
+    const { response, finalUrl } = await fetchPreviewResponse(url, controller.signal);
 
     const contentType = response.headers.get("content-type") || "";
     if (!response.ok || !contentType.toLowerCase().includes("text/html")) {
@@ -170,7 +227,6 @@ const fetchLinkPreview = async (url: string): Promise<LinkPreview> => {
     }
 
     const html = (await response.text()).slice(0, MAX_PREVIEW_HTML_BYTES);
-    const finalUrl = sanitizePreviewUrl(response.url) || url;
     const domain = new URL(finalUrl).hostname.replace(/^www\./, "");
     const title = getTitle(html) || domain;
     const description =
@@ -186,7 +242,12 @@ const fetchLinkPreview = async (url: string): Promise<LinkPreview> => {
       domain,
     };
 
-    linkPreviewCache.set(url, preview);
+    setCapped(
+      linkPreviewCache,
+      url,
+      { expiresAt: Date.now() + LINK_PREVIEW_CACHE_TTL_MS, value: preview },
+      MAX_LINK_PREVIEW_CACHE_ENTRIES
+    );
     return preview;
   } finally {
     clearTimeout(timeout);
@@ -205,6 +266,8 @@ router.post("/token", async (req: Request, res: Response) => {
       res.status(400).json({ msg: "Group ID is required." });
       return;
     }
+
+    if (!(await loadGroupForMember(res, groupId, userId))) return;
 
     const group = await Group.findById(groupId);
     if (!group) {
@@ -247,8 +310,12 @@ router.post("/token", async (req: Request, res: Response) => {
       groupMembers,
     });
   } catch (error) {
+    if ((error as Error).message?.startsWith("Unauthorized")) {
+      res.status(401).json({ msg: "Unauthorized" });
+      return;
+    }
     console.error("Error in /api/chat/token:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
@@ -288,8 +355,12 @@ router.get("/unread-info", async (req: Request, res: Response) => {
       name: decoded.name,
     });
   } catch (error) {
+    if ((error as Error).message?.startsWith("Unauthorized")) {
+      res.status(401).json({ msg: "Unauthorized" });
+      return;
+    }
     console.error("Error in /api/chat/unread-info:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+    res.status(500).json({ msg: "Server error" });
   }
 });
 

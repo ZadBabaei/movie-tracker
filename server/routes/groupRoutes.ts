@@ -8,6 +8,9 @@ import Movie from "../models/movie";
 import User from "../models/user";
 import InvitationLink from "../models/InvitationLink";
 import { authenticate } from "../middleware/authMiddleware";
+import { isGroupMember } from "../middleware/groupAccess";
+import { inviteLimiter } from "../middleware/rateLimits";
+import { verifyAuthToken } from "../utils/authToken";
 import { getIO } from "../socket";
 import { sendGroupInviteEmail } from "../utils/emailService";
 import { getDefaultAvatarUrl } from "../utils/avatar";
@@ -152,12 +155,22 @@ router.get("/mine", authenticate, async (req: Request, res: Response) => {
 
 router.post("/:id/leave", authenticate, async (req: Request, res: Response) => {
   try {
-    const groupId = req.params.id;
+    const groupId = String(req.params.id || "");
     const userId = req.user!.id;
+
+    if (!mongoose.Types.ObjectId.isValid(groupId)) {
+      res.status(400).json({ msg: "Invalid group id." });
+      return;
+    }
 
     const group = await Group.findById(groupId);
     if (!group) {
       res.status(404).json({ msg: "Group not found." });
+      return;
+    }
+
+    if (!isGroupMember(group, userId)) {
+      res.status(403).json({ msg: "You are not a member of this group." });
       return;
     }
 
@@ -198,7 +211,7 @@ router.post("/create", authenticate, async (req: Request, res: Response) => {
     res.json({ msg: "Group created", group });
   } catch (error) {
     console.error("Error creating group:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
@@ -212,21 +225,51 @@ router.get("/slug/:slug", authenticate, async (req: Request, res: Response) => {
       return;
     }
 
+    if (!isGroupMember(group, req.user!.id)) {
+      res.status(403).json({ msg: "You are not a member of this group." });
+      return;
+    }
+
     res.json({ _id: group._id, slug: group.slug, name: group.name });
   } catch (error) {
     console.error("Error fetching group by slug:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
 router.post("/invite", authenticate, async (req: Request, res: Response) => {
   try {
-    const { groupId, members, inviterName } = req.body;
+    const { groupId, members } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(String(groupId || ""))) {
+      res.status(400).json({ msg: "Invalid group id." });
+      return;
+    }
+
+    if (!Array.isArray(members) || members.length === 0) {
+      res.status(400).json({ msg: "members must be a non-empty array of user ids." });
+      return;
+    }
+
+    if (members.some((memberId: unknown) => !mongoose.Types.ObjectId.isValid(String(memberId)))) {
+      res.status(400).json({ msg: "members contains an invalid user id." });
+      return;
+    }
+
     const group = await Group.findById(groupId);
     if (!group) {
       res.status(404).json({ msg: "Group not found." });
       return;
     }
+
+    if (!isGroupMember(group, req.user!.id)) {
+      res.status(403).json({ msg: "Only group members can invite people." });
+      return;
+    }
+
+    // Never trust a client-supplied inviter name — it is shown to the invitee.
+    const inviter = await User.findById(req.user!.id).select("name").lean();
+    const inviterName = inviter?.name || "Someone";
 
     if (!group.pendingInvitations) group.pendingInvitations = [];
 
@@ -253,7 +296,7 @@ router.post("/invite", authenticate, async (req: Request, res: Response) => {
     res.status(200).json({ msg: "Invitations sent successfully!", group });
   } catch (error) {
     console.error("Error sending invitations:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
@@ -262,7 +305,11 @@ router.post("/respond", authenticate, async (req: Request, res: Response) => {
     const userId = new mongoose.Types.ObjectId(req.user!.id);
     const { groupId, response } = req.body;
 
-    if (!groupId || !["accept", "decline"].includes(response)) {
+    if (
+      !groupId ||
+      !mongoose.Types.ObjectId.isValid(String(groupId)) ||
+      !["accept", "decline"].includes(response)
+    ) {
       res.status(400).json({ msg: "Invalid request." });
       return;
     }
@@ -274,6 +321,15 @@ router.post("/respond", authenticate, async (req: Request, res: Response) => {
     }
 
     if (!Array.isArray(group.pendingInvitations)) group.pendingInvitations = [];
+
+    // Without this check /respond is itself a self-join into any group.
+    const hasPendingInvitation = group.pendingInvitations.some(
+      (invitation) => invitation.userId?.toString() === userId.toString()
+    );
+    if (!hasPendingInvitation) {
+      res.status(403).json({ msg: "You do not have a pending invitation to this group." });
+      return;
+    }
 
     if (response === "accept") {
       await Group.updateOne(
@@ -296,7 +352,7 @@ router.post("/respond", authenticate, async (req: Request, res: Response) => {
     res.json({ msg: `You have ${response}ed the invitation.`, group: updatedGroup || group });
   } catch (error) {
     console.error("Error responding to invitation:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
@@ -311,9 +367,14 @@ router.get("/:id", authenticate, async (req: Request, res: Response) => {
       return;
     }
 
+    if (!isGroupMember(rawGroup, req.user!.id)) {
+      res.status(403).json({ msg: "You are not a member of this group." });
+      return;
+    }
+
     let needsSave = false;
     const seenMembers = new Set<string>();
-    rawGroup.members = rawGroup.members.filter((memberId) => {
+    rawGroup.members = rawGroup.members.filter((memberId: mongoose.Types.ObjectId) => {
       const id = memberId.toString();
       if (seenMembers.has(id)) {
         needsSave = true;
@@ -364,7 +425,7 @@ router.get("/:id", authenticate, async (req: Request, res: Response) => {
     res.json(withRatingSummaries({ ...group!.toObject(), hasActivePoll }, req.user!.id));
   } catch (error) {
     console.error("Error fetching group:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
@@ -461,7 +522,7 @@ router.post("/:id/add-movie", authenticate, async (req: Request, res: Response) 
     res.json({ msg: "Movie added", movie: existingMovie });
   } catch (error) {
     console.error("Error adding movie:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
@@ -539,7 +600,7 @@ router.post("/:groupId/history/:historyItemId/rating", authenticate, async (req:
     });
   } catch (error) {
     console.error("Error rating history item:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
@@ -614,7 +675,7 @@ router.patch("/:groupId/history/:historyItemId", authenticate, async (req: Reque
     res.json({ msg: "History item updated", historyItem: updatedHistoryItem });
   } catch (error) {
     console.error("Error updating history item:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
@@ -657,7 +718,7 @@ router.delete("/:groupId/history/:historyItemId", authenticate, async (req: Requ
     res.json({ msg: "History item deleted", historyItemId, movies: group.movies });
   } catch (error) {
     console.error("Error deleting history item:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
@@ -703,7 +764,7 @@ router.delete("/:groupId/remove-movie/:movieId", authenticate, async (req: Reque
     res.json({ msg: "Movie removed from group" });
   } catch (error) {
     console.error("Error removing movie:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
@@ -741,7 +802,7 @@ router.delete("/:id/remove-member/:memberId", authenticate, async (req: Request,
     res.json({ msg: "Member removed successfully." });
   } catch (error) {
     console.error("Error removing member:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
@@ -774,7 +835,7 @@ router.post("/:id/invite-link", authenticate, async (req: Request, res: Response
     });
   } catch (error) {
     console.error("Error generating invite link:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
@@ -794,7 +855,7 @@ router.get("/join-by-link/:token", async (req: Request, res: Response) => {
     res.json({ groupId: group._id, groupSlug: group.slug, groupName: group.name, valid: true });
   } catch (error) {
     console.error("Error validating invite link:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
@@ -822,7 +883,7 @@ router.post("/join-by-link/:token", async (req: Request, res: Response) => {
     const token = authHeader.split(" ")[1];
     let decoded: any;
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET as string);
+      decoded = verifyAuthToken(token);
     } catch {
       res.status(401).json({ msg: "auth required", groupId: group._id, groupSlug: group.slug, groupName: group.name });
       return;
@@ -857,17 +918,22 @@ router.post("/join-by-link/:token", async (req: Request, res: Response) => {
     res.json({ joined, alreadyMember: !joined, groupId: hydratedGroup._id, groupSlug: hydratedGroup.slug });
   } catch (error) {
     console.error("Error joining by link:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
-router.post("/invite-by-email", authenticate, async (req: Request, res: Response) => {
+router.post("/invite-by-email", authenticate, inviteLimiter, async (req: Request, res: Response) => {
   try {
-    const { groupId, inviterName } = req.body;
+    const { groupId } = req.body;
     const email = String(req.body?.email || "").trim().toLowerCase();
 
-    if (!email) {
-      res.status(400).json({ msg: "Email is required." });
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      res.status(400).json({ msg: "A valid email is required." });
+      return;
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(String(groupId || ""))) {
+      res.status(400).json({ msg: "Invalid group id." });
       return;
     }
 
@@ -876,6 +942,15 @@ router.post("/invite-by-email", authenticate, async (req: Request, res: Response
       res.status(404).json({ msg: "Group not found" });
       return;
     }
+
+    if (!isGroupMember(group, req.user!.id)) {
+      res.status(403).json({ msg: "Only group members can invite people." });
+      return;
+    }
+
+    // Never trust a client-supplied inviter name — it is shown to the invitee.
+    const inviter = await User.findById(req.user!.id).select("name").lean();
+    const inviterName = inviter?.name || "Someone";
 
     const existingUser = await User.findOne({ email });
 
@@ -927,7 +1002,7 @@ router.post("/invite-by-email", authenticate, async (req: Request, res: Response
     }
   } catch (error) {
     console.error("Error inviting by email:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
@@ -944,7 +1019,7 @@ router.get("/favorites/list", authenticate, async (req: Request, res: Response) 
     res.json(favorites);
   } catch (error) {
     console.error("Error fetching favorite groups:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
@@ -958,7 +1033,11 @@ router.post("/favorite/:groupId", authenticate, async (req: Request, res: Respon
 
     if (!user.favoriteGroups) user.favoriteGroups = [] as any;
 
-    const groupId = req.params.groupId;
+    const groupId = String(req.params.groupId || "");
+    if (!mongoose.Types.ObjectId.isValid(groupId)) {
+      res.status(400).json({ msg: "Invalid group id." });
+      return;
+    }
     const index = user.favoriteGroups.findIndex((id) => id.toString() === groupId);
 
     if (index > -1) {
@@ -978,7 +1057,7 @@ router.post("/favorite/:groupId", authenticate, async (req: Request, res: Respon
     }
   } catch (error) {
     console.error("Error toggling favorite group:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
