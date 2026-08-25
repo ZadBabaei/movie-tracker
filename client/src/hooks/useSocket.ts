@@ -11,7 +11,12 @@ let sharedSocket: Socket | null = null;
 
 const getSocket = (): Socket => {
   if (!sharedSocket) {
-    sharedSocket = io(SOCKET_URL, { transports: ["websocket", "polling"] });
+    sharedSocket = io(SOCKET_URL, {
+      transports: ["websocket", "polling"],
+      // Read as a callback so a reconnect picks up the current token rather
+      // than one captured when the socket was first created.
+      auth: (cb) => cb({ token: localStorage.getItem("token") || "" }),
+    });
   }
   return sharedSocket;
 };
