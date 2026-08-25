@@ -1,6 +1,5 @@
 import express, { Request, Response } from "express";
 import mongoose from "mongoose";
-import jwt from "jsonwebtoken";
 import { StreamChat } from "stream-chat";
 import Group from "../models/Groups";
 import Movie from "../models/movie";

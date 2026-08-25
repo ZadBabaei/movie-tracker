@@ -1,5 +1,4 @@
 import express, { Request, Response } from "express";
-import jwt from "jsonwebtoken";
 import net from "net";
 import dns from "dns";
 import { StreamChat } from "stream-chat";
