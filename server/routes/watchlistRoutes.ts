@@ -27,18 +27,20 @@ router.get("/", authenticate, async (req: Request, res: Response) => {
 router.post("/", authenticate, async (req: Request, res: Response) => {
   try {
     const { movie } = req.body;
-    if (!movie || !movie.imdbID || !movie.title) {
+    const imdbID = String(movie?.imdbID || "").trim();
+    const title = String(movie?.title || "").trim();
+    if (!imdbID || !title || imdbID.length > 64 || title.length > 300) {
       res.status(400).json({ msg: "Invalid movie data" });
       return;
     }
 
-    let existingMovie = await Movie.findOne({ imdbID: movie.imdbID });
+    let existingMovie = await Movie.findOne({ imdbID });
     if (!existingMovie) {
       existingMovie = new Movie({
-        title: movie.title,
-        imdbID: movie.imdbID,
+        title,
+        imdbID,
         poster: movie.poster_path,
-        vote_average: movie.vote_average || 0,
+        vote_average: Number(movie.vote_average) || 0,
         addedBy: req.user!.id,
       });
       await existingMovie.save();
@@ -65,6 +67,11 @@ router.post("/", authenticate, async (req: Request, res: Response) => {
 // DELETE /api/watchlist/:movieId — remove movie from watchlist
 router.delete("/:movieId", authenticate, async (req: Request, res: Response) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(String(req.params.movieId))) {
+      res.status(400).json({ msg: "Invalid movie id." });
+      return;
+    }
+
     const user = await User.findById(req.user!.id);
     if (!user) {
       res.status(404).json({ msg: "User not found" });
@@ -450,13 +457,23 @@ router.get("/favorites/group/:groupId", authenticate, async (req: Request, res: 
 // POST /api/watchlist/favorites/:movieId — toggle favorite
 router.post("/favorites/:movieId", authenticate, async (req: Request, res: Response) => {
   try {
+    const movieId = String(req.params.movieId || "");
+    if (!mongoose.Types.ObjectId.isValid(movieId)) {
+      res.status(400).json({ msg: "Invalid movie id." });
+      return;
+    }
+
+    if (!(await Movie.exists({ _id: movieId }))) {
+      res.status(404).json({ msg: "Movie not found" });
+      return;
+    }
+
     const user = await User.findById(req.user!.id);
     if (!user) {
       res.status(404).json({ msg: "User not found" });
       return;
     }
 
-    const movieId = req.params.movieId;
     const isFav = user.favorites.some((id) => id.toString() === movieId);
 
     if (isFav) {

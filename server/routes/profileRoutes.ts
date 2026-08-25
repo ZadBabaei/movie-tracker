@@ -8,8 +8,10 @@ import Movie from "../models/movie";
 import Poll from "../models/Poll";
 import cloudinary from "../utils/cloudinary";
 import { hasAdminAccess } from "../middleware/adminMiddleware";
+import { uploadLimiter } from "../middleware/rateLimits";
 
 const router = express.Router();
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type ActivityType = "watchlist" | "group" | "poll-vote" | "poll-created" | "profile";
 
@@ -188,10 +190,45 @@ const upload = multer({
   },
 });
 
+// The multer fileFilter only sees the client-supplied Content-Type, so the
+// bytes are checked here before anything is forwarded to Cloudinary.
+const looksLikeImage = (buffer: Buffer) => {
+  if (buffer.length < 12) return false;
+  const ascii = (start: number, end: number) => buffer.subarray(start, end).toString("ascii");
+
+  const isJpeg = buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+  const isPng =
+    buffer[0] === 0x89 && ascii(1, 4) === "PNG" && buffer[4] === 0x0d && buffer[5] === 0x0a;
+  const isGif = ascii(0, 4) === "GIF8";
+  const isWebp = ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP";
+
+  return isJpeg || isPng || isGif || isWebp;
+};
+
+// multer reports oversize/wrong-type uploads as errors; translate them into a
+// 400 rather than letting them surface as a generic server error.
+const uploadAvatar = (req: Request, res: Response, next: express.NextFunction) =>
+  upload.single("avatar")(req, res, (err: unknown) => {
+    if (!err) {
+      next();
+      return;
+    }
+
+    const code = (err as { code?: string }).code;
+    res.status(400).json({
+      msg:
+        code === "LIMIT_FILE_SIZE"
+          ? "Image must be smaller than 5MB."
+          : "Only image files are allowed.",
+    });
+  });
+
 // GET /api/profile — get current user profile
 router.get("/", authenticate, async (req: Request, res: Response) => {
   try {
-    const user = await User.findById(req.user!.id).select("-password");
+    const user = await User.findById(req.user!.id).select(
+      "-password -passwordResetToken -passwordResetExpires -__v"
+    );
     if (!user) {
       res.status(404).json({ msg: "User not found" });
       return;
@@ -212,13 +249,25 @@ router.put("/", authenticate, async (req: Request, res: Response) => {
     const updateData: any = {};
     if (name?.trim()) updateData.name = name.trim();
     if (email?.trim()) {
-      // Check if email is taken by another user
-      const existing = await User.findOne({ email: email.trim(), _id: { $ne: userId } });
+      // Every auth lookup treats email case-insensitively, so the uniqueness
+      // check has to as well — otherwise two accounts can share an address and
+      // sign-in resolves to whichever document Mongo happens to return first.
+      const normalizedEmail = String(email).trim().toLowerCase();
+
+      if (!EMAIL_PATTERN.test(normalizedEmail)) {
+        res.status(400).json({ msg: "Please enter a valid email address" });
+        return;
+      }
+
+      const existing = await User.findOne({
+        email: normalizedEmail,
+        _id: { $ne: userId },
+      });
       if (existing) {
         res.status(400).json({ msg: "Email already in use" });
         return;
       }
-      updateData.email = email.trim();
+      updateData.email = normalizedEmail;
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -226,7 +275,9 @@ router.put("/", authenticate, async (req: Request, res: Response) => {
       return;
     }
 
-    const user = await User.findByIdAndUpdate(userId, updateData, { new: true }).select("-password");
+    const user = await User.findByIdAndUpdate(userId, updateData, { new: true }).select(
+      "-password -passwordResetToken -passwordResetExpires -__v"
+    );
     res.json(user ? { ...user.toObject(), isAdmin: hasAdminAccess(user) } : user);
   } catch (error) {
     console.error("Error updating profile:", error);
@@ -235,10 +286,15 @@ router.put("/", authenticate, async (req: Request, res: Response) => {
 });
 
 // POST /api/profile/avatar — upload profile picture to Cloudinary
-router.post("/avatar", authenticate, upload.single("avatar"), async (req: Request, res: Response) => {
+router.post("/avatar", authenticate, uploadLimiter, uploadAvatar, async (req: Request, res: Response) => {
   try {
     if (!req.file) {
       res.status(400).json({ msg: "No file uploaded" });
+      return;
+    }
+
+    if (!looksLikeImage(req.file.buffer)) {
+      res.status(400).json({ msg: "That file is not a valid JPEG, PNG, GIF or WebP image." });
       return;
     }
 
