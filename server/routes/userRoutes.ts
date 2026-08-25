@@ -1,56 +1,37 @@
 import express, { Request, Response } from "express";
-import jwt from "jsonwebtoken";
+import { authenticate } from "../middleware/authMiddleware";
 import User from "../models/user";
 
 const router = express.Router();
 
-router.get("/all", async (req: Request, res: Response) => {
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// Name lookup is a contains-match so people can be found by partial name, but
+// the term is escaped (an unescaped one allowed regex injection and ReDoS) and
+// email is matched exactly — otherwise a one-letter query harvested addresses.
+// Email is never echoed back; invitations are sent by user id or by email the
+// caller already knows.
+router.get("/search", authenticate, async (req: Request, res: Response) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      res.status(401).json({ msg: "Unauthorized: No token provided" });
-      return;
-    }
-
-    const token = authHeader.split(" ")[1];
-    jwt.verify(token, process.env.JWT_SECRET as string);
-
-    const users = await User.find().select("_id name email");
-    res.json(users);
-  } catch (error) {
-    console.error("Error fetching users:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
-  }
-});
-
-router.get("/search", async (req: Request, res: Response) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      res.status(401).json({ msg: "Unauthorized: No token provided" });
-      return;
-    }
-
-    const token = authHeader.split(" ")[1];
-    jwt.verify(token, process.env.JWT_SECRET as string);
-
-    const q = req.query.q as string;
-    if (!q) {
+    const query = String(req.query.q || "").trim();
+    if (query.length < 2) {
       res.json([]);
       return;
     }
 
-    const regex = new RegExp(q, "i");
     const users = await User.find({
-      $or: [{ name: regex }, { email: regex }],
+      $or: [
+        { name: { $regex: escapeRegex(query), $options: "i" } },
+        { email: query.toLowerCase() },
+      ],
     })
-      .select("_id name email")
+      .select("_id name avatar")
       .limit(20);
 
     res.json(users);
   } catch (error) {
     console.error("Error searching users:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
