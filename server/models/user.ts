@@ -8,6 +8,7 @@ export interface IUser extends Document {
   googleId?: string;
   passwordResetToken?: string;
   passwordResetExpires?: Date;
+  tokenVersion: number;
   watchlist: Types.ObjectId[];
   favorites: Types.ObjectId[];
   favoriteGroups: Types.ObjectId[];
@@ -21,7 +22,7 @@ export interface IUser extends Document {
 const userSchema = new Schema<IUser>(
   {
     name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: {
       type: String,
       required: function (this: IUser) {
@@ -32,6 +33,8 @@ const userSchema = new Schema<IUser>(
     googleId: { type: String, unique: true, sparse: true },
     passwordResetToken: { type: String },
     passwordResetExpires: { type: Date },
+    // Bumped to invalidate every token already issued for this user.
+    tokenVersion: { type: Number, default: 0 },
     watchlist: [{ type: Schema.Types.ObjectId, ref: "Movie", default: [] }],
     favorites: [{ type: Schema.Types.ObjectId, ref: "Movie", default: [] }],
     favoriteGroups: [{ type: Schema.Types.ObjectId, ref: "Group", default: [] }],

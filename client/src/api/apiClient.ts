@@ -32,4 +32,25 @@ const apiClient = axios.create({
   baseURL: API_BASE_URL || undefined,
 });
 
+const AUTH_PAGES = ["/", "/signup"];
+
+// The server now rejects sessions it has invalidated (password reset, deleted
+// account, rotated token format). Clear the stale credentials and send the
+// person back to sign in rather than leaving the UI in a broken state.
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    if (status === 401 && localStorage.getItem("token")) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("userId");
+      if (!AUTH_PAGES.includes(window.location.pathname)) {
+        window.location.assign("/");
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default apiClient;

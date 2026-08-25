@@ -8,16 +8,13 @@ import { sendPasswordResetEmail } from "../utils/emailService";
 import { getDefaultAvatarUrl } from "../utils/avatar";
 import { hasAdminAccess } from "../middleware/adminMiddleware";
 import { recordAnalyticsEvent } from "../utils/analytics";
+import { loginLimiter, passwordResetLimiter, registerLimiter } from "../middleware/rateLimits";
+import { readBearerToken, signAuthToken, verifyAuthToken } from "../utils/authToken";
 
 const router = express.Router();
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-const buildAuthToken = (user: any) =>
-  jwt.sign(
-    { id: user._id, name: user.name },
-    process.env.JWT_SECRET as string,
-    { expiresIn: "30d" }
-  );
+const buildAuthToken = (user: any) => signAuthToken(user);
 
 const resolveAvatarUrl = (user: any) => {
   const avatar = String(user?.avatar || "").trim();
@@ -35,10 +32,14 @@ const buildAuthUser = (user: any) => ({
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const genericPasswordResetMessage = "If an account exists for that email, we sent a reset link.";
-const forgotPasswordAttempts = new Map<string, { count: number; resetAt: number }>();
-const FORGOT_PASSWORD_WINDOW_MS = 15 * 60 * 1000;
-const FORGOT_PASSWORD_MAX_ATTEMPTS = 5;
+const MIN_PASSWORD_LENGTH = 8;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Sign-in used to emit a dozen log lines per attempt. Keep them available for
+// debugging, but off by default.
+const googleAuthDebug = (...args: unknown[]) => {
+  if (process.env.DEBUG_GOOGLE_AUTH === "true") console.info(...args);
+};
 const hashResetToken = (token: string) =>
   crypto.createHash("sha256").update(token).digest("hex");
 
@@ -67,27 +68,24 @@ const sendGoogleAuthFailure = (
   res.status(status).json({ msg: publicMessage, reason });
 };
 
-const isForgotPasswordRateLimited = (email: string, ip?: string) => {
-  const now = Date.now();
-  const key = `${email}:${ip || "unknown"}`;
-  const current = forgotPasswordAttempts.get(key);
-
-  if (!current || current.resetAt <= now) {
-    forgotPasswordAttempts.set(key, { count: 1, resetAt: now + FORGOT_PASSWORD_WINDOW_MS });
-    return false;
-  }
-
-  current.count += 1;
-  return current.count > FORGOT_PASSWORD_MAX_ATTEMPTS;
-};
-
-router.post("/register", async (req: Request, res: Response) => {
+router.post("/register", registerLimiter, async (req: Request, res: Response) => {
   try {
     const { password, avatar } = req.body;
     const name = String(req.body?.name || "").trim();
     const email = normalizeEmail(req.body?.email);
     if (!name || !email || !password) {
       res.status(400).json({ msg: "Please fill in all fields" });
+      return;
+    }
+
+    if (!EMAIL_PATTERN.test(email)) {
+      res.status(400).json({ msg: "Please enter a valid email address" });
+      return;
+    }
+
+    // Matches the rule already enforced on password reset.
+    if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
+      res.status(400).json({ msg: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` });
       return;
     }
 
@@ -114,11 +112,11 @@ router.post("/register", async (req: Request, res: Response) => {
     res.json({ msg: "Signup successful", user: buildAuthUser(savedUser) });
   } catch (error) {
     console.error("Error in register route:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
-router.post("/login", async (req: Request, res: Response) => {
+router.post("/login", loginLimiter, async (req: Request, res: Response) => {
   try {
     const { password } = req.body;
     const email = normalizeEmail(req.body?.email);
@@ -153,15 +151,10 @@ router.post("/login", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/forgot-password", async (req: Request, res: Response) => {
+router.post("/forgot-password", passwordResetLimiter, async (req: Request, res: Response) => {
   try {
     const email = normalizeEmail(req.body?.email);
     if (!email) {
-      res.json({ msg: genericPasswordResetMessage });
-      return;
-    }
-
-    if (isForgotPasswordRateLimited(email, req.ip)) {
       res.json({ msg: genericPasswordResetMessage });
       return;
     }
@@ -196,7 +189,7 @@ router.post("/forgot-password", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/reset-password/:token", async (req: Request, res: Response) => {
+router.post("/reset-password/:token", passwordResetLimiter, async (req: Request, res: Response) => {
   try {
     const token = String(req.params.token || "");
     const password = String(req.body?.password || "");
@@ -206,8 +199,8 @@ router.post("/reset-password/:token", async (req: Request, res: Response) => {
       return;
     }
 
-    if (password.length < 8) {
-      res.status(400).json({ msg: "Password must be at least 8 characters." });
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      res.status(400).json({ msg: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` });
       return;
     }
 
@@ -225,6 +218,8 @@ router.post("/reset-password/:token", async (req: Request, res: Response) => {
     user.provider = user.googleId ? user.provider || "google" : "local";
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
+    // Any session created before the reset must stop working.
+    user.tokenVersion = (user.tokenVersion ?? 0) + 1;
     await user.save();
 
     res.json({ msg: "Password reset successful. You can now sign in." });
@@ -234,12 +229,12 @@ router.post("/reset-password/:token", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/google", async (req: Request, res: Response) => {
+router.post("/google", loginLimiter, async (req: Request, res: Response) => {
   try {
     const { credential, accessToken } = req.body;
     const googleClientId = process.env.GOOGLE_CLIENT_ID;
 
-    console.info("Google auth debug:", {
+    googleAuthDebug("Google auth debug:", {
       step: "request_received",
       googleClientIdExists: Boolean(googleClientId),
       googleClientIdPreview: previewValue(googleClientId),
@@ -267,7 +262,7 @@ router.post("/google", async (req: Request, res: Response) => {
       });
       payload = ticket.getPayload();
     } else {
-      console.info("Google auth debug:", {
+      googleAuthDebug("Google auth debug:", {
         step: "access_token_flow_started",
         hasAccessToken: Boolean(accessToken),
         googleClientIdExists: Boolean(googleClientId),
@@ -283,7 +278,7 @@ router.post("/google", async (req: Request, res: Response) => {
         user_id?: string;
       };
 
-      console.info("Google auth debug:", {
+      googleAuthDebug("Google auth debug:", {
         step: "tokeninfo_response",
         tokenInfoResponseOk: tokenInfoResponse.ok,
         tokenInfoStatus: tokenInfoResponse.status,
@@ -321,7 +316,7 @@ router.post("/google", async (req: Request, res: Response) => {
       });
       const userInfo = await userInfoResponse.json().catch(() => ({})) as any;
 
-      console.info("Google auth debug:", {
+      googleAuthDebug("Google auth debug:", {
         step: "userinfo_response",
         userInfoResponseOk: userInfoResponse.ok,
         userInfoStatus: userInfoResponse.status,
@@ -346,7 +341,7 @@ router.post("/google", async (req: Request, res: Response) => {
       };
     }
 
-    console.info("Google auth debug:", {
+    googleAuthDebug("Google auth debug:", {
       step: "payload_ready",
       hasPayloadSubject: Boolean(payload?.sub),
       hasPayloadEmail: Boolean(payload?.email),
@@ -379,7 +374,7 @@ router.post("/google", async (req: Request, res: Response) => {
       user = await User.findOne({
         $or: [{ googleId }, { email: { $regex: `^${escapeRegex(email)}$`, $options: "i" } }],
       });
-      console.info("Google auth debug:", {
+      googleAuthDebug("Google auth debug:", {
         step: "mongo_user_lookup",
         lookupSucceeded: true,
         userFound: Boolean(user),
@@ -404,7 +399,7 @@ router.post("/google", async (req: Request, res: Response) => {
           googleId,
         });
         userWasCreated = true;
-        console.info("Google auth debug:", {
+        googleAuthDebug("Google auth debug:", {
           step: "mongo_user_create",
           createSucceeded: true,
         });
@@ -433,7 +428,7 @@ router.post("/google", async (req: Request, res: Response) => {
       if (shouldSave) {
         try {
           await user.save();
-          console.info("Google auth debug:", {
+          googleAuthDebug("Google auth debug:", {
             step: "mongo_user_update",
             updateSucceeded: true,
           });
@@ -453,7 +448,7 @@ router.post("/google", async (req: Request, res: Response) => {
       user.avatar = picture || getDefaultAvatarUrl(user.name, user.email);
       try {
         await user.save();
-        console.info("Google auth debug:", {
+        googleAuthDebug("Google auth debug:", {
           step: "mongo_user_avatar_update",
           updateSucceeded: true,
         });
@@ -490,17 +485,23 @@ router.post("/google", async (req: Request, res: Response) => {
 
 router.get("/me", async (req: Request, res: Response) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    const token = readBearerToken(req.headers.authorization);
+    if (!token) {
       res.status(401).json({ msg: "Unauthorized: No token provided" });
       return;
     }
 
-    const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { id: string };
+    let decoded;
+    try {
+      decoded = verifyAuthToken(token);
+    } catch {
+      res.status(401).json({ msg: "Unauthorized: Invalid token" });
+      return;
+    }
+
     const user = await User.findById(decoded.id).select("-password");
-    if (!user) {
-      res.status(404).json({ msg: "User not found" });
+    if (!user || (user.tokenVersion ?? 0) !== decoded.tokenVersion) {
+      res.status(401).json({ msg: "Unauthorized: Session is no longer valid" });
       return;
     }
 
@@ -515,39 +516,6 @@ router.get("/me", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error in /me route:", error);
     res.status(500).json({ msg: "Server error" });
-  }
-});
-
-router.get("/search", async (req: Request, res: Response) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      res.status(401).json({ msg: "Unauthorized: No token provided" });
-      return;
-    }
-
-    const token = authHeader.split(" ")[1];
-    jwt.verify(token, process.env.JWT_SECRET as string);
-
-    const { query } = req.query as { query: string };
-    if (!query) {
-      res.json([]);
-      return;
-    }
-
-    const users = await User.find({
-      $or: [
-        { name: { $regex: query, $options: "i" } },
-        { email: { $regex: query, $options: "i" } },
-      ],
-    })
-      .select("_id name email")
-      .limit(10);
-
-    res.json(users);
-  } catch (error) {
-    console.error("Error searching users:", error);
-    res.status(500).json({ msg: "Server error", error: (error as Error).message });
   }
 });
 
