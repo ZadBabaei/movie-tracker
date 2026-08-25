@@ -57,6 +57,15 @@ const analytics = {
   ].map(([key, label, users, conversionRate]) => ({ key, label, users, conversionRate })),
 };
 
+const userDirectory = {
+  users: [
+    { id: "user-1", name: "Mara Chen", email: "mara@example.com", avatar: "", provider: "google", role: "user", onboardingComplete: true, joinedAt: "2026-08-19T12:00:00.000Z", watchlistCount: 14, lastActiveAt: "2026-08-24T19:20:00.000Z", lastFeature: "groups", country: "CA", device: "desktop", eventCount: 87 },
+    { id: "user-2", name: "Jon Bell", email: "jon@example.com", avatar: "", provider: "local", role: "user", onboardingComplete: true, joinedAt: "2026-08-17T09:30:00.000Z", watchlistCount: 6, lastActiveAt: "2026-08-23T16:10:00.000Z", lastFeature: "watchlist", country: "US", device: "mobile", eventCount: 42 },
+    { id: "user-3", name: "Sofia Rossi", email: "sofia@example.com", avatar: "", provider: "google", role: "user", onboardingComplete: false, joinedAt: "2026-08-15T17:45:00.000Z", watchlistCount: 0, lastActiveAt: null, lastFeature: null, country: null, device: null, eventCount: 0 },
+  ],
+  pagination: { page: 1, limit: 10, total: 1284, totalPages: 129 },
+};
+
 const runViewport = async (browser, viewport, viewportScreenshot) => {
   const context = await browser.newContext({ viewport, reducedMotion: "reduce" });
   await context.addInitScript((authToken) => localStorage.setItem("token", authToken), token);
@@ -68,6 +77,10 @@ const runViewport = async (browser, viewport, viewportScreenshot) => {
     }
     if (url.includes("/api/analytics/admin/overview")) {
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(analytics) });
+      return;
+    }
+    if (url.includes("/api/analytics/admin/users")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(userDirectory) });
       return;
     }
     if (url.includes("/api/profile")) {
@@ -87,8 +100,18 @@ const runViewport = async (browser, viewport, viewportScreenshot) => {
   await page.goto(`${baseURL}/dashboard`, { waitUntil: "networkidle" });
   try {
     await page.getByRole("heading", { name: "Audience & product intelligence" }).waitFor();
+    await page.getByRole("heading", { name: "Registered users" }).waitFor();
+    await page.getByRole("cell", { name: "mara@example.com", exact: false }).waitFor();
     await page.getByRole("heading", { name: "Feature signal" }).waitFor();
     await page.getByText("1.3K").first().waitFor();
+    const searchMetrics = await page.getByRole("searchbox", { name: "Search users by name or email" }).evaluate((element) => ({
+      inputWidth: element.getBoundingClientRect().width,
+      labelWidth: element.parentElement?.getBoundingClientRect().width || 0,
+      gridColumns: element.parentElement ? getComputedStyle(element.parentElement).gridTemplateColumns : "",
+    }));
+    if (searchMetrics.inputWidth < 150) {
+      throw new Error(`User search collapsed: ${JSON.stringify(searchMetrics)}`);
+    }
   } catch (error) {
     await page.screenshot({ path: "test-results/analytics-dashboard-error.png", fullPage: true });
     console.error("Verification URL:", page.url());

@@ -11,6 +11,8 @@ import { recordAnalyticsEvent } from "../utils/analytics";
 const router = express.Router();
 const ALLOWED_RANGES = new Set([7, 30, 90, 365]);
 
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const startOfUtcDay = (value: Date) =>
   new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
 
@@ -56,6 +58,86 @@ router.post("/events", authenticate, async (req: Request, res: Response) => {
   } catch (error) {
     console.warn("Client analytics event could not be recorded:", error);
     res.status(202).json({ accepted: false });
+  }
+});
+
+router.get("/admin/users", authenticate, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const requestedPage = Number(req.query.page || 1);
+    const requestedLimit = Number(req.query.limit || 10);
+    const page = Number.isFinite(requestedPage) ? Math.max(1, Math.floor(requestedPage)) : 1;
+    const limit = Number.isFinite(requestedLimit)
+      ? Math.min(50, Math.max(5, Math.floor(requestedLimit)))
+      : 10;
+    const search = String(req.query.search || "").trim().slice(0, 80);
+    const filter = search
+      ? {
+          $or: [
+            { name: { $regex: escapeRegex(search), $options: "i" } },
+            { email: { $regex: escapeRegex(search), $options: "i" } },
+          ],
+        }
+      : {};
+
+    const [total, users] = await Promise.all([
+      User.countDocuments(filter),
+      User.find(filter)
+        .select("name email avatar provider role firstLogin createdAt watchlist")
+        .sort({ createdAt: -1, _id: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+    ]);
+
+    const userIds = users.map((user) => user._id);
+    const activityRows = userIds.length
+      ? await AnalyticsEvent.aggregate([
+          { $match: { userId: { $in: userIds } } },
+          { $sort: { createdAt: -1 } },
+          {
+            $group: {
+              _id: "$userId",
+              lastActiveAt: { $first: "$createdAt" },
+              lastFeature: { $first: "$feature" },
+              country: { $first: "$country" },
+              device: { $first: "$device" },
+              eventCount: { $sum: 1 },
+            },
+          },
+        ])
+      : [];
+    const activityByUser = new Map(activityRows.map((row: any) => [String(row._id), row]));
+
+    res.json({
+      users: users.map((user) => {
+        const activity: any = activityByUser.get(String(user._id));
+        return {
+          id: String(user._id),
+          name: user.name,
+          email: user.email,
+          avatar: user.avatar || "",
+          provider: user.provider || "local",
+          role: user.role || "user",
+          onboardingComplete: !user.firstLogin,
+          joinedAt: user.createdAt?.toISOString() || null,
+          watchlistCount: user.watchlist?.length || 0,
+          lastActiveAt: activity?.lastActiveAt?.toISOString() || null,
+          lastFeature: activity?.lastFeature || null,
+          country: activity?.country || null,
+          device: activity?.device || null,
+          eventCount: activity?.eventCount || 0,
+        };
+      }),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+    });
+  } catch (error) {
+    console.error("Analytics user directory failed:", error);
+    res.status(500).json({ msg: "Unable to load users" });
   }
 });
 

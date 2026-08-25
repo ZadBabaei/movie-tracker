@@ -7,6 +7,7 @@ import {
   FaFilm,
   FaGlobe,
   FaLayerGroup,
+  FaMagnifyingGlass,
   FaUsers,
 } from "react-icons/fa6";
 import apiClient from "../api/apiClient";
@@ -48,6 +49,26 @@ interface AnalyticsResponse {
   funnel: Array<{ key: string; label: string; users: number; conversionRate: number }>;
 }
 
+interface UserDirectoryResponse {
+  users: Array<{
+    id: string;
+    name: string;
+    email: string;
+    avatar: string;
+    provider: "local" | "google";
+    role: "user" | "admin";
+    onboardingComplete: boolean;
+    joinedAt: string | null;
+    watchlistCount: number;
+    lastActiveAt: string | null;
+    lastFeature: string | null;
+    country: string | null;
+    device: string | null;
+    eventCount: number;
+  }>;
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+
 const RANGE_OPTIONS = [7, 30, 90, 365];
 const CHART_COLORS = ["#d3ac6c", "#f3eee4", "#5f8b6c", "#8f8573"];
 
@@ -56,6 +77,17 @@ const fullNumber = new Intl.NumberFormat("en");
 
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(`${value}T00:00:00Z`));
+
+const formatTimestamp = (value: string | null) => value
+  ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value))
+  : "No signal yet";
+
+const initials = (name: string) => name
+  .split(/\s+/)
+  .filter(Boolean)
+  .slice(0, 2)
+  .map((part) => part[0]?.toUpperCase())
+  .join("") || "?";
 
 const Metric = ({ label, value, detail, icon }: { label: string; value: number; detail: string; icon: ReactNode }) => (
   <article className="analytics-metric">
@@ -78,6 +110,11 @@ export default function Dashboard() {
   const [data, setData] = useState<AnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [userDirectory, setUserDirectory] = useState<UserDirectoryResponse | null>(null);
+  const [userSearch, setUserSearch] = useState("");
+  const [userPage, setUserPage] = useState(1);
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [usersError, setUsersError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -103,6 +140,29 @@ export default function Dashboard() {
     void load();
     return () => { cancelled = true; };
   }, [rangeDays]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setUsersLoading(true);
+      setUsersError("");
+      try {
+        const response = await apiClient.get<UserDirectoryResponse>("/api/analytics/admin/users", {
+          params: { page: userPage, limit: 10, search: userSearch || undefined },
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        });
+        if (!cancelled) setUserDirectory(response.data);
+      } catch {
+        if (!cancelled) setUsersError("The user directory could not be loaded.");
+      } finally {
+        if (!cancelled) setUsersLoading(false);
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [userPage, userSearch]);
 
   const chartDates = useMemo(() => data?.trend.map((point) => formatDate(point.date)) || [], [data?.trend]);
   const maxCountryUsers = Math.max(...(data?.countries.map((country) => country.users) || [1]), 1);
@@ -149,6 +209,70 @@ export default function Dashboard() {
                 <strong>{data.overview.userGrowthRate > 0 ? "+" : ""}{data.overview.userGrowthRate}%</strong>
                 <small>versus previous period</small>
               </div>
+            </section>
+
+            <section className="analytics-panel analytics-panel--registry" aria-labelledby="user-registry-title">
+              <div className="analytics-registry__header">
+                <div>
+                  <p className="analytics-section-index">Audience registry · {fullNumber.format(userDirectory?.pagination.total || data.overview.totalUsers)} records</p>
+                  <h2 id="user-registry-title">Registered users</h2>
+                  <p>Account identity, arrival date, and the latest recorded product signal.</p>
+                </div>
+                <label className="analytics-user-search">
+                  <span className="sr-only">Search users by name or email</span>
+                  <FaMagnifyingGlass aria-hidden="true" />
+                  <input
+                    type="search"
+                    value={userSearch}
+                    onChange={(event) => {
+                      setUserSearch(event.target.value);
+                      setUserPage(1);
+                    }}
+                    placeholder="Search name or email"
+                  />
+                </label>
+              </div>
+
+              {usersLoading ? <div className="analytics-registry__state" role="status">Reading the audience registry…</div> : null}
+              {!usersLoading && usersError ? <div className="analytics-registry__state analytics-registry__state--error" role="alert">{usersError}</div> : null}
+              {!usersLoading && !usersError && userDirectory?.users.length === 0 ? (
+                <div className="analytics-registry__state">No users match “{userSearch}”.</div>
+              ) : null}
+
+              {!usersLoading && !usersError && userDirectory?.users.length ? (
+                <div className="analytics-user-table-wrap">
+                  <table className="analytics-user-table">
+                    <caption className="sr-only">Registered Movie Tracker users</caption>
+                    <thead>
+                      <tr><th>User</th><th>Joined</th><th>Access</th><th>Latest signal</th><th>Activity</th></tr>
+                    </thead>
+                    <tbody>
+                      {userDirectory.users.map((user) => (
+                        <tr key={user.id}>
+                          <td>
+                            <div className="analytics-user-identity">
+                              {user.avatar ? <img src={user.avatar} alt="" /> : <span aria-hidden="true">{initials(user.name)}</span>}
+                              <div><strong>{user.name}</strong><small>{user.email}</small></div>
+                            </div>
+                          </td>
+                          <td data-label="Joined"><strong>{formatTimestamp(user.joinedAt)}</strong><small>{user.onboardingComplete ? "Onboarded" : "Setup pending"}</small></td>
+                          <td data-label="Access"><strong className="analytics-user-provider">{user.provider}</strong><small>{user.role === "admin" ? "Admin" : "Member"}</small></td>
+                          <td data-label="Latest signal"><strong>{formatTimestamp(user.lastActiveAt)}</strong><small>{user.country || "Location unknown"}{user.device ? ` · ${user.device}` : ""}</small></td>
+                          <td data-label="Activity"><strong>{fullNumber.format(user.eventCount)} signals</strong><small>{user.watchlistCount} watchlist items</small></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
+
+              {userDirectory && userDirectory.pagination.totalPages > 1 ? (
+                <nav className="analytics-pagination" aria-label="User directory pages">
+                  <button type="button" onClick={() => setUserPage((page) => Math.max(1, page - 1))} disabled={userPage === 1}>Previous</button>
+                  <span>Page {userDirectory.pagination.page} of {userDirectory.pagination.totalPages}</span>
+                  <button type="button" onClick={() => setUserPage((page) => Math.min(userDirectory.pagination.totalPages, page + 1))} disabled={userPage === userDirectory.pagination.totalPages}>Next</button>
+                </nav>
+              ) : null}
             </section>
 
             <section className="analytics-grid analytics-grid--primary">
