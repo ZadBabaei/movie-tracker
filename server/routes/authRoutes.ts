@@ -6,6 +6,8 @@ import { OAuth2Client } from "google-auth-library";
 import User from "../models/user";
 import { sendPasswordResetEmail } from "../utils/emailService";
 import { getDefaultAvatarUrl } from "../utils/avatar";
+import { hasAdminAccess } from "../middleware/adminMiddleware";
+import { recordAnalyticsEvent } from "../utils/analytics";
 
 const router = express.Router();
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -28,6 +30,7 @@ const buildAuthUser = (user: any) => ({
   email: user.email,
   avatar: resolveAvatarUrl(user),
   firstLogin: user.firstLogin ?? true,
+  isAdmin: hasAdminAccess(user),
 });
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -105,6 +108,8 @@ router.post("/register", async (req: Request, res: Response) => {
       avatar: avatar || getDefaultAvatarUrl(name, email),
     });
     const savedUser = await newUser.save();
+    void recordAnalyticsEvent(req, "user_registered", "authentication", { provider: "local" }, savedUser._id.toString())
+      .catch((error) => console.warn("Registration analytics failed:", error));
 
     res.json({ msg: "Signup successful", user: buildAuthUser(savedUser) });
   } catch (error) {
@@ -369,6 +374,7 @@ router.post("/google", async (req: Request, res: Response) => {
     const picture = String(payload.picture || "").trim();
 
     let user;
+    let userWasCreated = false;
     try {
       user = await User.findOne({
         $or: [{ googleId }, { email: { $regex: `^${escapeRegex(email)}$`, $options: "i" } }],
@@ -397,6 +403,7 @@ router.post("/google", async (req: Request, res: Response) => {
           provider: "google",
           googleId,
         });
+        userWasCreated = true;
         console.info("Google auth debug:", {
           step: "mongo_user_create",
           createSucceeded: true,
@@ -463,6 +470,11 @@ router.post("/google", async (req: Request, res: Response) => {
 
     const token = buildAuthToken(user);
 
+    if (userWasCreated) {
+      void recordAnalyticsEvent(req, "user_registered", "authentication", { provider: "google" }, user._id.toString())
+        .catch((error) => console.warn("Google registration analytics failed:", error));
+    }
+
     res.json({
       token,
       user: buildAuthUser(user),
@@ -498,6 +510,7 @@ router.get("/me", async (req: Request, res: Response) => {
       email: user.email,
       avatar: resolveAvatarUrl(user),
       firstLogin: user.firstLogin ?? true,
+      isAdmin: hasAdminAccess(user),
     });
   } catch (error) {
     console.error("Error in /me route:", error);

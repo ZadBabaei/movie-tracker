@@ -7,6 +7,7 @@ import Group from "../models/Groups";
 import Movie from "../models/movie";
 import Poll from "../models/Poll";
 import cloudinary from "../utils/cloudinary";
+import { hasAdminAccess } from "../middleware/adminMiddleware";
 
 const router = express.Router();
 
@@ -195,7 +196,7 @@ router.get("/", authenticate, async (req: Request, res: Response) => {
       res.status(404).json({ msg: "User not found" });
       return;
     }
-    res.json(user);
+    res.json({ ...user.toObject(), isAdmin: hasAdminAccess(user) });
   } catch (error) {
     console.error("Error fetching profile:", error);
     res.status(500).json({ msg: "Server error" });
@@ -226,7 +227,7 @@ router.put("/", authenticate, async (req: Request, res: Response) => {
     }
 
     const user = await User.findByIdAndUpdate(userId, updateData, { new: true }).select("-password");
-    res.json(user);
+    res.json(user ? { ...user.toObject(), isAdmin: hasAdminAccess(user) } : user);
   } catch (error) {
     console.error("Error updating profile:", error);
     res.status(500).json({ msg: "Server error" });
@@ -302,7 +303,7 @@ router.get("/dashboard", authenticate, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
     const user = await User.findById(userId)
-      .select("_id name email avatar firstLogin createdAt watchlist")
+      .select("_id name email avatar firstLogin createdAt watchlist role")
       .lean();
 
     if (!user) {
@@ -324,6 +325,7 @@ router.get("/dashboard", authenticate, async (req: Request, res: Response) => {
         avatar: user.avatar || "",
         firstLogin: user.firstLogin,
         createdAt: user.createdAt ? toIsoString(user.createdAt) : undefined,
+        isAdmin: hasAdminAccess(user),
       },
       stats,
       recentActivity,

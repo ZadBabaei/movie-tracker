@@ -41,7 +41,15 @@ body,
 }
 
 @media (max-width: 768px) {
-  body {
+body {
     padding-bottom: calc(90px + env(safe-area-inset-bottom));
   }
+}
+
+.route-loading {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  color: var(--brand-muted);
+  background: var(--brand-black);
 }

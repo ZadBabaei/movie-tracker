@@ -15,6 +15,7 @@ Transition URL: https://movietracker.zadprogramming.com/ remains available durin
 - **Authentication and profiles:** JWT auth, Google sign-in support, protected routes, user profiles, avatars, and favorite groups.
 - **Movie discovery:** TMDB-backed search/details plus coming-soon enrichment paths using TMDB and optional Watchmode data.
 - **Operational feedback loop:** Optional bug report flow can create GitHub issues and email notifications when configured.
+- **Owner analytics:** An owner-only report combines exact MongoDB totals with privacy-conscious audience, geography, feature-adoption, device, and funnel events.
 
 ## Architecture
 
@@ -112,6 +113,12 @@ Use the example files as the source of truth:
 
 - `server/.env.example` for database, auth, Stream Chat, TMDB/Watchmode, Cloudinary, email, and bug-report integrations.
 - `client/.env.example` for frontend API URLs, Google OAuth, TMDB, and feature flags.
+
+### Owner analytics
+
+Set `ADMIN_EMAILS` on the backend to a comma-separated allowlist of owner accounts. Those users receive an **Analytics** navigation item and can access `/dashboard`; the API independently enforces owner access. Analytics stores event names, feature names, approximate hosting-region headers, device class, and the authenticated user ID. It does not store raw IP addresses.
+
+PostHog forwarding is optional. Set `VITE_POSTHOG_KEY` and, when needed, `VITE_POSTHOG_HOST` on the frontend to send the same named events to PostHog for deeper retention and path analysis. Leave both blank to use only the in-app MongoDB report. Set `DISABLE_ANALYTICS=true` on the backend to stop new in-app event collection.
 
 Do not commit real `.env` files.
 

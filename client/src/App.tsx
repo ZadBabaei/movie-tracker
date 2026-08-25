@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { Suspense, lazy, useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import Dashboard from "./pages/Dashboard";
 import Home from "./pages/Home";
 import Inbox from "./pages/inbox";
 import GroupPage from "./pages/GroupPage";
@@ -25,8 +24,11 @@ import ProtectedRoute from "./utils/ProtectedRoute";
 import { useModalStore } from "./store/useModalStore";
 import { useGroupStore } from "./store/useGroupStore";
 import { useUserStore } from "./store/useUserStore";
+import AnalyticsRouteTracker from "./component/AnalyticsRouteTracker";
 
 import "./App.css";
+
+const Dashboard = lazy(() => import("./pages/Dashboard"));
 
 interface AppProps {
   isAuthenticated: boolean;
@@ -80,6 +82,7 @@ function App({ isAuthenticated, isAuthPage }: AppProps) {
 
   return (
     <>
+      <AnalyticsRouteTracker />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={isAuthenticated ? <Navigate to="/home" replace /> : <Login />} />
@@ -91,7 +94,14 @@ function App({ isAuthenticated, isAuthPage }: AppProps) {
         {/* Protected Routes */}
         <Route element={<ProtectedRoute />}>
           <Route path="/home" element={<Home />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route
+            path="/dashboard"
+            element={(
+              <Suspense fallback={<div className="route-loading" role="status">Loading analytics…</div>}>
+                <Dashboard />
+              </Suspense>
+            )}
+          />
           <Route path="/inbox" element={<Inbox />} />
           <Route path="/group/:slug" element={<GroupPage />} />
           <Route path="/group/:slug/chat" element={<GroupChat />} />

@@ -13,6 +13,7 @@ export interface IUser extends Document {
   favoriteGroups: Types.ObjectId[];
   avatar?: string;
   firstLogin: boolean;
+  role: "user" | "admin";
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -36,6 +37,7 @@ const userSchema = new Schema<IUser>(
     favoriteGroups: [{ type: Schema.Types.ObjectId, ref: "Group", default: [] }],
     avatar: { type: String, default: "" },
     firstLogin: { type: Boolean, default: true },
+    role: { type: String, enum: ["user", "admin"], default: "user", index: true },
   },
   { timestamps: true }
 );

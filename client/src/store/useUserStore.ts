@@ -8,6 +8,7 @@ export interface UserProfile {
   avatar: string;
   firstLogin: boolean;
   createdAt?: string;
+  isAdmin?: boolean;
 }
 
 export interface UserStats {

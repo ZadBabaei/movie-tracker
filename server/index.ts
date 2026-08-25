@@ -19,7 +19,9 @@ import assistantRoutes from "./routes/assistantRoutes";
 import commentRoutes from "./routes/commentRoutes";
 import bugReportRoutes from "./routes/bugReportRoutes";
 import comingSoonRoutes from "./routes/comingSoonRoutes";
+import analyticsRoutes from "./routes/analyticsRoutes";
 import { corsOptions } from "./utils/corsConfig";
+import { analyticsResponseMiddleware } from "./utils/analytics";
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -55,6 +57,7 @@ initIO(httpServer);
 
 app.use(cors(corsOptions));
 app.use(express.json({ limit: "3mb" }));
+app.use(analyticsResponseMiddleware);
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
@@ -72,6 +75,7 @@ app.use("/api/assistant", assistantRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/bug-reports", bugReportRoutes);
 app.use("/api/coming-soon", comingSoonRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error("Global error handler:", err);

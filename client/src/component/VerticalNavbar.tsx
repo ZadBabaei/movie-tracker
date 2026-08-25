@@ -10,6 +10,7 @@ import {
   FaSignOutAlt,
   FaComments,
   FaEllipsisH,
+  FaChartLine,
 } from "react-icons/fa";
 import { useModalStore } from "../store/useModalStore";
 import { useUserStore } from "../store/useUserStore";
@@ -18,6 +19,7 @@ import { useUnreadCounts } from "../hooks/useUnreadCounts";
 import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
 import "./VerticalNavbar.css";
 import logoMark from "../assets/movie-tracker-logo-mark.svg";
+import { resetAnalytics } from "../utils/analytics";
 
 const VerticalNavbar: React.FC = () => {
   const location = useLocation();
@@ -66,6 +68,7 @@ const VerticalNavbar: React.FC = () => {
   };
 
   const logout = () => {
+    void resetAnalytics();
     localStorage.removeItem("token");
     useUserStore.getState().clear();
     navigate("/");
@@ -85,6 +88,14 @@ const VerticalNavbar: React.FC = () => {
         <img className="navbar-brand-mark" src={logoMark} alt="" />
       </Link>
       <ul className="navbar-list">
+        {profile?.isAdmin ? (
+          <li className="navbar-item">
+            <Link to="/dashboard" className="navbar-link">
+              <span className="icon"><FaChartLine /></span>
+              <span className="label">Analytics</span>
+            </Link>
+          </li>
+        ) : null}
         <li className="navbar-item">
           <Link to="/home" className="navbar-link">
             <span className="icon"><FaHome /></span>
@@ -245,7 +256,7 @@ const VerticalNavbar: React.FC = () => {
       <div className="mobile-more-wrap">
         <button
           type="button"
-          className={`mobile-nav-item ${isMoreOpen || isActive(["/profile", "/inbox", "/about", "/coming-soon"]) ? "active" : ""}`}
+          className={`mobile-nav-item ${isMoreOpen || isActive(["/profile", "/inbox", "/about", "/coming-soon", "/dashboard"]) ? "active" : ""}`}
           onClick={() => setIsMoreOpen((open) => !open)}
           aria-expanded={isMoreOpen}
           aria-haspopup="menu"
@@ -258,6 +269,11 @@ const VerticalNavbar: React.FC = () => {
             <button type="button" onClick={() => navigate("/profile")} role="menuitem">
               Profile
             </button>
+            {profile?.isAdmin ? (
+              <button type="button" onClick={() => navigate("/dashboard")} role="menuitem">
+                Analytics
+              </button>
+            ) : null}
             <button type="button" onClick={() => navigate("/coming-soon")} role="menuitem">
               Coming Soon
             </button>

@@ -92,7 +92,7 @@ Values must stay in Vercel. Only names are documented.
 
 | Project | Variable names |
 |---|---|
-| `movie-tracker` | `REACT_APP_API_BASE_URL`, `REACT_APP_SOCKET_URL`, `CI`, `REACT_APP_TMDB_API_KEY`, `REACT_APP_TMDB_API_URL`, `SKIP_PREFLIGHT_CHECK`, `REACT_APP_GOOGLE_CLIENT_ID`, `REACT_APP_ENABLE_BUG_REPORTS` |
+| `movie-tracker` | `REACT_APP_API_BASE_URL`, `REACT_APP_SOCKET_URL`, `CI`, `REACT_APP_TMDB_API_KEY`, `REACT_APP_TMDB_API_URL`, `SKIP_PREFLIGHT_CHECK`, `REACT_APP_GOOGLE_CLIENT_ID`, `REACT_APP_ENABLE_BUG_REPORTS`, `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST` |
 | `portfolio-app` | `ADMIN_PASSWORD`, `BLOB_READ_WRITE_TOKEN` |
 
 ## Railway Deployment
@@ -127,6 +127,7 @@ Values must stay in Railway. Only names are documented.
 | Movie data | `TMDB_API_KEY`, `WATCHMODE_API_KEY`, `WATCHMODE_REGION` |
 | Realtime/other integrations | `STREAM_API_KEY`, `STREAM_API_SECRET` |
 | Bug reporting | `ENABLE_BUG_REPORTS`, `ENABLE_BUG_REPORT_EMAILS`, `ENABLE_GITHUB_BUG_ISSUES`, `BUG_REPORT_NOTIFY_EMAIL`, `GITHUB_REPO_OWNER`, `GITHUB_REPO_NAME`, `GITHUB_TOKEN` |
+| Owner analytics | `ADMIN_EMAILS`, `DISABLE_ANALYTICS` |
 
 ## DNS Setup
 
