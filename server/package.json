@@ -7,7 +7,10 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node dist/index.js",
     "build": "tsc",
-    "dev": "nodemon --exec ts-node index.ts"
+    "dev": "nodemon --exec ts-node index.ts",
+    "migrate:watch-history": "ts-node scripts/migrateWatchHistory.ts",
+    "migrate:watch-history:dry": "ts-node scripts/migrateWatchHistory.ts --dry-run",
+    "seed:watch-history-demo": "ts-node scripts/seedWatchHistoryDemo.ts"
   },
   "keywords": [],
   "author": "",

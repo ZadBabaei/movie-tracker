@@ -10,7 +10,7 @@ Transition URL: https://movietracker.zadprogramming.com/ remains available durin
 
 - **Group movie planning:** Users can create groups, invite friends, manage memberships, and keep movie activity scoped to each group.
 - **Collaborative polls:** Groups can suggest movie options, vote, and resolve winners with app-level voting rules.
-- **Shared watchlist and watch history:** Groups can add movies, mark titles as watched, and keep richer watch context for later.
+- **Personal and shared watch history:** Users keep a personal film diary alongside group-specific history tabs, including dates, locations, participants, notes, and ratings.
 - **Realtime group chat:** Stream Chat and Socket.io support private group conversations, unread counts, and navbar chat access.
 - **Authentication and profiles:** JWT auth, Google sign-in support, protected routes, user profiles, avatars, and favorite groups.
 - **Movie discovery:** TMDB-backed search/details plus coming-soon enrichment paths using TMDB and optional Watchmode data.
@@ -106,6 +106,17 @@ npm run e2e
 ```
 
 The Playwright suite expects a reachable app and test database configuration. See `tests/e2e/README.md` for details.
+
+### Watch history migration
+
+The history page uses the `WatchHistoryEntry` collection as its source of truth while continuing to mirror legacy group-history writes during rollout. Preview and run the idempotent migration from the server directory:
+
+```bash
+npm run migrate:watch-history:dry
+npm run migrate:watch-history
+```
+
+Run the dry pass first in each environment, then compare migrated counts and sample records before enabling the page for production users.
 
 ## Environment
 

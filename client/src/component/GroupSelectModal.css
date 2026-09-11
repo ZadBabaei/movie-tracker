@@ -80,6 +80,25 @@
   transform: translateX(4px);
 }
 
+.group-select-item--personal {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 14px;
+  border-color: var(--brand-hairline);
+}
+
+.group-select-item--personal span {
+  color: var(--brand-gold-bright);
+  font-weight: 700;
+}
+
+.group-select-item--personal small {
+  color: var(--brand-muted);
+  font-size: 0.78rem;
+}
+
 .group-select-empty {
   text-align: center;
   padding: 24px;
@@ -136,6 +155,20 @@
 
 .group-select-input:focus {
   border-color: #d3ac6c;
+}
+
+.group-select-textarea {
+  resize: vertical;
+  min-height: 84px;
+  line-height: 1.45;
+}
+
+.group-select-optional {
+  color: var(--brand-dim);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .group-select-loading {

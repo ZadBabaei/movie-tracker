@@ -20,6 +20,7 @@ export interface WatchMetadata {
   watchedDate: string;
   watchedWhere: string;
   watchedWith: string[];
+  watchedNotes?: string;
 }
 
 interface GroupSelectModalProps {
@@ -45,6 +46,7 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
     new Date().toISOString().split("T")[0]
   );
   const [watchedWhere, setWatchedWhere] = useState("");
+  const [watchedNotes, setWatchedNotes] = useState("");
   const [watchedWith, setWatchedWith] = useState<string[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [watchedWithError, setWatchedWithError] = useState("");
@@ -57,6 +59,7 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
       setMembers([]);
       setWatchedDate(new Date().toISOString().split("T")[0]);
       setWatchedWhere("");
+      setWatchedNotes("");
       setWatchedWith([]);
       setWatchedWithError("");
       setHasEditedWatchedWith(false);
@@ -90,6 +93,14 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
     }
   };
 
+  const handlePersonalClick = () => {
+    setSelectedGroupId("personal");
+    setMembers([]);
+    setWatchedWith([]);
+    setWatchedWithError("");
+    setStep(2);
+  };
+
   const toggleMember = (memberId: string) => {
     setHasEditedWatchedWith(true);
     setWatchedWithError("");
@@ -101,7 +112,7 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
   };
 
   const handleDone = () => {
-    if (watchedWith.length === 0) {
+    if (selectedGroupId !== "personal" && watchedWith.length === 0) {
       setWatchedWithError("Select at least one person who watched.");
       return;
     }
@@ -110,6 +121,7 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
       watchedDate,
       watchedWhere,
       watchedWith,
+      watchedNotes,
     });
   };
 
@@ -119,6 +131,7 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
       watchedDate: new Date().toISOString().split("T")[0],
       watchedWhere: "",
       watchedWith: members.map((m) => m._id),
+      watchedNotes: "",
     });
   };
 
@@ -134,12 +147,22 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
           <>
             <h2 className="group-select-heading">Mark as Watched</h2>
             <p className="group-select-sub">
-              Which group watched <strong>{movieTitle}</strong>?
+              Where should <strong>{movieTitle}</strong> be recorded?
             </p>
+
+            <button
+              type="button"
+              className="group-select-item group-select-item--personal"
+              data-testid="personal-history-option"
+              onClick={handlePersonalClick}
+            >
+              <span>Personal history</span>
+              <small>Just for your own film diary</small>
+            </button>
 
             {groups.length === 0 ? (
               <div className="group-select-empty">
-                <p>Create or join a group first</p>
+                <p>You can also create or join a group to keep a shared history.</p>
               </div>
             ) : (
               <div className="group-select-list">
@@ -183,6 +206,19 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
               </div>
 
               <div className="group-select-field">
+                <label htmlFor="watch-notes">Notes <span className="group-select-optional">Optional</span></label>
+                <textarea
+                  id="watch-notes"
+                  value={watchedNotes}
+                  onChange={(e) => setWatchedNotes(e.target.value)}
+                  className="group-select-input group-select-textarea"
+                  placeholder="Anything you want to remember about this watch…"
+                  maxLength={2000}
+                  rows={3}
+                />
+              </div>
+
+              <div className="group-select-field">
                 <label>Where did you watch?</label>
                 <input
                   type="text"
@@ -203,9 +239,9 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
                 </button>
                 <button
                   className="group-select-btn group-select-btn--done"
-                  onClick={() => setStep(3)}
+                  onClick={() => selectedGroupId === "personal" ? handleDone() : setStep(3)}
                 >
-                  Next <FaArrowRight style={{ marginLeft: 6 }} />
+                  {selectedGroupId === "personal" ? "Save to History" : <>Next <FaArrowRight style={{ marginLeft: 6 }} /></>}
                 </button>
               </div>
             </div>

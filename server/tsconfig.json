@@ -16,6 +16,7 @@
     "socket.ts",
     "models/**/*.ts",
     "routes/**/*.ts",
+    "scripts/**/*.ts",
     "middleware/**/*.ts",
     "utils/**/*.ts",
     "types/**/*.ts"

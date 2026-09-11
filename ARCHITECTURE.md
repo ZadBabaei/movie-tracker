@@ -61,7 +61,7 @@ flowchart TD
 | Vercel `portfolio-app` | Builds and serves the portfolio frontend | Uses `portfolio.zadprogramming.com` |
 | Vercel `movie-tracker` | Builds and serves the Movie Tracker frontend | Canonical `movietrk.com`; `www` redirects; old hostname retained temporarily |
 | Railway `movie-tracker` | Runs backend API and Socket.IO server | Uses Railway-generated public backend URL |
-| MongoDB Atlas | Stores users, movies, watchlists, groups, and app data | Accessed through `MONGODB_URI` |
+| MongoDB Atlas | Stores users, movies, watchlists, groups, first-class watch-history entries, and app data | Accessed through `MONGODB_URI` |
 | Google OAuth | User sign-in provider | Client IDs only are public; secrets must stay out of docs |
 | Resend / SMTP | Sends bug reports and app emails | DNS includes SPF, DKIM, DMARC support |
 | Cloudinary | Image/media hosting | API secret must remain private |
@@ -126,6 +126,12 @@ MongoDB Atlas is accessed only by the Railway backend. Frontend clients must not
 | Watchlists/groups | Vercel frontend -> Railway API -> MongoDB Atlas |
 | App settings/preferences | Vercel frontend -> Railway API -> MongoDB Atlas |
 | Realtime updates | Vercel frontend -> Railway Socket.IO -> MongoDB Atlas as needed |
+
+### Watch history data flow
+
+`WatchHistoryEntry` is the canonical record for personal and group screenings. Personal history queries entries where the current user is a participant; a group tab queries entries belonging to that group after independently checking membership. This lets one group screening appear in each participant's personal diary without duplicating the event.
+
+During the compatibility window, group screenings are dual-written to the existing `Group.movies` subdocuments. The idempotent `migrate:watch-history` server command imports older group history using legacy group and subdocument IDs as a unique key. Legacy storage should be removed only after production migration counts and behavior have been verified.
 
 ## Email Flow
 

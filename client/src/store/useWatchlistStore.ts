@@ -34,6 +34,7 @@ interface WatchlistState {
     watchedDate?: string;
     watchedWhere?: string;
     watchedWith?: string[];
+    watchedNotes?: string;
   }, source?: "personal" | "group") => Promise<void>;
 
   setActiveTab: (tab: string) => void;

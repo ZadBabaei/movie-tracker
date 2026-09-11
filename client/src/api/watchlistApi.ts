@@ -32,18 +32,22 @@ export const markAsWatched = async (
     watchedDate?: string;
     watchedWhere?: string;
     watchedWith?: string[];
+    watchedNotes?: string;
   },
   source?: "personal" | "group"
 ) => {
   const payload = {
-    groupId,
-    ...metadata,
+    movieId,
+    scope: groupId && groupId !== "personal" ? "group" : "personal",
+    groupId: groupId && groupId !== "personal" ? groupId : undefined,
     watchedAt: metadata?.watchedDate,
     watchedLocation: metadata?.watchedWhere,
+    participants: metadata?.watchedWith,
+    watchedNotes: metadata?.watchedNotes,
     source,
   };
   const res = await apiClient.post(
-    `/api/watchlist/${movieId}/mark-watched`,
+    "/api/history",
     payload,
     getAuthHeaders()
   );

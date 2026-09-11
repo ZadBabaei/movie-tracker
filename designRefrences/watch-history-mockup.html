@@ -1,0 +1,803 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Movie Tracker — Watch History UI Concept</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --black: #021a08;
+      --charcoal: #05240e;
+      --deep: #073312;
+      --ivory: #f3eee4;
+      --muted: #b8b0a2;
+      --dim: #837c70;
+      --gold: #d3ac6c;
+      --gold-bright: #e9c98d;
+      --hairline: rgba(211, 172, 108, 0.25);
+      --soft-line: rgba(243, 238, 228, 0.1);
+      --danger: #a84a46;
+      --sidebar: 80px;
+      --ease: cubic-bezier(.22, 1, .36, 1);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { background: var(--black); scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--black);
+      color: var(--ivory);
+      font-family: "Segoe UI Variable", "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 2px solid var(--gold-bright);
+      outline-offset: 3px;
+    }
+
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: 30;
+      width: var(--sidebar);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 0 18px;
+      border-right: 1px solid rgba(211, 172, 108, 0.13);
+      background: linear-gradient(to top, #05240e, #021a08);
+    }
+
+    .logo {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--hairline);
+      color: var(--gold-bright);
+      font-weight: 800;
+      letter-spacing: -0.08em;
+    }
+
+    .nav-list { display: grid; gap: 9px; margin-top: 46px; }
+    .nav-spacer { flex: 1; }
+
+    .nav-button {
+      position: relative;
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border: 0;
+      background: transparent;
+      color: #9b968d;
+      cursor: pointer;
+      transition: color 180ms ease, background 180ms ease;
+    }
+
+    .nav-button:hover { color: var(--ivory); background: rgba(243, 238, 228, 0.05); }
+    .nav-button.active { color: var(--gold-bright); background: rgba(211, 172, 108, 0.09); }
+    .nav-button.active::before {
+      content: "";
+      position: absolute;
+      left: -16px;
+      width: 2px;
+      height: 24px;
+      background: var(--gold);
+    }
+
+    .nav-button svg { width: 19px; height: 19px; }
+
+    .nav-button .tip {
+      position: absolute;
+      left: 60px;
+      padding: 7px 9px;
+      border: 1px solid var(--hairline);
+      background: var(--charcoal);
+      color: var(--ivory);
+      font-size: 0.72rem;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(-5px);
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    .nav-button:hover .tip { opacity: 1; transform: translateX(0); }
+
+    .avatar {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--gold);
+      border-radius: 50%;
+      background: #184c27;
+      color: var(--ivory);
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+
+    .page { min-height: 100vh; margin-left: var(--sidebar); }
+
+    .hero {
+      position: relative;
+      min-height: 390px;
+      display: flex;
+      align-items: flex-end;
+      overflow: hidden;
+      background: var(--black);
+    }
+
+    .hero-image {
+      position: absolute;
+      inset: -34px;
+      background-image: url("watch-history-assets/oppenheimer.jpg");
+      background-position: center 32%;
+      background-size: cover;
+      filter: blur(18px) saturate(.72);
+      opacity: .38;
+      transform: scale(1.05);
+      transition: background-image 300ms ease, opacity 300ms ease;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(to right, rgba(2, 26, 8, .92) 0%, rgba(2, 26, 8, .56) 55%, rgba(2, 26, 8, .7) 100%),
+        linear-gradient(to top, var(--black) 0%, rgba(2, 26, 8, .25) 60%, rgba(2, 26, 8, .55) 100%);
+    }
+
+    .hero-inner {
+      position: relative;
+      z-index: 2;
+      width: min(1180px, calc(100% - 80px));
+      margin: 0 auto;
+      padding: 80px 0 52px;
+    }
+
+    .kicker {
+      margin: 0 0 15px;
+      color: var(--gold);
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .23em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 720px;
+      color: var(--ivory);
+      font-size: clamp(2.55rem, 5vw, 4.7rem);
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: -.035em;
+      text-wrap: balance;
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    .hero-copy {
+      max-width: 620px;
+      margin: 19px 0 0;
+      color: var(--muted);
+      font-size: .98rem;
+      line-height: 1.65;
+      text-wrap: pretty;
+    }
+
+    .hero-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 26px;
+      margin: 25px 0 0;
+      padding: 17px 0 0;
+      border-top: 1px solid var(--hairline);
+      color: var(--muted);
+      font-size: .83rem;
+    }
+
+    .hero-stats strong { color: var(--ivory); font-weight: 700; }
+
+    main {
+      width: min(1180px, calc(100% - 80px));
+      margin: 0 auto;
+      padding: 36px 0 120px;
+    }
+
+    .group-tabs {
+      display: flex;
+      gap: 31px;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--soft-line);
+      scrollbar-width: none;
+    }
+
+    .group-tabs::-webkit-scrollbar { display: none; }
+
+    .group-tab {
+      flex: 0 0 auto;
+      padding: 11px 2px 15px;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      font-size: .98rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: color 180ms ease, border-color 180ms ease;
+    }
+
+    .group-tab:hover { color: var(--ivory); }
+    .group-tab.active { border-bottom-color: var(--gold); color: var(--gold-bright); }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 16px 25px;
+      padding: 30px 0 22px;
+      border-bottom: 1px solid var(--soft-line);
+    }
+
+    .search {
+      position: relative;
+      flex: 1 1 280px;
+      max-width: 420px;
+    }
+
+    .search svg {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      width: 16px;
+      height: 16px;
+      color: var(--dim);
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+
+    .search input {
+      width: 100%;
+      padding: 11px 8px 11px 28px;
+      border: 0;
+      border-bottom: 1px solid var(--soft-line);
+      border-radius: 0;
+      background: transparent;
+      color: var(--ivory);
+      outline: 0;
+    }
+
+    .search input:focus { border-bottom-color: var(--gold); }
+    .search input::placeholder { color: #8d867a; opacity: 1; }
+
+    .filter-group { display: flex; gap: 4px; }
+
+    .filter-button {
+      min-height: 40px;
+      padding: 0 13px;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    .filter-button:hover { color: var(--ivory); }
+    .filter-button.active { border-bottom-color: var(--gold); color: var(--gold-bright); }
+
+    .sort {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+      color: var(--dim);
+      font-size: .69rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .sort select {
+      min-height: 40px;
+      border: 0;
+      border-bottom: 1px solid var(--soft-line);
+      border-radius: 0;
+      background: var(--black);
+      color: var(--ivory);
+      cursor: pointer;
+    }
+
+    .results-note {
+      margin: 20px 0 0;
+      color: var(--dim);
+      font-size: .8rem;
+    }
+
+    .timeline { position: relative; padding-top: 10px; }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      top: 48px;
+      bottom: 30px;
+      left: 148px;
+      width: 1px;
+      background: linear-gradient(to bottom, var(--gold), rgba(211, 172, 108, .08));
+    }
+
+    .period {
+      position: relative;
+      display: grid;
+      grid-template-columns: 120px minmax(0, 1fr);
+      gap: 58px;
+      padding: 42px 0 26px;
+    }
+
+    .period-label {
+      position: sticky;
+      top: 28px;
+      align-self: start;
+      color: var(--ivory);
+    }
+
+    .period-label strong { display: block; font-family: Georgia, "Times New Roman", serif; font-size: 1rem; font-weight: 500; }
+    .period-label span { display: block; margin-top: 6px; color: var(--dim); font-size: .72rem; }
+
+    .period-label::after {
+      content: "";
+      position: absolute;
+      top: 4px;
+      right: -35px;
+      width: 9px;
+      height: 9px;
+      border: 3px solid var(--black);
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 0 1px var(--gold);
+    }
+
+    .movie-list { display: grid; gap: 1px; }
+
+    .movie-row {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: 72px minmax(150px, 1.25fr) minmax(160px, .9fr) auto;
+      align-items: center;
+      gap: 20px;
+      padding: 13px 14px 13px 0;
+      border-bottom: 1px solid rgba(243, 238, 228, .075);
+      cursor: pointer;
+      transition: background 180ms ease, transform 180ms var(--ease);
+    }
+
+    .movie-row:hover { background: rgba(243, 238, 228, .035); transform: translateX(4px); }
+    .movie-row[hidden] { display: none; }
+
+    .poster {
+      width: 58px;
+      aspect-ratio: 2 / 3;
+      display: block;
+      object-fit: cover;
+      background: var(--charcoal);
+      box-shadow: 0 5px 8px rgba(0, 0, 0, .3);
+    }
+
+    .movie-title { margin: 0; color: var(--ivory); font-size: 1rem; font-weight: 700; }
+    .movie-year { margin: 6px 0 0; color: var(--dim); font-size: .76rem; }
+
+    .watch-context { min-width: 0; }
+    .watch-context strong { display: block; color: var(--muted); font-size: .79rem; font-weight: 600; }
+    .watch-context span {
+      display: block;
+      margin-top: 5px;
+      overflow: hidden;
+      color: var(--dim);
+      font-size: .73rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .rating {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      color: var(--gold-bright);
+      font-size: .87rem;
+      font-weight: 700;
+    }
+
+    .rating svg { width: 15px; height: 15px; fill: currentColor; }
+
+    .empty {
+      display: none;
+      max-width: 620px;
+      margin: 70px auto 0;
+      padding: 44px 0;
+      border-top: 1px solid var(--hairline);
+      border-bottom: 1px solid var(--hairline);
+      text-align: center;
+    }
+
+    .empty.visible { display: block; }
+    .empty h2 { margin: 0; font-size: 1.5rem; font-weight: 500; }
+    .empty p { margin: 12px 0 0; color: var(--muted); line-height: 1.6; }
+
+    dialog {
+      width: min(560px, calc(100% - 32px));
+      max-height: calc(100vh - 40px);
+      padding: 0;
+      overflow: auto;
+      border: 1px solid var(--hairline);
+      border-radius: 3px;
+      background: #05240e;
+      color: var(--ivory);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, .55);
+    }
+
+    dialog::backdrop { background: rgba(0, 10, 3, .76); backdrop-filter: blur(4px); }
+
+    .modal-layout { display: grid; grid-template-columns: 158px minmax(0, 1fr); }
+    .modal-poster { width: 100%; height: 100%; min-height: 275px; object-fit: cover; }
+    .modal-content { position: relative; padding: 30px 28px 28px; }
+    .modal-close {
+      position: absolute;
+      top: 13px;
+      right: 13px;
+      width: 36px;
+      height: 36px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+
+    .modal-kicker { margin: 0 0 9px; color: var(--gold); font-size: .68rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+    .modal-title { margin: 0; padding-right: 24px; font-family: Georgia, "Times New Roman", serif; font-size: 1.55rem; font-weight: 500; line-height: 1.15; }
+    .modal-meta { margin: 9px 0 0; color: var(--dim); font-size: .76rem; }
+    .detail-list { display: grid; gap: 14px; margin: 28px 0 0; }
+    .detail { padding-top: 12px; border-top: 1px solid var(--soft-line); }
+    .detail dt { color: var(--dim); font-size: .67rem; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+    .detail dd { margin: 6px 0 0; color: var(--muted); font-size: .84rem; line-height: 1.5; }
+
+    .mobile-nav { display: none; }
+
+    @media (max-width: 900px) {
+      .hero-inner, main { width: min(100% - 48px, 1180px); }
+      .hero { min-height: 350px; }
+      .timeline::before { left: 94px; }
+      .period { grid-template-columns: 70px minmax(0, 1fr); gap: 49px; }
+      .period-label::after { right: -29px; }
+      .movie-row { grid-template-columns: 62px minmax(140px, 1fr) auto; gap: 15px; }
+      .watch-context { display: none; }
+    }
+
+    @media (max-width: 680px) {
+      :root { --sidebar: 0px; }
+      .sidebar { display: none; }
+      .page { margin-left: 0; padding-bottom: 72px; }
+      .hero { min-height: 340px; }
+      .hero-inner, main { width: calc(100% - 34px); }
+      .hero-inner { padding-bottom: 38px; }
+      h1 { font-size: 2.75rem; }
+      .hero-copy { font-size: .9rem; }
+      .hero-stats { gap: 8px 17px; }
+      main { padding-top: 22px; padding-bottom: 55px; }
+      .group-tabs { gap: 25px; }
+      .toolbar { align-items: stretch; padding-top: 22px; }
+      .search { flex-basis: 100%; max-width: none; }
+      .filter-group { flex: 1; overflow-x: auto; }
+      .filter-button { min-width: max-content; padding-inline: 9px; }
+      .sort { width: 100%; margin-left: 0; justify-content: space-between; }
+      .timeline::before { left: 7px; }
+      .period { display: block; padding: 34px 0 18px 28px; }
+      .period-label { position: relative; top: 0; margin-bottom: 15px; }
+      .period-label strong, .period-label span { display: inline; }
+      .period-label span { margin-left: 8px; }
+      .period-label::after { left: -25px; right: auto; top: 4px; }
+      .movie-row { grid-template-columns: 54px minmax(0, 1fr) auto; padding-right: 4px; gap: 12px; }
+      .poster { width: 48px; }
+      .movie-title { overflow: hidden; font-size: .91rem; text-overflow: ellipsis; white-space: nowrap; }
+      .rating span { display: none; }
+      .modal-layout { grid-template-columns: 105px minmax(0, 1fr); }
+      .modal-content { padding: 25px 20px 22px; }
+      .modal-poster { min-height: 220px; }
+      .mobile-nav {
+        position: fixed;
+        z-index: 40;
+        inset: auto 0 0;
+        height: 70px;
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        padding-bottom: env(safe-area-inset-bottom);
+        border-top: 1px solid var(--hairline);
+        background: rgba(2, 26, 8, .96);
+        backdrop-filter: blur(12px);
+      }
+      .mobile-nav button {
+        width: 54px;
+        height: 48px;
+        display: grid;
+        place-items: center;
+        border: 0;
+        background: transparent;
+        color: var(--dim);
+      }
+      .mobile-nav button.active { color: var(--gold-bright); }
+      .mobile-nav svg { width: 20px; height: 20px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+      .movie-row:hover { transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar" aria-label="Primary navigation">
+    <div class="logo" aria-label="Movie Tracker">MT</div>
+    <nav class="nav-list">
+      <button class="nav-button" aria-label="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 10 9-7 9 7v10H3Z"/><path d="M9 20v-6h6v6"/></svg><span class="tip">Home</span></button>
+      <button class="nav-button" aria-label="Groups"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.5 20c.4-4 2.2-6 5.5-6s5.1 2 5.5 6M14 15c4.5-.7 6.8 1 7.2 5"/></svg><span class="tip">Groups</span></button>
+      <button class="nav-button" aria-label="Watchlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h12v18l-6-4-6 4Z"/></svg><span class="tip">Watchlist</span></button>
+      <button class="nav-button active" aria-label="Watch history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg><span class="tip">Watch history</span></button>
+      <button class="nav-button" aria-label="Chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v12H8l-4 4Z"/></svg><span class="tip">Chat</span></button>
+    </nav>
+    <div class="nav-spacer"></div>
+    <div class="avatar" aria-label="Mehrzad's profile">MZ</div>
+  </aside>
+
+  <div class="page">
+    <header class="hero">
+      <div class="hero-image" id="heroImage" aria-hidden="true"></div>
+      <div class="hero-inner">
+        <p class="kicker" id="heroKicker">Your film diary</p>
+        <h1 id="heroTitle">Watch History</h1>
+        <p class="hero-copy" id="heroCopy">Every movie night, remembered. Revisit what you watched, where you watched it, and who shared the screen with you.</p>
+        <div class="hero-stats" aria-live="polite">
+          <span><strong id="statMovies">12</strong> films watched</span>
+          <span><strong id="statHours">25</strong> hours</span>
+          <span>Last watched <strong id="statRecent">Aug 28</strong></span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <nav class="group-tabs" role="tablist" aria-label="Whose watch history">
+        <button class="group-tab active" role="tab" aria-selected="true" data-tab="personal">Personal</button>
+        <button class="group-tab" role="tab" aria-selected="false" data-tab="cinema">Cinema Society</button>
+        <button class="group-tab" role="tab" aria-selected="false" data-tab="family">Family Night</button>
+        <button class="group-tab" role="tab" aria-selected="false" data-tab="weekend">Weekend Crew</button>
+      </nav>
+
+      <section class="toolbar" aria-label="History controls">
+        <label class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>
+          <input id="searchInput" type="search" placeholder="Search watch history…" aria-label="Search watch history" />
+        </label>
+        <div class="filter-group" aria-label="History period">
+          <button class="filter-button active" data-filter="all">All time</button>
+          <button class="filter-button" data-filter="year">This year</button>
+          <button class="filter-button" data-filter="rated">Rated</button>
+        </div>
+        <label class="sort">Sort
+          <select id="sortSelect" aria-label="Sort watch history">
+            <option value="recent">Most recent</option>
+            <option value="rating">Highest rated</option>
+            <option value="title">Title A–Z</option>
+          </select>
+        </label>
+      </section>
+
+      <p class="results-note" id="resultsNote">Showing your complete personal history</p>
+
+      <div class="timeline" id="timeline">
+        <section class="period" data-year="2026">
+          <div class="period-label"><strong>August</strong><span>2026</span></div>
+          <div class="movie-list">
+            <article class="movie-row" tabindex="0" data-tabs="personal cinema" data-title="Oppenheimer" data-year="2026" data-rating="9.1" data-date="August 28, 2026" data-place="Cinema 6 · Avalon Mall" data-with="Cinema Society · 5 friends" data-notes="The 70mm presentation made this one feel genuinely enormous." data-poster="watch-history-assets/oppenheimer.jpg">
+              <img class="poster" src="watch-history-assets/oppenheimer.jpg" alt="Oppenheimer poster" />
+              <div><h2 class="movie-title">Oppenheimer</h2><p class="movie-year">2023 · Drama, History</p></div>
+              <div class="watch-context"><strong>Cinema 6 · Avalon Mall</strong><span>With Cinema Society · 5 friends</span></div>
+              <div class="rating" aria-label="Rated 9.1 out of 10"><svg viewBox="0 0 24 24"><path d="m12 2.7 2.8 5.7 6.3.9-4.6 4.5 1.1 6.3-5.6-3-5.6 3 1.1-6.3-4.6-4.5 6.3-.9Z"/></svg><span>9.1</span></div>
+            </article>
+            <article class="movie-row" tabindex="0" data-tabs="personal family" data-title="The Grand Budapest Hotel" data-year="2026" data-rating="8.4" data-date="August 16, 2026" data-place="Home" data-with="Family Night · 3 people" data-notes="Still the best lobby in cinema. Everyone voted to revisit another Wes Anderson film next month." data-poster="watch-history-assets/grand-budapest.jpg">
+              <img class="poster" src="watch-history-assets/grand-budapest.jpg" alt="The Grand Budapest Hotel poster" />
+              <div><h2 class="movie-title">The Grand Budapest Hotel</h2><p class="movie-year">2014 · Comedy, Drama</p></div>
+              <div class="watch-context"><strong>Home</strong><span>With Family Night · 3 people</span></div>
+              <div class="rating" aria-label="Rated 8.4 out of 10"><svg viewBox="0 0 24 24"><path d="m12 2.7 2.8 5.7 6.3.9-4.6 4.5 1.1 6.3-5.6-3-5.6 3 1.1-6.3-4.6-4.5 6.3-.9Z"/></svg><span>8.4</span></div>
+            </article>
+            <article class="movie-row" tabindex="0" data-tabs="personal weekend" data-title="Past Lives" data-year="2026" data-rating="8.8" data-date="August 3, 2026" data-place="Sarah's apartment" data-with="Weekend Crew · 4 friends" data-notes="A very quiet room when the credits started." data-poster="watch-history-assets/past-lives.jpg">
+              <img class="poster" src="watch-history-assets/past-lives.jpg" alt="Past Lives poster" />
+              <div><h2 class="movie-title">Past Lives</h2><p class="movie-year">2023 · Drama, Romance</p></div>
+              <div class="watch-context"><strong>Sarah's apartment</strong><span>With Weekend Crew · 4 friends</span></div>
+              <div class="rating" aria-label="Rated 8.8 out of 10"><svg viewBox="0 0 24 24"><path d="m12 2.7 2.8 5.7 6.3.9-4.6 4.5 1.1 6.3-5.6-3-5.6 3 1.1-6.3-4.6-4.5 6.3-.9Z"/></svg><span>8.8</span></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="period" data-year="2026">
+          <div class="period-label"><strong>July</strong><span>2026</span></div>
+          <div class="movie-list">
+            <article class="movie-row" tabindex="0" data-tabs="personal cinema" data-title="Dune: Part Two" data-year="2026" data-rating="9.3" data-date="July 21, 2026" data-place="Scotiabank Theatre" data-with="Cinema Society · 7 friends" data-notes="The sound alone justified seeing it in a theatre again." data-poster="watch-history-assets/dune-part-two.jpg">
+              <img class="poster" src="watch-history-assets/dune-part-two.jpg" alt="Dune: Part Two poster" />
+              <div><h2 class="movie-title">Dune: Part Two</h2><p class="movie-year">2024 · Science Fiction</p></div>
+              <div class="watch-context"><strong>Scotiabank Theatre</strong><span>With Cinema Society · 7 friends</span></div>
+              <div class="rating" aria-label="Rated 9.3 out of 10"><svg viewBox="0 0 24 24"><path d="m12 2.7 2.8 5.7 6.3.9-4.6 4.5 1.1 6.3-5.6-3-5.6 3 1.1-6.3-4.6-4.5 6.3-.9Z"/></svg><span>9.3</span></div>
+            </article>
+            <article class="movie-row" tabindex="0" data-tabs="personal family" data-title="Spider-Man: Into the Spider-Verse" data-year="2026" data-rating="8.7" data-date="July 9, 2026" data-place="Home" data-with="Family Night · 4 people" data-notes="A family favourite. The animation still feels completely fresh." data-poster="watch-history-assets/spider-verse.jpg">
+              <img class="poster" src="watch-history-assets/spider-verse.jpg" alt="Spider-Man: Into the Spider-Verse poster" />
+              <div><h2 class="movie-title">Spider-Man: Into the Spider-Verse</h2><p class="movie-year">2018 · Animation, Action</p></div>
+              <div class="watch-context"><strong>Home</strong><span>With Family Night · 4 people</span></div>
+              <div class="rating" aria-label="Rated 8.7 out of 10"><svg viewBox="0 0 24 24"><path d="m12 2.7 2.8 5.7 6.3.9-4.6 4.5 1.1 6.3-5.6-3-5.6 3 1.1-6.3-4.6-4.5 6.3-.9Z"/></svg><span>8.7</span></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="period" data-year="2025">
+          <div class="period-label"><strong>December</strong><span>2025</span></div>
+          <div class="movie-list">
+            <article class="movie-row" tabindex="0" data-tabs="personal weekend" data-title="The Holdovers" data-year="2025" data-rating="8.2" data-date="December 19, 2025" data-place="Michael's place" data-with="Weekend Crew · 6 friends" data-notes="Exactly the winter movie we needed." data-poster="watch-history-assets/holdovers.jpg">
+              <img class="poster" src="watch-history-assets/holdovers.jpg" alt="The Holdovers poster" />
+              <div><h2 class="movie-title">The Holdovers</h2><p class="movie-year">2023 · Comedy, Drama</p></div>
+              <div class="watch-context"><strong>Michael's place</strong><span>With Weekend Crew · 6 friends</span></div>
+              <div class="rating" aria-label="Rated 8.2 out of 10"><svg viewBox="0 0 24 24"><path d="m12 2.7 2.8 5.7 6.3.9-4.6 4.5 1.1 6.3-5.6-3-5.6 3 1.1-6.3-4.6-4.5 6.3-.9Z"/></svg><span>8.2</span></div>
+            </article>
+          </div>
+        </section>
+      </div>
+
+      <section class="empty" id="emptyState">
+        <h2>No matching screenings</h2>
+        <p>Try another title or return to the complete history.</p>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="movieDialog" aria-labelledby="dialogTitle">
+    <div class="modal-layout">
+      <img class="modal-poster" id="dialogPoster" src="watch-history-assets/oppenheimer.jpg" alt="Selected movie poster" />
+      <div class="modal-content">
+        <button class="modal-close" id="dialogClose" aria-label="Close details">×</button>
+        <p class="modal-kicker">Watch entry</p>
+        <h2 class="modal-title" id="dialogTitle"></h2>
+        <p class="modal-meta" id="dialogMeta"></p>
+        <dl class="detail-list">
+          <div class="detail"><dt>Watched</dt><dd id="dialogDate"></dd></div>
+          <div class="detail"><dt>Location</dt><dd id="dialogPlace"></dd></div>
+          <div class="detail"><dt>Watched with</dt><dd id="dialogWith"></dd></div>
+          <div class="detail"><dt>Notes</dt><dd id="dialogNotes"></dd></div>
+        </dl>
+      </div>
+    </div>
+  </dialog>
+
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    <button aria-label="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 10 9-7 9 7v10H3Z"/><path d="M9 20v-6h6v6"/></svg></button>
+    <button aria-label="Groups"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.5 20c.4-4 2.2-6 5.5-6s5.1 2 5.5 6M14 15c4.5-.7 6.8 1 7.2 5"/></svg></button>
+    <button aria-label="Watchlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h12v18l-6-4-6 4Z"/></svg></button>
+    <button class="active" aria-label="Watch history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></button>
+    <button aria-label="Chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v12H8l-4 4Z"/></svg></button>
+  </nav>
+
+  <script>
+    const tabConfig = {
+      personal: { kicker: "Your film diary", title: "Watch History", copy: "Every movie night, remembered. Revisit what you watched, where you watched it, and who shared the screen with you.", note: "Showing your complete personal history", hours: 25, recent: "Aug 28", image: "watch-history-assets/oppenheimer.jpg" },
+      cinema: { kicker: "Shared screenings", title: "Cinema Society", copy: "The complete screening record for Cinema Society — from opening nights to the films everyone still talks about.", note: "Showing Cinema Society's shared history", hours: 9, recent: "Aug 28", image: "watch-history-assets/dune-part-two.jpg" },
+      family: { kicker: "Shared screenings", title: "Family Night", copy: "Comfort rewatches, animated favourites, and the occasional film that keeps everyone debating after the credits.", note: "Showing Family Night's shared history", hours: 8, recent: "Aug 16", image: "watch-history-assets/grand-budapest.jpg" },
+      weekend: { kicker: "Shared screenings", title: "Weekend Crew", copy: "Late starts, excellent snacks, and every weekend selection kept together in one shared record.", note: "Showing Weekend Crew's shared history", hours: 7, recent: "Aug 3", image: "watch-history-assets/past-lives.jpg" }
+    };
+
+    let activeTab = "personal";
+    let activeFilter = "all";
+    const rows = [...document.querySelectorAll(".movie-row")];
+    const periods = [...document.querySelectorAll(".period")];
+    const tabs = [...document.querySelectorAll(".group-tab")];
+    const filters = [...document.querySelectorAll(".filter-button")];
+    const search = document.getElementById("searchInput");
+    const sort = document.getElementById("sortSelect");
+    const empty = document.getElementById("emptyState");
+    const dialog = document.getElementById("movieDialog");
+
+    function applyView() {
+      const query = search.value.trim().toLowerCase();
+      let visibleCount = 0;
+      rows.forEach(row => {
+        const inTab = row.dataset.tabs.split(" ").includes(activeTab);
+        const matchesSearch = row.dataset.title.toLowerCase().includes(query);
+        const matchesFilter = activeFilter === "all" || (activeFilter === "year" && row.dataset.year === "2026") || (activeFilter === "rated" && Number(row.dataset.rating) > 0);
+        const visible = inTab && matchesSearch && matchesFilter;
+        row.hidden = !visible;
+        if (visible) visibleCount += 1;
+      });
+
+      periods.forEach(period => {
+        period.hidden = ![...period.querySelectorAll(".movie-row")].some(row => !row.hidden);
+      });
+      empty.classList.toggle("visible", visibleCount === 0);
+      document.getElementById("statMovies").textContent = visibleCount;
+    }
+
+    function setTab(tab) {
+      activeTab = tab;
+      tabs.forEach(button => {
+        const selected = button.dataset.tab === tab;
+        button.classList.toggle("active", selected);
+        button.setAttribute("aria-selected", String(selected));
+      });
+      const config = tabConfig[tab];
+      document.getElementById("heroKicker").textContent = config.kicker;
+      document.getElementById("heroTitle").textContent = config.title;
+      document.getElementById("heroCopy").textContent = config.copy;
+      document.getElementById("resultsNote").textContent = config.note;
+      document.getElementById("statHours").textContent = config.hours;
+      document.getElementById("statRecent").textContent = config.recent;
+      document.getElementById("heroImage").style.backgroundImage = `url("${config.image}")`;
+      search.value = "";
+      applyView();
+    }
+
+    function sortRows(mode) {
+      periods.forEach(period => {
+        const list = period.querySelector(".movie-list");
+        const periodRows = [...list.querySelectorAll(".movie-row")];
+        periodRows.sort((a, b) => {
+          if (mode === "rating") return Number(b.dataset.rating) - Number(a.dataset.rating);
+          if (mode === "title") return a.dataset.title.localeCompare(b.dataset.title);
+          return rows.indexOf(a) - rows.indexOf(b);
+        });
+        periodRows.forEach(row => list.appendChild(row));
+      });
+    }
+
+    tabs.forEach(tab => tab.addEventListener("click", () => setTab(tab.dataset.tab)));
+    filters.forEach(button => button.addEventListener("click", () => {
+      activeFilter = button.dataset.filter;
+      filters.forEach(item => item.classList.toggle("active", item === button));
+      applyView();
+    }));
+    search.addEventListener("input", applyView);
+    sort.addEventListener("change", () => sortRows(sort.value));
+
+    function openDetails(row) {
+      document.getElementById("dialogPoster").src = row.dataset.poster;
+      document.getElementById("dialogPoster").alt = `${row.dataset.title} poster`;
+      document.getElementById("dialogTitle").textContent = row.dataset.title;
+      document.getElementById("dialogMeta").textContent = `Your rating · ${row.dataset.rating}/10`;
+      document.getElementById("dialogDate").textContent = row.dataset.date;
+      document.getElementById("dialogPlace").textContent = row.dataset.place;
+      document.getElementById("dialogWith").textContent = row.dataset.with;
+      document.getElementById("dialogNotes").textContent = row.dataset.notes;
+      dialog.showModal();
+    }
+
+    rows.forEach(row => {
+      row.addEventListener("click", () => openDetails(row));
+      row.addEventListener("keydown", event => {
+        if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openDetails(row); }
+      });
+    });
+    document.getElementById("dialogClose").addEventListener("click", () => dialog.close());
+    dialog.addEventListener("click", event => { if (event.target === dialog) dialog.close(); });
+
+    applyView();
+  </script>
+</body>
+</html>

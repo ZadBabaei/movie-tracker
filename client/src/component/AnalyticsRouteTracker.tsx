@@ -6,6 +6,7 @@ import { captureAnalyticsEvent, identifyAnalyticsUser } from "../utils/analytics
 const featureForPath = (path: string) => {
   if (path === "/home") return "home";
   if (path === "/watchlist") return "watchlist";
+  if (path === "/history") return "watch_history";
   if (path === "/coming-soon") return "coming_soon";
   if (path === "/my-groups" || /^\/group\/[^/]+$/.test(path)) return "groups";
   if (path.endsWith("/chat")) return "chat";

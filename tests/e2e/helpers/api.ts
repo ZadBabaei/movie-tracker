@@ -15,7 +15,8 @@ export interface AuthSession {
   password: string;
 }
 
-const apiBaseURL = () => process.env.E2E_API_URL || "http://localhost:5000";
+const apiBaseURL = () =>
+  process.env.E2E_API_URL || `http://localhost:${process.env.E2E_SERVER_PORT || "5000"}`;
 
 const authHeaders = (token: string) => ({
   Authorization: `Bearer ${token}`,
@@ -152,6 +153,17 @@ export const getGroup = async (
   groupId: string
 ) => {
   const response = await request.get(`${apiBaseURL()}/api/groups/${groupId}`, {
+    headers: authHeaders(token),
+  });
+  expect(response.ok()).toBeTruthy();
+  return response.json();
+};
+
+export const getPersonalHistory = async (
+  request: APIRequestContext,
+  token: string
+) => {
+  const response = await request.get(`${apiBaseURL()}/api/history/personal`, {
     headers: authHeaders(token),
   });
   expect(response.ok()).toBeTruthy();

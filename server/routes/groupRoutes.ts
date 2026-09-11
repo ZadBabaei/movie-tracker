@@ -13,6 +13,8 @@ import { verifyAuthToken } from "../utils/authToken";
 import { getIO } from "../socket";
 import { sendGroupInviteEmail } from "../utils/emailService";
 import { getDefaultAvatarUrl } from "../utils/avatar";
+import WatchHistoryEntry from "../models/WatchHistoryEntry";
+import { syncLegacyGroupHistory } from "../utils/watchHistory";
 
 const router = express.Router();
 const objectIdPattern = /^[a-f\d]{24}$/i;
@@ -431,7 +433,7 @@ router.get("/:id", authenticate, async (req: Request, res: Response) => {
 router.post("/:id/add-movie", authenticate, async (req: Request, res: Response) => {
   try {
     const userId = new mongoose.Types.ObjectId(req.user!.id);
-    const groupId = req.params.id;
+    const groupId = String(req.params.id);
     const {
       movie,
       watchedAt,
@@ -516,6 +518,7 @@ router.post("/:id/add-movie", authenticate, async (req: Request, res: Response) 
       } as any);
     }
     await group.save();
+    await syncLegacyGroupHistory([groupId]);
 
     getIO().to(groupId).emit("group:movie_added", { movie: existingMovie });
     res.json({ msg: "Movie added", movie: existingMovie });
@@ -580,6 +583,20 @@ router.post("/:groupId/history/:historyItemId/rating", authenticate, async (req:
     }
 
     await group.save();
+    await syncLegacyGroupHistory([groupId]);
+    await WatchHistoryEntry.updateOne(
+      { legacyGroupId: group._id, legacyHistoryItemId: historyItem._id },
+      {
+        $set: {
+          ratings: historyItem.ratings.map((entry: any) => ({
+            userId: entry.userId?._id || entry.userId,
+            rating: entry.rating,
+            createdAt: entry.createdAt,
+            updatedAt: entry.updatedAt,
+          })),
+        },
+      }
+    );
     await group.populate({
       path: "movies.ratings.userId",
       select: "_id name avatar",
@@ -667,6 +684,18 @@ router.patch("/:groupId/history/:historyItemId", authenticate, async (req: Reque
     historyItem.watchedNotes = notesPayload;
 
     await group.save();
+    await syncLegacyGroupHistory([groupId]);
+    await WatchHistoryEntry.updateOne(
+      { legacyGroupId: group._id, legacyHistoryItemId: historyItem._id },
+      {
+        $set: {
+          watchedAt: parsedWatchedAt,
+          watchedLocation: locationPayload,
+          watchedNotes: notesPayload,
+          participants: validWatchedWith,
+        },
+      }
+    );
     await group.populate({ path: "movies.watchedWith", select: "_id name avatar" });
 
     const updatedHistoryItem = (group.movies as any).id(historyItemId) || historyItem;
@@ -713,6 +742,10 @@ router.delete("/:groupId/history/:historyItemId", authenticate, async (req: Requ
     }
 
     await group.save();
+    await WatchHistoryEntry.deleteOne({
+      legacyGroupId: group._id,
+      legacyHistoryItemId: new mongoose.Types.ObjectId(historyItemId),
+    });
     getIO().to(groupId).emit("group:history_deleted", { historyItemId });
     res.json({ msg: "History item deleted", historyItemId, movies: group.movies });
   } catch (error) {
@@ -760,6 +793,7 @@ router.delete("/:groupId/remove-movie/:movieId", authenticate, async (req: Reque
     }
 
     await group.save();
+    await WatchHistoryEntry.deleteMany({ groupId: group._id, movieId: new mongoose.Types.ObjectId(movieId) });
     res.json({ msg: "Movie removed from group" });
   } catch (error) {
     console.error("Error removing movie:", error);

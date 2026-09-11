@@ -33,7 +33,10 @@ export const getAllowedOrigins = () => {
 
 export const isOriginAllowed = (origin?: string) => {
   if (!origin) return true;
-  return getAllowedOrigins().includes(normalizeOrigin(origin));
+  const normalized = normalizeOrigin(origin);
+  const isStagingPreview = process.env.NODE_ENV === "staging"
+    && /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(normalized);
+  return isStagingPreview || getAllowedOrigins().includes(normalized);
 };
 
 export const corsOptions: CorsOptions = {

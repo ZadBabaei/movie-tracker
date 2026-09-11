@@ -293,8 +293,12 @@ const Watchlist: React.FC = () => {
 
     setMarkingWatched(true);
     try {
-      await markAsWatched(pendingMovie._id, groupId, metadata);
-      toast.success(`${pendingMovie.title} moved to group watch history.`);
+      await markAsWatched(pendingMovie._id, groupId, metadata, "personal");
+      toast.success(
+        groupId === "personal"
+          ? `${pendingMovie.title} moved to your watch history.`
+          : `${pendingMovie.title} moved to group watch history.`
+      );
       setGroupSelectOpen(false);
       setPendingMovie(null);
     } catch (err: any) {

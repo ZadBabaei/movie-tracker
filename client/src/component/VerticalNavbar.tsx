@@ -11,6 +11,7 @@ import {
   FaComments,
   FaEllipsisH,
   FaChartLine,
+  FaHistory,
 } from "react-icons/fa";
 import { useModalStore } from "../store/useModalStore";
 import { useUserStore } from "../store/useUserStore";
@@ -136,6 +137,12 @@ const VerticalNavbar: React.FC = () => {
           </Link>
         </li>
         <li className="navbar-item">
+          <Link to="/history" className="navbar-link">
+            <span className="icon"><FaHistory /></span>
+            <span className="label">Watch History</span>
+          </Link>
+        </li>
+        <li className="navbar-item">
           <Link to="/coming-soon" className="navbar-link">
             <span className="icon"><FaCalendarAlt /></span>
             <span className="label">Coming Soon</span>
@@ -241,6 +248,14 @@ const VerticalNavbar: React.FC = () => {
       >
         <FaThList />
         <span>Watchlist</span>
+      </button>
+      <button
+        type="button"
+        className={`mobile-nav-item ${isActive(["/history"]) ? "active" : ""}`}
+        onClick={() => navigate("/history")}
+      >
+        <FaHistory />
+        <span>History</span>
       </button>
       <button
         type="button"
