@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo, useRef } from "react"
 import {
   FaClock,
   FaListUl,
+  FaPoll,
   FaPlus,
   FaSearch,
   FaStar,
@@ -13,6 +14,7 @@ import "./Watchlist.css";
 import SearchBar from "../component/SearchBar";
 import MovieCard from "../component/MovieCard";
 import MovieDetailModal from "../component/MovieDetailModal";
+import VoteModal from "../component/VoteModal";
 import VerticalNavbar from "../component/VerticalNavbar";
 import SuggestionsCarousel from "../component/SuggestionsCarousel";
 import FavoritesCarousel from "../component/FavoritesCarousel";
@@ -26,6 +28,8 @@ import {
 import { useGroupStore } from "../store/useGroupStore";
 import { useUserStore } from "../store/useUserStore";
 import { useSocket } from "../hooks/useSocket";
+import { useModalStore } from "../store/useModalStore";
+import { usePollStore } from "../store/usePollStore";
 import { toast } from "react-toastify";
 import apiClient from "../api/apiClient";
 import { fetchGroupFavorites as fetchGroupFavoritesApi } from "../api/watchlistApi";
@@ -72,6 +76,8 @@ const Watchlist: React.FC = () => {
 
   const { groupList, fetchGroups } = useGroupStore();
   const { profile, fetchProfile } = useUserStore();
+  const { isVoteModalOpen, openVoteModal } = useModalStore();
+  const { clearVoteSelections, setCurrentPoll } = usePollStore();
   const [searchParams] = useSearchParams();
 
   const isPersonalTab = activeTab === "personal";
@@ -321,6 +327,13 @@ const Watchlist: React.FC = () => {
     removeMovieFromGroup(activeTab, movie._id);
   };
 
+  const handleCreatePoll = () => {
+    if (isPersonalTab) return;
+    clearVoteSelections();
+    setCurrentPoll(null);
+    openVoteModal("create");
+  };
+
   const formatMovieForCard = (movie: WatchlistMovie) => ({
     ...movie,
     poster_path: movie.poster,
@@ -546,6 +559,18 @@ const Watchlist: React.FC = () => {
                 {showQuickAdd ? <FaTimes /> : <FaPlus />}
                 <span>{showQuickAdd ? "Close" : "Add a Film"}</span>
               </button>
+
+              {!isPersonalTab && (
+                <button
+                  type="button"
+                  className="wl2-poll-toggle"
+                  onClick={handleCreatePoll}
+                  aria-label={`Create a poll for ${activeGroup?.name || "this group"}`}
+                >
+                  <FaPoll />
+                  <span>Create Poll</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -690,6 +715,10 @@ const Watchlist: React.FC = () => {
           variant="watchlist"
           onClose={() => setSelectedMovie(null)}
         />
+      )}
+
+      {isVoteModalOpen && !isPersonalTab && (
+        <VoteModal groupId={activeTab} />
       )}
 
       <GroupSelectModal
