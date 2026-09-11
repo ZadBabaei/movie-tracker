@@ -440,6 +440,45 @@
   font-weight: 600;
 }
 
+.mdm-cast-strip {
+  display: flex;
+  gap: 10px;
+  margin: 4px 0 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(211, 172, 108, 0.45) transparent;
+}
+
+.mdm-cast-person {
+  flex: 0 0 58px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  color: #aaa;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.mdm-cast-photo {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.mdm-cast-person span {
+  width: 100%;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
 .mdm-overview {
   font-size: 0.875rem;
   color: #999;
@@ -650,6 +689,10 @@
   .mdm-watch-meta {
     gap: 10px;
     padding: 10px;
+  }
+
+  .mdm-cast-strip {
+    width: 100%;
   }
 
   .mdm-group-ratings-content {

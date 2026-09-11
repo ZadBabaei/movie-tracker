@@ -12,6 +12,23 @@ const getPosterUrl = (path) => {
   return path.startsWith("http") ? path : `https://image.tmdb.org/t/p/w500${path}`;
 };
 
+const getProfileUrl = (path) => {
+  if (!path) return "";
+  return path.startsWith("http") ? path : `https://image.tmdb.org/t/p/w185${path}`;
+};
+
+const formatLanguages = (details = {}) => {
+  const spoken = details?.spoken_languages || [];
+  if (spoken.length > 0) {
+    return spoken
+      .map((language) => language.english_name || language.name)
+      .filter(Boolean)
+      .join(", ");
+  }
+
+  return details?.original_language ? details.original_language.toUpperCase() : "";
+};
+
 const getTmdbMovieId = (movie = {}) => {
   const explicitId = movie.tmdbId || movie.movieTmdbId || movie.tmdbMovieId;
   if (explicitId) return explicitId.toString();
@@ -157,7 +174,7 @@ const MovieDetailModal = ({ movie, groupId = null, variant = "history", onRating
     setTrailerKey(null);
     setShowTrailerPlayer(false);
 
-    if (!isPoll || !tmdbId) {
+    if ((!isPoll && !isWatchlist) || !tmdbId) {
       setLoadingTrailer(false);
       return undefined;
     }
@@ -189,7 +206,7 @@ const MovieDetailModal = ({ movie, groupId = null, variant = "history", onRating
       });
 
     return () => controller.abort();
-  }, [isPoll, tmdbId]);
+  }, [isPoll, isWatchlist, tmdbId]);
 
   useEffect(() => {
     const existingImdbUrl = getImdbUrlFromMovie(movie);
@@ -221,7 +238,10 @@ const MovieDetailModal = ({ movie, groupId = null, variant = "history", onRating
   }, [movie, tmdbId]);
 
   const director = details?.credits?.crew?.find((c) => c.job === "Director")?.name;
-  const cast = details?.credits?.cast?.slice(0, 4).map((a) => a.name) || [];
+  const castMembers = details?.credits?.cast?.slice(0, 6) || [];
+  const cast = castMembers.slice(0, 4).map((a) => a.name);
+  const castWithImages = castMembers.filter((member) => member.profile_path);
+  const languages = formatLanguages(details);
   const year = details?.release_date ? new Date(details.release_date).getFullYear() : null;
   const overview = details?.overview;
   const genres = details?.genres?.map((g) => g.name) || [];
@@ -343,10 +363,32 @@ const MovieDetailModal = ({ movie, groupId = null, variant = "history", onRating
               </p>
             )}
 
-            {!loadingDetails && cast.length > 0 && (
+            {!loadingDetails && languages && (
               <p className="mdm-meta">
-                <span className="mdm-label">Cast:</span> {cast.join(", ")}
+                <span className="mdm-label">Language:</span> {languages}
               </p>
+            )}
+
+            {!loadingDetails && cast.length > 0 && (
+              <>
+                <p className="mdm-meta">
+                  <span className="mdm-label">Cast:</span> {cast.join(", ")}
+                </p>
+                {castWithImages.length > 0 && (
+                  <div className="mdm-cast-strip" aria-label="Cast headshots">
+                    {castWithImages.map((member) => (
+                      <div className="mdm-cast-person" key={member.cast_id || member.credit_id || member.id}>
+                        <img
+                          src={getProfileUrl(member.profile_path)}
+                          alt={member.name}
+                          className="mdm-cast-photo"
+                        />
+                        <span>{member.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
 
             {!loadingDetails && overview && (
@@ -506,7 +548,7 @@ const MovieDetailModal = ({ movie, groupId = null, variant = "history", onRating
           </section>
         )}
 
-        {isPoll && (
+        {(isPoll || isWatchlist) && (
           <section className="mdm-trailer">
             <h3 className="mdm-trailer-heading">Trailer</h3>
 
