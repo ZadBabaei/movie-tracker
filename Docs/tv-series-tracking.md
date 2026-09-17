@@ -241,3 +241,43 @@ Status: Phase 0 audit + Phase 1 data foundation complete.
 - Known gaps: hero stat still says "films watched"; the temporary episode
   row/detail is minimal until Phase 8; timezone of "today" and of
   `watchedAt` is UTC-day based (Phase 4 decision).
+
+
+---
+
+# Phase 4 — Unified timeline model + TV daily sessions (done)
+
+- `client/src/utils/historyTimeline.ts` — pure model over raw entries:
+  `TimelineItem = MovieTimelineItem | TvSessionTimelineItem`. Movies never
+  group (a same-day rewatch is two items). Episodes group by
+  `seriesTmdbId + calendar day` only; `entries` keeps every underlying
+  record in raw order, never deduplicated. `sortAt` = max `watchedAt`; ties
+  keep first-appearance order. Helpers for search (session matches if any
+  episode's series title / episode title / `SxxExx` matches), This-year
+  (calendar day), Rated (any entry rated), title sort (series title) and a
+  sort-only rating value (mean of rated entries, never displayed).
+- **Calendar-day rule (locked):** `historyCalendarDay(watchedAt)` = the UTC
+  date of `watchedAt` (`toISOString().slice(0, 10)`). Date-only inputs are
+  stored as UTC midnight and the UI formats in UTC, so this preserves exactly
+  the date the user entered. `23:59:59Z` → that day, `00:00:00Z` → next day.
+  No user-timezone setting; external imports must normalise before becoming
+  history.
+- Session summary `describeTvSessionEpisodes`: `S01 · E01–E04`,
+  `S01 · E01, E03, E05`, `S01 · E08 · S02 · E01–E02`, `S01 · E01 ×2, E02`
+  (a range is never used once any episode repeats), `Specials · E01–E02`.
+- `client/src/utils/historyPagination.ts` — `completeTrailingDay`: after the
+  100-row page, if the trailing calendar day contains a TV episode and there
+  is a next page, fetch 25-row continuations and append records while they
+  belong to that same day; the first earlier-day record is left on the server
+  side and `nextCursor` becomes the last included id. Capped at 8 pages.
+  Whole-day (not "consecutive same-session") because same-day watches share
+  one UTC-midnight timestamp and are ordered by `_id`, so an interleaved
+  movie would otherwise still split a session. Wired into both store fetches;
+  store remains raw `HistoryEntry[]`.
+- Page: timeline derived via `useMemo`; movie cards unchanged; TV session card
+  shows series poster/title/summary/day/"N episode watches". Clicking a
+  session opens a list of its exact occurrences (code, title, date, location,
+  rating) inside the existing details modal; each occurrence opens the normal
+  entry detail (edit/rate/delete by `_id`) with a back link. Session identity
+  is the recomputed key, so edits/deletes/socket refreshes regroup live.
+- Hero copy: "N watch events" (raw count), media-neutral empty-state copy.

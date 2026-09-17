@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import * as api from "../api/historyApi";
+import { completeTrailingDay } from "../utils/historyPagination";
 
 export interface HistoryMember {
   _id: string;
@@ -83,8 +84,17 @@ export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
     set((state) => ({ loading: { ...state.loading, personal: true }, errors: { ...state.errors, personal: null } }));
     try {
       const data = await api.fetchPersonalHistory({ limit: 100 });
+      // Pull in the rest of the trailing day so a TV session is never split
+      // at the page boundary (see utils/historyPagination.ts).
+      const page = await completeTrailingDay(
+        { items: data.items || [], nextCursor: data.nextCursor || null },
+        async (cursor, limit) => {
+          const more = await api.fetchPersonalHistory({ cursor, limit });
+          return { items: more.items || [], nextCursor: more.nextCursor || null };
+        }
+      );
       set((state) => ({
-        personal: { items: data.items || [], total: data.stats?.total || 0, nextCursor: data.nextCursor || null },
+        personal: { items: page.items, total: data.stats?.total || 0, nextCursor: page.nextCursor },
         loading: { ...state.loading, personal: false },
       }));
     } catch (error: any) {
@@ -99,10 +109,17 @@ export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
     set((state) => ({ loading: { ...state.loading, [groupId]: true }, errors: { ...state.errors, [groupId]: null } }));
     try {
       const data = await api.fetchGroupHistory(groupId, { limit: 100 });
+      const page = await completeTrailingDay(
+        { items: data.items || [], nextCursor: data.nextCursor || null },
+        async (cursor, limit) => {
+          const more = await api.fetchGroupHistory(groupId, { cursor, limit });
+          return { items: more.items || [], nextCursor: more.nextCursor || null };
+        }
+      );
       set((state) => ({
         byGroup: {
           ...state.byGroup,
-          [groupId]: { items: data.items || [], total: data.stats?.total || 0, nextCursor: data.nextCursor || null },
+          [groupId]: { items: page.items, total: data.stats?.total || 0, nextCursor: page.nextCursor },
         },
         loading: { ...state.loading, [groupId]: false },
       }));
