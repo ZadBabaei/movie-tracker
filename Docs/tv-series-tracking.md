@@ -1,7 +1,7 @@
 # TV Series Tracking — Phase 0 Audit
 
 Branch: `feature/tv-series-tracking` (from `main` @ `2666bdbb`).
-Status: audit complete, no product behavior changed.
+Status: Phase 0 audit + Phase 1 data foundation complete.
 
 ## What exists today
 
@@ -125,3 +125,57 @@ Status: audit complete, no product behavior changed.
 - `main` has uncommitted, unrelated dependency bumps in `server/package.json`
   / `package-lock.json` (multer, nodemailer, `qs` override). They are carried
   in the working tree but will not be included in phase commits.
+
+---
+
+# Phase 1 — Data foundation (done)
+
+## `WatchHistoryEntry` changes (`server/models/WatchHistoryEntry.ts`)
+- `mediaType: "movie" | "tv_episode"`, default `"movie"`. Documents written
+  before this phase have no `mediaType`; every reader goes through
+  `resolveMediaType()` which maps missing → `"movie"`. No migration.
+- `movieId` is now required only when `mediaType` resolves to `"movie"`.
+- New `tv` subdocument (no `_id`), required only for `tv_episode`:
+  identity `seriesTmdbId` (int ≥ 1), `seasonNumber` (int ≥ 0; TMDB uses 0 for
+  specials), `episodeNumber` (int ≥ 1), optional `episodeTmdbId`; display
+  snapshot `seriesTitle` (required), `episodeTitle`, `posterPath`,
+  `backdropPath`, `stillPath`, `airDate`.
+- `pre("validate")` rejects `movie` + `tv`, and `tv_episode` + `movieId`.
+- New index `{ participants: 1, "tv.seriesTmdbId": 1, watchedAt: -1, _id: -1 }`
+  with `partialFilterExpression: { mediaType: "tv_episode" }` — serves the
+  Phase 6/7 series page query ("this user's watches of series X, newest
+  first"). Not unique. Queries must include `mediaType: "tv_episode"` to hit
+  it. All pre-existing indexes untouched.
+
+## Server behavior
+- `POST /api/history` accepts `mediaType` (+ `tv` object). Movie path is
+  unchanged. Episode path: no `Movie` lookup, no `Group.movies[]` legacy push,
+  no `legacyGroupId/legacyHistoryItemId`, and `source` (watchlist pull) is
+  ignored. `tv` identity is immutable after creation (PATCH only edits
+  watch metadata, as for movies).
+- `serializeHistoryEntry` now emits `mediaType` on every entry; movies keep
+  their exact previous shape plus `tv: null`; episodes emit `tv: {...}` and
+  `movie: null`.
+- `search=` matches `Movie.title` **or** `tv.seriesTitle`; `sort=title` uses
+  movie title / series title. `year`, `rated`, cursor pagination are
+  media-agnostic already.
+- `syncLegacyGroupHistory` explicitly writes `mediaType: "movie"`; all other
+  `groupRoutes` history code paths key on legacy ids / `movieId` and are
+  therefore movie-only by construction.
+
+## Tests
+- `server/tests/` — Node's built-in `node:test` runner via `ts-node/register`
+  (no new dependencies). `npm test` in `server/`. Uses a real Mongo at
+  `TEST_MONGODB_URI` → `E2E_MONGODB_URI` → `mongodb://127.0.0.1:27017/movie-tracker-test`
+  and refuses any database whose name lacks `test`/`e2e`.
+
+## Known gaps carried forward
+- `client/src/pages/WatchHistory.tsx` and `useWatchHistoryStore.HistoryEntry`
+  still assume `entry.movie` is present. No UI can create episodes until
+  Phase 3, and the client is generalized in Phase 4; until then an episode
+  created via the raw API would render badly on `/history`.
+- GroupPage's `WatchTimeline` reads legacy `Group.movies[]` and will not show
+  episodes (Phase 9 decision).
+- `Group` "remove movie" (`groupRoutes` ~L796) deletes history by `movieId`;
+  there is no equivalent for series yet (not needed until series can be
+  removed from a group, which has no UI).
