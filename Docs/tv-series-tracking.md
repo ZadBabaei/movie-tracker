@@ -179,3 +179,29 @@ Status: Phase 0 audit + Phase 1 data foundation complete.
 - `Group` "remove movie" (`groupRoutes` ~L796) deletes history by `movieId`;
   there is no equivalent for series yet (not needed until series can be
   removed from a group, which has no UI).
+
+---
+
+# Phase 2 — TMDB TV metadata layer (done)
+
+- `client/src/api/tmdb.ts` — typed TV client on native `fetch`, same
+  `VITE_TMDB_API_KEY` / `api_key` query-param auth the movie screens already
+  use (the key has always been public in the bundle; unchanged here). No
+  movie call sites were touched.
+- Operations: `searchTv`, `getTvSeries` (append `credits,external_ids,images`),
+  `getTvSeason` (episodes incl. crew + guest stars), `getTvEpisode` (append
+  `credits,external_ids`), `getTvSeriesExternalIds`; helpers `tmdbImageUrl`,
+  `tvSeasonLabel`. Normalizers are exported for tests.
+- Types: `TvSearchResult`/`TvSearchPage`, `TvSeriesDetails`,
+  `TvSeasonSummary`/`TvSeasonDetails`, `TvEpisodeSummary`/`TvEpisodeDetails`,
+  `TvCastMember`, `TvCrewMember`, `TvExternalIds`, `TvGenre`, `TvNetwork`,
+  `TvImage`. Field names match the history `tv` snapshot.
+- Missing data → `null` (never fabricated); malformed rows in lists are
+  dropped; payloads without identity throw `TmdbError("malformed")`. Season 0
+  carries `isSpecials: true` and is labelled "Specials".
+- Errors: `TmdbError` with `kind` ∈ config | not_found | unauthorized |
+  rate_limited | http | network | aborted | malformed, plus HTTP `status`.
+- Only cache: in-flight de-duplication of identical GETs without an
+  AbortSignal. Nothing persisted.
+- Tests: `client/src/api/tmdb.test.ts` (vitest, stubbed `fetch`, fixture
+  payloads; no live TMDB).
