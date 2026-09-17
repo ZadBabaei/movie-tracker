@@ -5,7 +5,11 @@ import { isGroupMember } from "../middleware/groupAccess";
 import Group from "../models/Groups";
 import Movie from "../models/movie";
 import User from "../models/user";
-import WatchHistoryEntry, { IWatchHistoryTvEpisode, resolveMediaType } from "../models/WatchHistoryEntry";
+import WatchHistoryEntry, {
+  IWatchHistoryTvEpisode,
+  MEDIA_TYPES,
+  WatchHistoryMediaType,
+} from "../models/WatchHistoryEntry";
 import { getIO } from "../socket";
 import { serializeHistoryEntry, syncLegacyGroupHistory } from "../utils/watchHistory";
 
@@ -42,6 +46,15 @@ const buildSearchFilter = async (search: unknown) => {
 
 const entryTitle = (item: ReturnType<typeof serializeHistoryEntry>) =>
   item.movie?.title || item.tv?.seriesTitle || "";
+
+// Request input is stricter than stored data: an absent value keeps the
+// pre-TV contract (movie), but an unknown value is rejected rather than
+// silently treated as a movie. `resolveMediaType` remains the lenient reader
+// for persisted documents only.
+const parseRequestMediaType = (value: unknown): WatchHistoryMediaType | null => {
+  if (value === undefined || value === null || value === "") return "movie";
+  return MEDIA_TYPES.includes(value as WatchHistoryMediaType) ? (value as WatchHistoryMediaType) : null;
+};
 
 const optionalInteger = (value: unknown, min: number) => {
   if (value === undefined || value === null || value === "") return undefined;
@@ -172,7 +185,11 @@ router.get("/group/:groupId", authenticate, async (req, res) => {
 router.post("/", authenticate, async (req, res) => {
   try {
     const userId = req.user!.id;
-    const mediaType = resolveMediaType(req.body?.mediaType);
+    const mediaType = parseRequestMediaType(req.body?.mediaType);
+    if (!mediaType) {
+      res.status(400).json({ msg: `Unsupported media type. Use one of: ${MEDIA_TYPES.join(", ")}.` });
+      return;
+    }
     const movieId = String(req.body?.movieId || "");
     const scope = req.body?.scope === "group" ? "group" : "personal";
     const groupId = String(req.body?.groupId || "");

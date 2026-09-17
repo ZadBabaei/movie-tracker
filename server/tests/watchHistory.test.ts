@@ -208,6 +208,25 @@ describe("history API — movie compatibility", () => {
     assert.equal(res.status, 400);
   });
 
+  it("rejects an unsupported mediaType even with a valid movieId, but accepts absent/null/empty", async () => {
+    const { user, token } = await createUser();
+    const movie = await createMovie();
+    const client = api(server, token);
+
+    for (const mediaType of ["banana", "tv", "MOVIE", 1, {}]) {
+      const res = await client.post("/api/history", { mediaType, movieId: String(movie._id), watchedAt: "2024-04-01" });
+      assert.equal(res.status, 400, `mediaType ${JSON.stringify(mediaType)} should be rejected`);
+    }
+    assert.equal(await WatchHistoryEntry.countDocuments({}), 0);
+
+    for (const mediaType of [undefined, null, ""]) {
+      const res = await client.post("/api/history", { mediaType, movieId: String(movie._id), watchedAt: "2024-04-01" });
+      assert.equal(res.status, 201, `mediaType ${JSON.stringify(mediaType)} should default to movie`);
+      assert.equal(res.body.entry.mediaType, "movie");
+    }
+    assert.equal(await WatchHistoryEntry.countDocuments({ createdBy: user._id, mediaType: "movie" }), 3);
+  });
+
   it("still dual-writes group movie history into Group.movies[]", async () => {
     const { user, token } = await createUser("Owner");
     const { user: friend } = await createUser("Friend");
