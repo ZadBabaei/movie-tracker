@@ -205,3 +205,39 @@ Status: Phase 0 audit + Phase 1 data foundation complete.
   AbortSignal. Nothing persisted.
 - Tests: `client/src/api/tmdb.test.ts` (vitest, stubbed `fetch`, fixture
   payloads; no live TMDB).
+
+---
+
+# Phase 3 — TV discovery + mark-episodes-watched (done)
+
+- Entry point: **Add TV Watch** button in the `/history` toolbar
+  (`client/src/pages/WatchHistory.tsx`).
+- `client/src/component/AddTvWatchModal.tsx` — search (`searchTv`, 300 ms
+  debounce, ≥2 chars, AbortController) → series (`getTvSeries`) → season tabs
+  (Season 0 shown as "Specials", never merged) → episode checkboxes
+  (`getTvSeason` lazy per tab, cached in component state). Default season =
+  latest non-special season whose `airDate <= today` (UTC calendar day, same
+  convention as `GroupSelectModal`), else first non-special, else whatever
+  exists. Episodes with a known future `airDate` are disabled and labelled
+  "Upcoming"; a missing `airDate` is *not* treated as unaired.
+- Watch details reuse `GroupSelectModal` unchanged in behaviour (sequential
+  modal, as `Watchlist` does for movies) via a new media-neutral `watchTitle`
+  prop; `movieTitle` remains as an alias.
+- `client/src/hooks/useAddTvWatch.ts` — holds the selection, submits one
+  `POST /api/history` per episode via `createTvEpisodeHistoryEntries`
+  (`Promise.allSettled`), guards against double submission with a ref, keeps
+  the per-episode failure list and can `retryFailed()` with the same details
+  without resending successes. Successful saves refresh the personal bucket
+  (+ the group bucket for group scope).
+- `client/src/api/historyApi.ts` — `buildTvEpisodeHistoryPayload` (omits
+  empty optionals, never sets `movieId`), `createTvEpisodeHistoryEntry`,
+  `createTvEpisodeHistoryEntries`.
+- History compatibility bridge: `HistoryEntry` now has `mediaType`,
+  `movie | null`, `tv | null`; `client/src/utils/historyEntry.ts` provides
+  `isTvEntry`, `getEntryTitle`, `getEntrySubtitle` ("S01E03 · Title"),
+  `getEntryPosterPath`, `getEntryBackdropPath`, `getEntrySearchText`. The
+  page renders episodes as plain rows (series title + code + episode title);
+  movie rows are unchanged. Grouping / purple cards are Phase 4–5.
+- Known gaps: hero stat still says "films watched"; the temporary episode
+  row/detail is minimal until Phase 8; timezone of "today" and of
+  `watchedAt` is UTC-day based (Phase 4 decision).

@@ -1,13 +1,25 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FaClock, FaMapMarkerAlt, FaSearch, FaStar, FaTrashAlt, FaUsers } from "react-icons/fa";
+import { FaClock, FaMapMarkerAlt, FaSearch, FaStar, FaTrashAlt, FaTv, FaUsers } from "react-icons/fa";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import AddTvWatchModal from "../component/AddTvWatchModal";
+import GroupSelectModal, { WatchMetadata } from "../component/GroupSelectModal";
 import Modal from "../component/Modal/Modal";
 import VerticalNavbar from "../component/VerticalNavbar";
+import { describeEpisodeSelection, TvWatchOutcome, TvWatchSelection, useAddTvWatch } from "../hooks/useAddTvWatch";
 import { useSocket } from "../hooks/useSocket";
 import { useGroupStore } from "../store/useGroupStore";
 import { HistoryEntry, useWatchHistoryStore } from "../store/useWatchHistoryStore";
 import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
+import {
+  formatEpisodeCode,
+  getEntryBackdropPath,
+  getEntryPosterPath,
+  getEntrySearchText,
+  getEntrySubtitle,
+  getEntryTitle,
+  isTvEntry,
+} from "../utils/historyEntry";
 import "./WatchHistory.css";
 
 type PeriodFilter = "all" | "year" | "rated";
@@ -59,9 +71,43 @@ const WatchHistory: React.FC = () => {
   const [editLocation, setEditLocation] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const deepLinkApplied = useRef(false);
+  const [tvPickerOpen, setTvPickerOpen] = useState(false);
   const activeGroup = groupList.find((group) => group._id === activeTab);
   const isPersonal = activeTab === "personal";
   const socket = useSocket(isPersonal ? "" : activeTab);
+
+  // Episodes land in the scope they were saved to and, because personal history
+  // also lists group watches the user took part in, in the personal bucket.
+  const refreshAfterTvSave = useCallback(
+    async (outcome: TvWatchOutcome) => {
+      const refreshes = [fetchPersonal()];
+      if (outcome.scopeId !== "personal") refreshes.push(fetchGroup(outcome.scopeId));
+      await Promise.all(refreshes);
+    },
+    [fetchGroup, fetchPersonal]
+  );
+  const tvWatch = useAddTvWatch({ onSaved: refreshAfterTvSave });
+
+  const handleTvSelection = (selection: TvWatchSelection) => {
+    setTvPickerOpen(false);
+    tvWatch.setPending(selection);
+  };
+
+  const handleTvDetails = async (scopeId: string, metadata?: WatchMetadata) => {
+    const outcome = await tvWatch.submit(scopeId, metadata);
+    if (!outcome) return;
+    if (outcome.failed.length === 0) {
+      toast.success(`${outcome.succeeded} episode${outcome.succeeded === 1 ? "" : "s"} of ${outcome.seriesTitle} saved to history.`);
+    } else if (outcome.succeeded === 0) {
+      toast.error(`Couldn't save ${outcome.seriesTitle} — no episodes were recorded.`);
+    } else {
+      toast.warn(`${outcome.succeeded} saved, ${outcome.failed.length} failed for ${outcome.seriesTitle}.`);
+    }
+  };
+
+  const pendingTvTitle = tvWatch.pending
+    ? `${tvWatch.pending.series.seriesTitle} · ${describeEpisodeSelection(tvWatch.pending.episodes)}`
+    : "";
 
   const setActiveTab = useCallback((tab: string) => {
     localStorage.setItem(ACTIVE_TAB_KEY, tab);
@@ -113,12 +159,12 @@ const WatchHistory: React.FC = () => {
   const visibleItems = useMemo(() => {
     const query = search.trim().toLowerCase();
     let items = bucket.items.filter((entry) => {
-      if (query && !entry.movie.title.toLowerCase().includes(query)) return false;
+      if (query && !getEntrySearchText(entry).includes(query)) return false;
       if (periodFilter === "year" && new Date(entry.watchedAt).getUTCFullYear() !== new Date().getFullYear()) return false;
       if (periodFilter === "rated" && entry.currentUserRating == null && entry.averageRating == null) return false;
       return true;
     });
-    if (sortMode === "title") items = [...items].sort((a, b) => a.movie.title.localeCompare(b.movie.title));
+    if (sortMode === "title") items = [...items].sort((a, b) => getEntryTitle(a).localeCompare(getEntryTitle(b)));
     else if (sortMode === "rating") items = [...items].sort((a, b) => (b.averageRating ?? b.currentUserRating ?? -1) - (a.averageRating ?? a.currentUserRating ?? -1));
     else items = [...items].sort((a, b) => new Date(b.watchedAt).getTime() - new Date(a.watchedAt).getTime());
     return items;
@@ -141,7 +187,7 @@ const WatchHistory: React.FC = () => {
   }, [visibleItems]);
 
   const latest = bucket.items[0];
-  const heroBackdrop = latest?.movie.poster ? posterUrl(latest.movie.poster) : "";
+  const heroBackdrop = latest ? posterUrl(getEntryBackdropPath(latest)) : "";
 
   const openDetails = (entry: HistoryEntry) => {
     setSelected(entry);
@@ -242,7 +288,26 @@ const WatchHistory: React.FC = () => {
               <option value="title">Title A–Z</option>
             </select>
           </label>
+          <button type="button" className="history-add-tv" onClick={() => setTvPickerOpen(true)} data-testid="add-tv-watch">
+            <FaTv aria-hidden="true" /> Add TV Watch
+          </button>
         </section>
+
+        {tvWatch.outcome && tvWatch.outcome.failed.length > 0 && (
+          <section className="history-tv-outcome" role="alert" data-testid="tv-outcome">
+            <p>
+              <strong>{tvWatch.outcome.seriesTitle}:</strong> {tvWatch.outcome.succeeded} saved,{" "}
+              {tvWatch.outcome.failed.length} failed —{" "}
+              {tvWatch.outcome.failed.map((item) => `${formatEpisodeCode(item.episode)} (${item.message})`).join(", ")}
+            </p>
+            <div>
+              <button type="button" onClick={() => tvWatch.retryFailed()} disabled={tvWatch.submitting}>
+                {tvWatch.submitting ? "Retrying…" : "Retry failed"}
+              </button>
+              <button type="button" onClick={tvWatch.dismissOutcome}>Dismiss</button>
+            </div>
+          </section>
+        )}
 
         {activeLoading ? (
           <div className="history-skeleton" role="status" aria-label="Loading watch history">{Array.from({ length: 6 }).map((_, index) => <div key={index} />)}</div>
@@ -257,15 +322,16 @@ const WatchHistory: React.FC = () => {
                 <header className="history-period-label"><h2>{period.month}</h2><span>{period.year}</span></header>
                 <div className="history-period-list">
                   {period.items.map((entry) => (
-                    <button type="button" className="history-card" data-testid="history-row" key={entry._id} onClick={() => openDetails(entry)} aria-label={`View details for ${entry.movie.title}`}>
+                    <button type="button" className="history-card" data-testid="history-row" key={entry._id} onClick={() => openDetails(entry)} aria-label={`View details for ${getEntryTitle(entry)}${isTvEntry(entry) ? ` ${formatEpisodeCode(entry.tv)}` : ""}`}>
                       <span className="history-card-poster-wrap">
-                        <img className="history-card-poster" src={posterUrl(entry.movie.poster)} alt={`${entry.movie.title} poster`} onError={(event) => { (event.currentTarget as HTMLImageElement).src = "/default-avatar.png"; }} />
+                        <img className="history-card-poster" src={posterUrl(getEntryPosterPath(entry))} alt={`${getEntryTitle(entry)} poster`} onError={(event) => { (event.currentTarget as HTMLImageElement).src = "/default-avatar.png"; }} />
                         {(entry.averageRating != null || entry.currentUserRating != null) && (
                           <span className="history-card-rating"><FaStar aria-hidden="true" /> {entry.averageRating ?? entry.currentUserRating}</span>
                         )}
                       </span>
                       <span className="history-card-body">
-                        <strong className="history-card-title">{entry.movie.title}</strong>
+                        <strong className="history-card-title">{getEntryTitle(entry)}</strong>
+                        {isTvEntry(entry) && <span className="history-card-episode">{getEntrySubtitle(entry)}</span>}
                         <span className="history-card-meta">
                           <span>{formatDate(entry.watchedAt)}</span>
                           <span>{entry.watchedLocation || (entry.scope === "group" ? entry.group?.name : "Personal watch")}</span>
@@ -294,13 +360,23 @@ const WatchHistory: React.FC = () => {
         )}
       </main>
 
+      <AddTvWatchModal isOpen={tvPickerOpen} onClose={() => setTvPickerOpen(false)} onSelect={handleTvSelection} />
+      <GroupSelectModal
+        isOpen={!!tvWatch.pending}
+        onClose={() => tvWatch.setPending(null)}
+        onSelect={handleTvDetails}
+        groups={groupList}
+        watchTitle={pendingTvTitle}
+      />
+
       <Modal isOpen={!!selected} onClose={() => setSelected(null)} size="lg" ariaLabel="Watch history details" className="history-details-modal">
         {selected ? (
           <div className="history-details">
-            <img className="history-details-poster" src={posterUrl(selected.movie.poster)} alt={`${selected.movie.title} poster`} />
+            <img className="history-details-poster" src={posterUrl(getEntryPosterPath(selected))} alt={`${getEntryTitle(selected)} poster`} />
             <div className="history-details-body">
               <p className="history-details-context">{selected.scope === "group" ? selected.group?.name : "Personal history"}</p>
-              <h2>{selected.movie.title}</h2>
+              <h2>{getEntryTitle(selected)}</h2>
+              {isTvEntry(selected) && <p className="history-details-episode">{getEntrySubtitle(selected)}</p>}
               {!editing ? (
                 <>
                   <div className="history-detail-facts">

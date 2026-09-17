@@ -28,7 +28,10 @@ interface GroupSelectModalProps {
   onClose: () => void;
   onSelect: (groupId: string, metadata?: WatchMetadata) => void;
   groups: GroupOption[];
-  movieTitle: string;
+  /** Media-neutral name of what is being recorded (movie, or "Series · S01 · E01–E03"). */
+  watchTitle?: string;
+  /** Older alias of `watchTitle`; kept so movie call sites keep working. */
+  movieTitle?: string;
 }
 
 const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
@@ -36,8 +39,10 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
   onClose,
   onSelect,
   groups,
+  watchTitle,
   movieTitle,
 }) => {
+  const itemTitle = watchTitle ?? movieTitle ?? "";
   // Step 1: group select, Step 2: when + where, Step 3: who
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedGroupId, setSelectedGroupId] = useState("");
@@ -147,7 +152,7 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
           <>
             <h2 className="group-select-heading">Mark as Watched</h2>
             <p className="group-select-sub">
-              Where should <strong>{movieTitle}</strong> be recorded?
+              Where should <strong>{itemTitle}</strong> be recorded?
             </p>
 
             <button
@@ -189,7 +194,7 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
             </button>
             <h2 className="group-select-heading">When & Where</h2>
             <p className="group-select-sub">
-              Details for <strong>{movieTitle}</strong>
+              Details for <strong>{itemTitle}</strong>
             </p>
             <div className="group-select-step-indicator">Step 1 of 2</div>
 
@@ -256,7 +261,7 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
             </button>
             <h2 className="group-select-heading">Who Watched?</h2>
             <p className="group-select-sub">
-              Select members who watched <strong>{movieTitle}</strong>
+              Select members who watched <strong>{itemTitle}</strong>
             </p>
             <div className="group-select-step-indicator">Step 2 of 2</div>
 

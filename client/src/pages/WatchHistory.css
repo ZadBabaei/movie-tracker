@@ -335,6 +335,24 @@
 .history-delete-confirm p { margin: 0; color: #ffd1ce; font-size: .82rem; line-height: 1.5; }
 .history-delete-confirm > div { margin-top: 12px; }
 
+
+/* ── Add TV watch entry point + submission outcome ─────────────────────── */
+.history-add-tv { display: inline-flex; align-items: center; gap: 9px; min-height: 42px; padding: 0 16px; border: 1px solid var(--brand-gold); border-radius: var(--brand-radius); background: transparent; color: var(--brand-gold-bright); font-size: .7rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
+.history-add-tv:hover { background: rgba(211, 172, 108, .1); }
+.history-add-tv:focus-visible { outline: 2px solid var(--brand-ivory); outline-offset: 2px; }
+.history-add-tv svg { font-size: .85rem; }
+
+.history-tv-outcome { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin-top: 18px; padding: 12px 16px; border: 1px solid rgba(140, 47, 47, .55); border-radius: var(--brand-radius); color: #e6c9c9; font-size: .84rem; line-height: 1.45; }
+.history-tv-outcome p { flex: 1 1 320px; margin: 0; }
+.history-tv-outcome strong { color: var(--brand-ivory); }
+.history-tv-outcome div { display: flex; gap: 8px; }
+.history-tv-outcome button { min-height: 34px; padding: 0 12px; border: 1px solid var(--brand-gold); border-radius: var(--brand-radius); background: transparent; color: var(--brand-gold-bright); font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
+.history-tv-outcome button:disabled { opacity: .5; cursor: wait; }
+
+/* Temporary per-episode rows until the grouped TV session cards land. */
+.history-card-episode { display: block; margin-top: 2px; color: var(--brand-gold); font-size: .7rem; font-weight: 700; letter-spacing: .06em; }
+.history-details-episode { margin: -18px 42px 22px 0; color: var(--brand-gold); font-size: .78rem; font-weight: 700; letter-spacing: .08em; }
+
 @media (max-width: 980px) {
   .history-hero-inner, .history-main { width: calc(100% - 128px); }
   .history-main { margin-left: 104px; }
@@ -357,6 +375,7 @@
   .history-filter-tabs { flex: 1; overflow-x: auto; }
   .history-filter-tabs button { flex: 0 0 auto; padding-inline: 9px; }
   .history-sort { width: 100%; margin-left: 0; justify-content: space-between; }
+  .history-add-tv { width: 100%; justify-content: center; }
   .history-timeline::before { left: 7px; }
   .history-period { display: block; padding: 34px 0 18px 28px; }
   .history-period-label { position: relative; top: 0; margin-bottom: 15px; }

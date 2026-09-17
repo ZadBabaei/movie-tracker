@@ -7,18 +7,39 @@ export interface HistoryMember {
   avatar?: string;
 }
 
+export interface HistoryMovie {
+  _id: string;
+  title: string;
+  imdbID: string;
+  poster?: string;
+  vote_average: number;
+}
+
+export interface HistoryTvEpisode {
+  seriesTmdbId: number;
+  seasonNumber: number;
+  episodeNumber: number;
+  episodeTmdbId: number | null;
+  seriesTitle: string;
+  episodeTitle: string;
+  posterPath: string;
+  backdropPath: string;
+  stillPath: string;
+  airDate: string | null;
+}
+
+export type HistoryMediaType = "movie" | "tv_episode";
+
+// The server always sends `mediaType`; exactly one of `movie` / `tv` is set.
+// Use the helpers in utils/historyEntry.ts rather than reaching into either.
 export interface HistoryEntry {
   _id: string;
+  mediaType: HistoryMediaType;
   scope: "personal" | "group";
   group: { _id: string; name: string; slug?: string } | null;
   createdBy: HistoryMember;
-  movie: {
-    _id: string;
-    title: string;
-    imdbID: string;
-    poster?: string;
-    vote_average: number;
-  };
+  movie: HistoryMovie | null;
+  tv: HistoryTvEpisode | null;
   participants: HistoryMember[];
   watchedAt: string;
   watchedLocation: string;
