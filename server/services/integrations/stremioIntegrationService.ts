@@ -31,7 +31,7 @@ export interface StremioIntegrationService {
     connected: false;
     remoteRevocationConfirmed: boolean;
   }>;
-  markReauthRequired(userId: string): Promise<void>;
+  markReauthRequired(userId: string, credentialVersion: number): Promise<boolean>;
 }
 
 export class IntegrationLifecycleError extends Error {
@@ -100,13 +100,13 @@ const swapCredential = async (
       credentialEnvelope,
     },
     $unset: { lastErrorCode: 1 as const },
+    $inc: { credentialVersion: 1 as const },
   };
   const swap = (upsert: boolean) =>
     UserIntegration.findOneAndUpdate(filter, update, {
       upsert,
       new: false,
       runValidators: true,
-      setDefaultsOnInsert: true,
     }).select("+credentialEnvelope");
 
   try {
@@ -219,12 +219,18 @@ export const createStremioIntegrationService = ({
     };
   },
 
-  async markReauthRequired(userId) {
-    // Before Task 5 uses this transition for provider operations, it must be
-    // guarded by the credential/version observed by that operation. A stale
-    // request must never erase a newer successful reconnect.
-    await UserIntegration.updateOne(
-      { userId: new Types.ObjectId(userId), provider: "stremio" },
+  async markReauthRequired(userId, credentialVersion) {
+    const versionCondition =
+      credentialVersion === 0
+        ? { $or: [{ credentialVersion: 0 }, { credentialVersion: { $exists: false } }] }
+        : { credentialVersion };
+    const result = await UserIntegration.updateOne(
+      {
+        userId: new Types.ObjectId(userId),
+        provider: "stremio",
+        status: "connected",
+        ...versionCondition,
+      },
       {
         $set: {
           status: "reauth_required",
@@ -233,6 +239,7 @@ export const createStremioIntegrationService = ({
         $unset: { credentialEnvelope: 1 },
       }
     );
+    return result.modifiedCount === 1;
   },
 });
 

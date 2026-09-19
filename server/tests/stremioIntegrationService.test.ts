@@ -380,9 +380,29 @@ test("invalid provider sessions transition to reauth_required without retaining 
   const service = createStremioIntegrationService({ client: clientWith(), cryptoService });
   await service.connect(userId, "person@example.test", "fake-password");
 
-  await service.markReauthRequired(userId);
+  const connected = await UserIntegration.findOne({ userId });
+  await service.markReauthRequired(userId, connected!.credentialVersion);
   const stored = await UserIntegration.findOne({ userId }).select("+credentialEnvelope");
   assert.equal(stored?.status, "reauth_required");
   assert.equal(stored?.lastErrorCode, "provider_session_invalid");
   assert.equal(stored?.credentialEnvelope, undefined);
+});
+
+test("stale reauth transition cannot clear a newer credential generation", async () => {
+  const userId = new mongoose.Types.ObjectId().toString();
+  const issuedKeys = ["old-fake-auth-key", "new-fake-auth-key"];
+  const service = createStremioIntegrationService({
+    client: clientWith({ login: async () => ({ authKey: issuedKeys.shift()! }) }),
+    cryptoService,
+  });
+  await service.connect(userId, "person@example.test", "first-password");
+  const old = await UserIntegration.findOne({ userId });
+  await service.connect(userId, "person@example.test", "second-password");
+
+  const transitioned = await service.markReauthRequired(userId, old!.credentialVersion);
+  const stored = await UserIntegration.findOne({ userId }).select("+credentialEnvelope");
+  assert.equal(transitioned, false);
+  assert.equal(stored?.status, "connected");
+  assert.equal(stored?.credentialVersion, old!.credentialVersion + 1);
+  assert.equal(cryptoService.decryptCredential(stored!.credentialEnvelope!), "new-fake-auth-key");
 });

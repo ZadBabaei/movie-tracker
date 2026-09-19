@@ -56,6 +56,22 @@ test("UserIntegration accepts a connected Stremio integration with a fake creden
   assert.equal(integration.provider, "stremio");
   assert.equal(integration.status, "connected");
   assert.equal(integration.credentialEnvelope?.keyVersion, 1);
+  assert.equal(integration.credentialVersion, 0);
+});
+
+test("legacy integration documents without credentialVersion hydrate with generation zero", async () => {
+  const userId = new mongoose.Types.ObjectId();
+  await UserIntegration.collection.insertOne({
+    userId,
+    provider: "stremio",
+    status: "connected",
+    credentialEnvelope: fakeCredentialEnvelope,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
+  const integration = await UserIntegration.findOne({ userId }).select("+credentialEnvelope");
+  assert.equal(integration?.credentialVersion, 0);
 });
 
 test("UserIntegration enforces one provider connection per user", async () => {

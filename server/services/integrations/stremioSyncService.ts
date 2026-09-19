@@ -1,0 +1,257 @@
+import { AnyBulkWriteOperation, Types } from "mongoose";
+import IntegrationMediaState, {
+  IIntegrationMediaState,
+} from "../../models/IntegrationMediaState";
+import UserIntegration, {
+  ICredentialEnvelope,
+} from "../../models/UserIntegration";
+import { decryptCredential } from "./credentialCrypto";
+import stremioClient, {
+  StremioClientError,
+  StremioSnapshotClient,
+} from "./stremioClient";
+import {
+  NormalizedStremioMovieState,
+  normalizeStremioMovieSnapshot,
+} from "./stremioSnapshot";
+
+const BULK_WRITE_SIZE = 500;
+
+export type StremioSyncErrorCode =
+  | "integration_not_connected"
+  | "integration_changed"
+  | "credential_decryption_failed";
+
+export class StremioSyncError extends Error {
+  constructor(public readonly code: StremioSyncErrorCode) {
+    super(code);
+    this.name = "StremioSyncError";
+  }
+}
+
+interface CryptoDependency {
+  decryptCredential(envelope: ICredentialEnvelope): string;
+}
+
+interface IngestionResult {
+  observed: number;
+  upserted: number;
+  matched: number;
+  modified: number;
+}
+
+const identityKey = (state: NormalizedStremioMovieState) =>
+  `${state.providerMediaType}\u0000${state.identifierNamespace}\u0000${state.providerItemId}`;
+
+const duplicateOnly = (error: unknown) => {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as {
+    code?: number;
+    writeErrors?: Array<{ code?: number }>;
+  };
+  if (candidate.writeErrors?.length) {
+    return candidate.writeErrors.every((writeError) => writeError.code === 11000);
+  }
+  return candidate.code === 11000;
+};
+
+const operationsFor = (
+  integrationId: Types.ObjectId,
+  states: NormalizedStremioMovieState[],
+  observedAt: Date,
+  upsert: boolean
+): AnyBulkWriteOperation<IIntegrationMediaState>[] =>
+  states.map((state) => {
+    const optionalSet: Record<string, unknown> = {};
+    const optionalUnset: Record<string, 1> = {};
+    if (state.providerRevision !== undefined) {
+      optionalSet.providerRevision = state.providerRevision;
+    } else {
+      optionalUnset.providerRevision = 1;
+    }
+    if (state.providerLastWatchedAt !== undefined) {
+      optionalSet.providerLastWatchedAt = state.providerLastWatchedAt;
+    } else {
+      optionalUnset.providerLastWatchedAt = 1;
+    }
+
+    const preserveCompletedAfterRemoval = state.removed && !state.completed;
+    return {
+      updateOne: {
+        filter: {
+          integrationId,
+          providerMediaType: state.providerMediaType,
+          identifierNamespace: state.identifierNamespace,
+          providerItemId: state.providerItemId,
+        },
+        update: {
+          $set: {
+            ...(!preserveCompletedAfterRemoval ? { completed: state.completed } : {}),
+            removed: state.removed,
+            lastSeenAt: observedAt,
+            timestampConfidence: state.timestampConfidence,
+            ...optionalSet,
+          },
+          ...(Object.keys(optionalUnset).length ? { $unset: optionalUnset } : {}),
+          $setOnInsert: {
+            integrationId,
+            providerMediaType: state.providerMediaType,
+            identifierNamespace: state.identifierNamespace,
+            providerItemId: state.providerItemId,
+            ...(preserveCompletedAfterRemoval ? { completed: false } : {}),
+            matchStatus: "unresolved",
+            importStatus: "pending",
+          },
+        },
+        upsert,
+      },
+    };
+  });
+
+export const ingestStremioMovieStates = async (
+  integrationId: Types.ObjectId,
+  states: NormalizedStremioMovieState[],
+  observedAt: Date
+): Promise<IngestionResult> => {
+  // Full-snapshot absence is deliberately a no-op. Stremio exposes explicit
+  // `removed` tombstones, so only rows actually observed in this snapshot are
+  // updated; older provenance/import links are never deleted or fabricated.
+  const uniqueStates = [...new Map(states.map((state) => [identityKey(state), state])).values()];
+  const totals: IngestionResult = { observed: uniqueStates.length, upserted: 0, matched: 0, modified: 0 };
+
+  for (let index = 0; index < uniqueStates.length; index += BULK_WRITE_SIZE) {
+    const chunk = uniqueStates.slice(index, index + BULK_WRITE_SIZE);
+    try {
+      const result = await IntegrationMediaState.bulkWrite(
+        operationsFor(integrationId, chunk, observedAt, true),
+        { ordered: false }
+      );
+      totals.upserted += result.upsertedCount;
+      totals.matched += result.matchedCount;
+      totals.modified += result.modifiedCount;
+    } catch (error) {
+      if (!duplicateOnly(error)) throw error;
+      const retry = await IntegrationMediaState.bulkWrite(
+        operationsFor(integrationId, chunk, observedAt, false),
+        { ordered: false }
+      );
+      totals.matched += retry.matchedCount;
+      totals.modified += retry.modifiedCount;
+    }
+  }
+  return totals;
+};
+
+const versionCondition = (credentialVersion: number) =>
+  credentialVersion === 0
+    ? { $or: [{ credentialVersion: 0 }, { credentialVersion: { $exists: false } }] }
+    : { credentialVersion };
+
+const lifecycleErrorCode = (error: unknown) => {
+  if (error instanceof StremioClientError) return error.code;
+  if (error instanceof StremioSyncError) return error.code;
+  return "provider_state_sync_failed";
+};
+
+export const createStremioSyncService = ({
+  client = stremioClient,
+  cryptoService = { decryptCredential },
+  ingest = ingestStremioMovieStates,
+  now = () => new Date(),
+}: {
+  client?: StremioSnapshotClient;
+  cryptoService?: CryptoDependency;
+  ingest?: typeof ingestStremioMovieStates;
+  now?: () => Date;
+} = {}) => ({
+  async sync(userId: string) {
+    const integration = await UserIntegration.findOne({
+      userId: new Types.ObjectId(userId),
+      provider: "stremio",
+    }).select("+credentialEnvelope");
+    if (integration?.status !== "connected" || !integration.credentialEnvelope) {
+      throw new StremioSyncError("integration_not_connected");
+    }
+
+    const credentialVersion = integration.credentialVersion ?? 0;
+    const currentFilter = {
+      _id: integration._id,
+      status: "connected" as const,
+      ...versionCondition(credentialVersion),
+    };
+    const startedAt = now();
+    const start = await UserIntegration.updateOne(currentFilter, {
+      $set: { lastSyncStartedAt: startedAt },
+      $unset: { lastErrorCode: 1 },
+    });
+    if (start.matchedCount !== 1) throw new StremioSyncError("integration_changed");
+
+    let authKey: string;
+    try {
+      authKey = cryptoService.decryptCredential(integration.credentialEnvelope);
+    } catch (error) {
+      await UserIntegration.updateOne(currentFilter, {
+        $set: {
+          lastSyncCompletedAt: now(),
+          lastSyncStatus: "failed",
+          lastErrorCode: "credential_decryption_failed",
+        },
+      });
+      throw new StremioSyncError("credential_decryption_failed");
+    }
+
+    try {
+      const snapshot = await client.getLibrarySnapshot(authKey);
+      const stillCurrent = await UserIntegration.exists(currentFilter);
+      if (!stillCurrent) throw new StremioSyncError("integration_changed");
+      const normalized = normalizeStremioMovieSnapshot(snapshot);
+      const observedAt = now();
+      const ingestion = await ingest(integration._id, normalized, observedAt);
+      const completedAt = now();
+      const completion = await UserIntegration.updateOne(currentFilter, {
+        $set: {
+          lastSyncCompletedAt: completedAt,
+          lastSuccessfulSyncAt: completedAt,
+          lastSyncStatus: "success",
+        },
+        $unset: { lastErrorCode: 1 },
+      });
+      if (completion.matchedCount !== 1) {
+        throw new StremioSyncError("integration_changed");
+      }
+      return {
+        status: "success" as const,
+        snapshotItems: snapshot.length,
+        movieStates: normalized.length,
+        ignoredItems: snapshot.length - normalized.length,
+        ...ingestion,
+      };
+    } catch (error) {
+      const completedAt = now();
+      if (error instanceof StremioClientError && error.code === "invalid_session") {
+        await UserIntegration.updateOne(currentFilter, {
+          $set: {
+            status: "reauth_required",
+            lastSyncCompletedAt: completedAt,
+            lastSyncStatus: "failed",
+            lastErrorCode: "provider_session_invalid",
+          },
+          $unset: { credentialEnvelope: 1 },
+        });
+      } else if (!(error instanceof StremioSyncError && error.code === "integration_changed")) {
+        await UserIntegration.updateOne(currentFilter, {
+          $set: {
+            lastSyncCompletedAt: completedAt,
+            lastSyncStatus: "failed",
+            lastErrorCode: lifecycleErrorCode(error).slice(0, 128),
+          },
+        });
+      }
+      throw error;
+    }
+  },
+});
+
+const stremioSyncService = createStremioSyncService();
+
+export default stremioSyncService;

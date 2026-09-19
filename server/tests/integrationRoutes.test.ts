@@ -40,7 +40,7 @@ const serviceWith = (
     connected: false,
     remoteRevocationConfirmed: true,
   }),
-  markReauthRequired: async () => undefined,
+  markReauthRequired: async () => false,
   ...overrides,
 });
 

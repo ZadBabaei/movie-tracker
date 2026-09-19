@@ -20,6 +20,23 @@ export interface StremioConnectionClient {
   logout(authKey: string): Promise<{ revoked: true }>;
 }
 
+export interface StremioLibraryItemDto {
+  id?: string;
+  type?: string;
+  removed: boolean;
+  revision?: string;
+  state: {
+    timesWatched?: number;
+    lastWatched?: string;
+  };
+}
+
+export interface StremioSnapshotClient {
+  getLibrarySnapshot(authKey: string): Promise<StremioLibraryItemDto[]>;
+}
+
+export interface StremioClient extends StremioConnectionClient, StremioSnapshotClient {}
+
 type FetchImplementation = typeof fetch;
 type JsonObject = Record<string, unknown>;
 
@@ -30,6 +47,35 @@ const apiErrorCode = (payload: JsonObject) => {
   return typeof code === "number" ? code : undefined;
 };
 
+const boundedString = (value: unknown, maxLength: number) =>
+  typeof value === "string" && value.length > 0 && value.length <= maxLength
+    ? value
+    : undefined;
+
+const toLibraryItemDto = (value: unknown): StremioLibraryItemDto | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const item = value as JsonObject;
+  const providerState =
+    item.state && typeof item.state === "object" && !Array.isArray(item.state)
+      ? (item.state as JsonObject)
+      : {};
+  const timesWatched = providerState.timesWatched;
+
+  return {
+    id: boundedString(item._id, 1024),
+    type: boundedString(item.type, 50),
+    removed: item.removed === true,
+    revision: boundedString(item._mtime, 1024),
+    state: {
+      timesWatched:
+        typeof timesWatched === "number" && Number.isFinite(timesWatched)
+          ? timesWatched
+          : undefined,
+      lastWatched: boundedString(providerState.lastWatched, 128),
+    },
+  };
+};
+
 export const createStremioClient = ({
   fetchImpl = fetch,
   baseUrl = STREMIO_API_BASE_URL,
@@ -38,8 +84,11 @@ export const createStremioClient = ({
   fetchImpl?: FetchImplementation;
   baseUrl?: string;
   timeoutMs?: number;
-} = {}): StremioConnectionClient => {
-  const request = async (endpoint: "login" | "logout", body: JsonObject) => {
+} = {}): StremioClient => {
+  const request = async (
+    endpoint: "login" | "logout" | "datastoreGet",
+    body: JsonObject
+  ) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -58,7 +107,9 @@ export const createStremioClient = ({
         }
         payload = parsed as JsonObject;
       } catch {
-        throw new StremioClientError("provider_protocol_error");
+        throw new StremioClientError(
+          response.status >= 500 ? "provider_unavailable" : "provider_protocol_error"
+        );
       }
 
       const providerCode = apiErrorCode(payload);
@@ -113,6 +164,21 @@ export const createStremioClient = ({
         throw new StremioClientError("provider_protocol_error");
       }
       return { revoked: true };
+    },
+
+    async getLibrarySnapshot(authKey) {
+      const result = await request("datastoreGet", {
+        authKey,
+        collection: "libraryItem",
+        ids: [],
+        all: true,
+      });
+      if (!Array.isArray(result) || result.length > 100_000) {
+        throw new StremioClientError("provider_protocol_error");
+      }
+      return result
+        .map(toLibraryItemDto)
+        .filter((item): item is StremioLibraryItemDto => item !== null);
     },
   };
 };

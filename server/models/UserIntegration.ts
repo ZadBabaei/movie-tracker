@@ -20,6 +20,7 @@ export interface IUserIntegration extends Document {
   provider: IntegrationProvider;
   status: IntegrationStatus;
   credentialEnvelope?: ICredentialEnvelope;
+  credentialVersion: number;
   lastSyncStartedAt?: Date;
   lastSyncCompletedAt?: Date;
   lastSuccessfulSyncAt?: Date;
@@ -64,6 +65,14 @@ const userIntegrationSchema = new Schema<IUserIntegration>(
     credentialEnvelope: {
       type: credentialEnvelopeSchema,
       select: false,
+    },
+    credentialVersion: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
+      max: Number.MAX_SAFE_INTEGER,
+      validate: Number.isSafeInteger,
     },
     lastSyncStartedAt: { type: Date },
     lastSyncCompletedAt: { type: Date },
