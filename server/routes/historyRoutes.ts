@@ -182,6 +182,76 @@ router.get("/group/:groupId", authenticate, async (req, res) => {
   }
 });
 
+// Every authorized watch occurrence of one TV series, for the dedicated
+// series page. Deliberately not paginated: the page shows the user's complete
+// relationship with a series, and each occurrence (including same-episode
+// rewatches) is returned as its own record. The cap only guards against a
+// runaway document; a real history never approaches it.
+const SERIES_HISTORY_CAP = 5000;
+
+router.get("/tv/:seriesTmdbId", authenticate, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const seriesTmdbId = Number(req.params.seriesTmdbId);
+    if (!/^[0-9]+$/.test(String(req.params.seriesTmdbId)) || !Number.isSafeInteger(seriesTmdbId) || seriesTmdbId < 1) {
+      res.status(400).json({ msg: "Invalid series id." });
+      return;
+    }
+
+    const scope = req.query.scope === undefined || req.query.scope === "" ? "personal" : String(req.query.scope);
+    const query: Record<string, unknown> = { mediaType: "tv_episode", "tv.seriesTmdbId": seriesTmdbId };
+    if (scope === "personal") {
+      query.participants = new mongoose.Types.ObjectId(userId);
+    } else if (scope === "group") {
+      const groupId = String(req.query.groupId || "");
+      if (!mongoose.Types.ObjectId.isValid(groupId)) {
+        res.status(400).json({ msg: "Invalid group id." });
+        return;
+      }
+      const group = await Group.findById(groupId).select("members creator").lean();
+      if (!group) {
+        res.status(404).json({ msg: "Group not found" });
+        return;
+      }
+      if (!isGroupMember(group, userId)) {
+        res.status(403).json({ msg: "Only group members can view this history." });
+        return;
+      }
+      query.groupId = new mongoose.Types.ObjectId(groupId);
+    } else {
+      res.status(400).json({ msg: "Invalid scope. Use personal or group." });
+      return;
+    }
+
+    const documents = await WatchHistoryEntry.find(query)
+      .sort({ watchedAt: -1, _id: -1 })
+      .limit(SERIES_HISTORY_CAP)
+      .populate(POPULATE)
+      .lean();
+    const items = documents.map((entry) => serializeHistoryEntry(entry, userId));
+    const episodeKeys = new Set(items.map((item) => `${item.tv?.seasonNumber}:${item.tv?.episodeNumber}`));
+    const seasons = new Set(items.map((item) => item.tv?.seasonNumber));
+
+    res.json({
+      seriesTmdbId,
+      scope,
+      groupId: scope === "group" ? String(req.query.groupId) : null,
+      items,
+      stats: {
+        watchCount: items.length,
+        uniqueEpisodes: episodeKeys.size,
+        seasonsWatched: seasons.size,
+        firstWatchedAt: items.length ? items[items.length - 1].watchedAt : null,
+        latestWatchedAt: items.length ? items[0].watchedAt : null,
+        truncated: documents.length === SERIES_HISTORY_CAP,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching series watch history:", error);
+    res.status(500).json({ msg: "Failed to fetch series watch history" });
+  }
+});
+
 router.post("/", authenticate, async (req, res) => {
   try {
     const userId = req.user!.id;

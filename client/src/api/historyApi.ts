@@ -40,6 +40,39 @@ export const fetchGroupHistory = async (groupId: string, query: HistoryQuery = {
   return response.data;
 };
 
+export type HistoryScope = "personal" | "group";
+
+export interface SeriesHistoryQuery {
+  scope: HistoryScope;
+  groupId?: string;
+}
+
+export interface SeriesHistoryStats {
+  watchCount: number;
+  uniqueEpisodes: number;
+  seasonsWatched: number;
+  firstWatchedAt: string | null;
+  latestWatchedAt: string | null;
+  truncated: boolean;
+}
+
+export interface SeriesHistoryResponse<E = unknown> {
+  seriesTmdbId: number;
+  scope: HistoryScope;
+  groupId: string | null;
+  /** Every authorized occurrence for the series, newest first; rewatches are separate rows. */
+  items: E[];
+  stats: SeriesHistoryStats;
+}
+
+/** Complete authorized history for one TV series — not the bounded timeline page. */
+export const fetchSeriesHistory = async <E = unknown>(seriesTmdbId: number, query: SeriesHistoryQuery): Promise<SeriesHistoryResponse<E>> => {
+  const params: Record<string, string> = { scope: query.scope };
+  if (query.scope === "group" && query.groupId) params.groupId = query.groupId;
+  const response = await apiClient.get(`/api/history/tv/${seriesTmdbId}`, { ...auth(), params });
+  return response.data;
+};
+
 export const createHistoryEntry = async (payload: CreateHistoryPayload) => {
   const response = await apiClient.post("/api/history", payload, auth());
   return response.data.entry;

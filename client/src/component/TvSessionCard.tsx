@@ -1,5 +1,6 @@
 import React from "react";
 import { FaStar } from "react-icons/fa";
+import { Link } from "react-router-dom";
 import { historyImageUrl } from "../utils/historyEntry";
 import type { TvSessionTimelineItem } from "../utils/historyTimeline";
 import "./TvSessionCard.css";
@@ -11,13 +12,15 @@ import "./TvSessionCard.css";
  * The stack is the TV identity, never a count. The two rear layers are
  * `::before` / `::after` on the non-semantic wrapper, so whatever the session
  * holds — one episode or ten — there is exactly one interactive front card and
- * exactly two decorative layers behind it.
+ * exactly two decorative layers behind it. The front card is a link to the
+ * series page (`/history/tv/:seriesTmdbId`) in the scope it was opened from.
  */
 
 export interface TvSessionCardProps {
   session: TvSessionTimelineItem;
   formattedDay: string;
-  onOpen: (session: TvSessionTimelineItem) => void;
+  /** Series page URL, including the scope query (see WatchHistory.seriesHref). */
+  to: string;
 }
 
 export const DEFAULT_ARTWORK = "/default-avatar.png";
@@ -57,18 +60,17 @@ const handleArtworkError = (event: React.SyntheticEvent<HTMLImageElement>) => {
   image.src = next;
 };
 
-const TvSessionCard: React.FC<TvSessionCardProps> = ({ session, formattedDay, onOpen }) => {
+const TvSessionCard: React.FC<TvSessionCardProps> = ({ session, formattedDay, to }) => {
   const artwork = sessionArtwork(session);
   const rating = sessionRating(session);
 
   return (
     <div className="history-tv-stack" data-testid="history-tv-stack">
-      <button
-        type="button"
+      <Link
+        to={to}
         className="history-card history-card--tv"
         data-testid="history-session"
-        onClick={() => onOpen(session)}
-        aria-label={`TV: ${session.seriesTitle}, ${session.episodeSummary}, ${watchCountLabel(session.watchCount)} on ${formattedDay}`}
+        aria-label={`TV: ${session.seriesTitle}, ${session.episodeSummary}, ${watchCountLabel(session.watchCount)} on ${formattedDay}. View series history`}
       >
         <span className="history-card-poster-wrap history-tv-art-wrap">
           <img
@@ -91,9 +93,9 @@ const TvSessionCard: React.FC<TvSessionCardProps> = ({ session, formattedDay, on
             <span>{formattedDay}</span>
             <span>{watchCountLabel(session.watchCount)}</span>
           </span>
-          <span className="history-card-action">Episodes</span>
+          <span className="history-card-action">View Series</span>
         </span>
-      </button>
+      </Link>
     </div>
   );
 };

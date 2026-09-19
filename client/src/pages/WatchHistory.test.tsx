@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { HistoryEntry } from "../store/useWatchHistoryStore";
 import { useWatchHistoryStore } from "../store/useWatchHistoryStore";
@@ -179,10 +179,18 @@ const chooseLionessEpisodes = () => {
   fireEvent.click(screen.getByRole("button", { name: /pick e01 e02/i }));
 };
 
+const LocationProbe = () => {
+  const location = useLocation();
+  return <div data-testid="series-route">{location.pathname + location.search}</div>;
+};
+
 const renderPage = () =>
   render(
-    <MemoryRouter>
-      <WatchHistory />
+    <MemoryRouter initialEntries={["/history"]}>
+      <Routes>
+        <Route path="/history" element={<WatchHistory />} />
+        <Route path="/history/tv/:seriesTmdbId" element={<LocationProbe />} />
+      </Routes>
     </MemoryRouter>
   );
 
@@ -225,7 +233,7 @@ describe("Watch History timeline", () => {
       expect(stack.children).toHaveLength(1);
     });
     expect(screen.getAllByTestId("history-tv-stack")).toHaveLength(2);
-    expect(may12).toHaveAccessibleName("TV: Special Ops: Lioness, S01 · E05, 1 episode watch on May 12, 2024");
+    expect(may12).toHaveAccessibleName("TV: Special Ops: Lioness, S01 · E05, 1 episode watch on May 12, 2024. View series history");
 
     expect(screen.getByText(/watch events/)).toHaveTextContent("5 watch events");
     const hero = document.querySelector(".history-hero-image") as HTMLImageElement;
@@ -264,70 +272,50 @@ describe("Watch History timeline", () => {
     expect(within(sessions[0]).getByText("S01 \u00b7 E03 \u00d72, E04")).toBeInTheDocument();
   });
 
-  test("a session opens a list of its exact occurrences, each reaching the entry detail", async () => {
+  test("a personal TV card links to the series page in personal scope and never opens a modal", async () => {
     renderPage();
     await screen.findAllByTestId("history-row");
-    fireEvent.click(screen.getAllByTestId("history-session")[1]);
+    const [may12, may10] = screen.getAllByTestId("history-session");
+    expect(may12.tagName).toBe("A");
+    expect(may12).toHaveAttribute("href", "/history/tv/199925?scope=personal");
+    expect(may10).toHaveAttribute("href", "/history/tv/199925?scope=personal");
+    expect(within(may10).getByText("View Series")).toBeInTheDocument();
+    expect(within(may10).queryByText("Episodes")).not.toBeInTheDocument();
+    expect(may10).toHaveAccessibleName("TV: Special Ops: Lioness, S01 · E03 ×2, E04, 3 episode watches on May 10, 2024. View series history");
 
-    const detail = await screen.findByTestId("session-detail");
-    expect(within(detail).getByRole("heading", { name: "Special Ops: Lioness" })).toBeInTheDocument();
-    expect(within(detail).getByText("S01 \u00b7 E03 \u00d72, E04")).toBeInTheDocument();
-    const occurrences = within(detail).getAllByTestId("session-entry");
-    expect(occurrences).toHaveLength(3);
-    expect(occurrences[0]).toHaveTextContent("S01E04");
-    expect(occurrences[0]).toHaveTextContent("\u2605 8");
-    expect(occurrences[1]).toHaveTextContent("S01E03");
-    expect(occurrences[1]).toHaveTextContent("Train");
-    expect(occurrences[2]).toHaveTextContent("S01E03");
-    expect(occurrences[2]).not.toHaveTextContent("Train");
-
-    fireEvent.click(occurrences[2]);
-    const dialog = await screen.findByRole("dialog", { name: /watch history details/i });
-    expect(within(dialog).getByText("S01E03 \u00b7 Bruise Like a Fist")).toBeInTheDocument();
-    expect(within(dialog).getByText("Cruz carries this one.")).toBeInTheDocument();
-
-    fireEvent.click(within(dialog).getByRole("button", { name: /all episodes that day/i }));
-    expect(await screen.findByTestId("session-detail")).toBeInTheDocument();
+    fireEvent.click(may10);
+    expect(await screen.findByTestId("series-route")).toHaveTextContent("/history/tv/199925?scope=personal");
+    expect(screen.queryByTestId("session-detail")).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  test("deleting one occurrence of a rewatched episode leaves the other and regroups", async () => {
+  test("a group TV card carries the group scope and id", async () => {
+    historyApi.fetchGroupHistory.mockResolvedValue({ items: [{ ...tvEntry, _id: "g1", scope: "group", group: { _id: "group-1", name: "Movie Club" } }], nextCursor: null, stats: { total: 1, latestWatchedAt: tvEntry.watchedAt } });
     renderPage();
     await screen.findAllByTestId("history-row");
-    fireEvent.click(screen.getAllByTestId("history-session")[1]);
-    const detail = await screen.findByTestId("session-detail");
-    fireEvent.click(within(detail).getAllByTestId("session-entry")[1]); // t2, the "Train" rewatch
+    fireEvent.click(screen.getByRole("tab", { name: "Movie Club" }));
+    const card = await screen.findByTestId("history-session");
+    expect(card).toHaveAttribute("href", "/history/tv/199925?scope=group&groupId=group-1");
+    fireEvent.click(card);
+    expect(await screen.findByTestId("series-route")).toHaveTextContent("/history/tv/199925?scope=group&groupId=group-1");
+  });
 
+  test("a movie card still opens the exact-entry detail with edit and delete, not the series route", async () => {
+    renderPage();
+    const [movieRow] = await screen.findAllByTestId("history-row");
+    expect(movieRow.tagName).toBe("BUTTON");
+    expect(movieRow).not.toHaveAttribute("href");
+    fireEvent.click(movieRow);
     const dialog = await screen.findByRole("dialog", { name: /watch history details/i });
+    expect(within(dialog).getByRole("heading", { name: "Heat" })).toBeInTheDocument();
+    expect(screen.getByTestId("entry-detail")).toHaveAttribute("data-entry-id", "m1");
+    expect(screen.queryByTestId("series-route")).not.toBeInTheDocument();
+
     fireEvent.click(within(dialog).getByRole("button", { name: /^delete$/i }));
     fireEvent.click(within(dialog).getByRole("button", { name: /delete entry/i }));
-    await waitFor(() => expect(historyApi.deleteHistoryEntry).toHaveBeenCalledWith("t2"));
-    expect(historyApi.deleteHistoryEntry).toHaveBeenCalledTimes(1);
-
-    const after = await screen.findByTestId("session-detail");
-    const remaining = within(after).getAllByTestId("session-entry");
-    expect(remaining).toHaveLength(2);
-    expect(within(after).getByText("S01 \u00b7 E03\u2013E04")).toBeInTheDocument();
-    expect(useWatchHistoryStore.getState().personal.items.map((entry) => entry._id)).toEqual(["t4", "t3", "t1", "m1"]);
-  });
-
-  test("editing an occurrence's date moves it into its own session", async () => {
-    historyApi.updateHistoryEntry.mockResolvedValue({ ...tvNext, watchedAt: "2024-05-11T00:00:00.000Z" });
-    renderPage();
-    await screen.findAllByTestId("history-row");
-    fireEvent.click(screen.getAllByTestId("history-session")[1]);
-    const detail = await screen.findByTestId("session-detail");
-    fireEvent.click(within(detail).getAllByTestId("session-entry")[0]); // t3 = E04
-
-    const dialog = await screen.findByRole("dialog", { name: /watch history details/i });
-    fireEvent.click(within(dialog).getByRole("button", { name: /edit details/i }));
-    fireEvent.change(within(dialog).getByLabelText(/watched date/i), { target: { value: "2024-05-11" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: /save changes/i }));
-    await waitFor(() => expect(historyApi.updateHistoryEntry).toHaveBeenCalledWith("t3", expect.objectContaining({ watchedAt: "2024-05-11" })));
-
-    fireEvent.click(within(dialog).getByRole("button", { name: /close dialog/i }));
-    await waitFor(() => expect(screen.getAllByTestId("history-session")).toHaveLength(3));
-    const summaries = screen.getAllByTestId("history-session").map((card) => within(card).getByText(/^S01 /).textContent);
-    expect(summaries).toEqual(["S01 \u00b7 E05", "S01 \u00b7 E04", "S01 \u00b7 E03 \u00d72"]);
+    await waitFor(() => expect(historyApi.deleteHistoryEntry).toHaveBeenCalledWith("m1"));
+    await waitFor(() => expect(screen.queryAllByTestId("history-row")).toHaveLength(0));
+    expect(screen.getAllByTestId("history-session")).toHaveLength(2);
   });
 
 });

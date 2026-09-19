@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, test, vi } from "vitest";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { describe, expect, test } from "vitest";
 import type { HistoryEntry } from "../store/useWatchHistoryStore";
 import { buildTimeline, TvSessionTimelineItem } from "../utils/historyTimeline";
 import TvSessionCard, { DEFAULT_ARTWORK, sessionArtwork, sessionRating } from "./TvSessionCard";
@@ -43,10 +44,22 @@ const sessionOf = (entries: HistoryEntry[]): TvSessionTimelineItem => {
   return item;
 };
 
-const renderCard = (session: TvSessionTimelineItem, onOpen = vi.fn()) => {
-  render(<TvSessionCard session={session} formattedDay="May 10, 2024" onOpen={onOpen} />);
-  return onOpen;
+const TO = "/history/tv/95396?scope=personal";
+
+const LocationProbe = () => {
+  const location = useLocation();
+  return <div data-testid="location">{location.pathname + location.search}</div>;
 };
+
+const renderCard = (session: TvSessionTimelineItem, to = TO) =>
+  render(
+    <MemoryRouter initialEntries={["/history"]}>
+      <Routes>
+        <Route path="/history" element={<TvSessionCard session={session} formattedDay="May 10, 2024" to={to} />} />
+        <Route path="/history/tv/:seriesTmdbId" element={<LocationProbe />} />
+      </Routes>
+    </MemoryRouter>
+  );
 
 /** Everything the stack contract promises: one wrapper, one front card, no cloned layers. */
 const expectFixedStack = (card: HTMLElement) => {
@@ -56,7 +69,7 @@ const expectFixedStack = (card: HTMLElement) => {
   // The rear layers are ::before/::after, so the wrapper's only element child is the real card.
   expect(stack.children).toHaveLength(1);
   expect(stack.children[0]).toBe(card);
-  expect(stack.querySelectorAll("button")).toHaveLength(1);
+  expect(stack.querySelectorAll("a")).toHaveLength(1);
   expect(stack.querySelectorAll('[data-testid="history-session"]')).toHaveLength(1);
   expect(stack.querySelectorAll(".history-card")).toHaveLength(1);
   expect(stack.querySelectorAll("img")).toHaveLength(1);
@@ -74,8 +87,9 @@ describe("TvSessionCard", () => {
     expect(within(card).getByText("S01 · E01–E03")).toHaveClass("history-card-episode");
     expect(within(card).getByText("May 10, 2024")).toBeInTheDocument();
     expect(within(card).getByText("3 episode watches")).toBeInTheDocument();
-    expect(within(card).getByText("Episodes")).toHaveClass("history-card-action");
-    expect(card).toHaveAccessibleName("TV: Severance, S01 · E01–E03, 3 episode watches on May 10, 2024");
+    expect(within(card).getByText("View Series")).toHaveClass("history-card-action");
+    expect(card).toHaveAttribute("href", TO);
+    expect(card).toHaveAccessibleName("TV: Severance, S01 · E01–E03, 3 episode watches on May 10, 2024. View series history");
   });
 
   test("uses the same fixed three-layer structure for one, three and ten watches", () => {
@@ -87,11 +101,11 @@ describe("TvSessionCard", () => {
     expect(sessions.map((session) => session.watchCount)).toEqual([1, 3, 10]);
 
     const structures = sessions.map((session) => {
-      const { unmount } = render(<TvSessionCard session={session} formattedDay="May 10, 2024" onOpen={vi.fn()} />);
+      const { unmount } = renderCard(session);
       const card = screen.getByTestId("history-session");
       expectFixedStack(card);
       const stack = card.parentElement as HTMLElement;
-      const shape = { wrapperChildren: stack.children.length, classes: stack.className, cardClasses: card.className, buttons: stack.querySelectorAll("button").length };
+      const shape = { wrapperChildren: stack.children.length, classes: stack.className, cardClasses: card.className, links: stack.querySelectorAll("a").length };
       unmount();
       return shape;
     });
@@ -134,24 +148,21 @@ describe("TvSessionCard", () => {
     expect(image).toHaveAttribute("src", DEFAULT_ARTWORK);
   });
 
-  test("clicking or pressing Enter on the front card opens the exact session; a long title changes nothing else", () => {
+  test("the front card navigates to the series page; a long title changes nothing else", () => {
     const longTitle = "The Extraordinarily Long-Winded Chronicles of a Series Whose Name Refuses to Fit on One Line";
     const entries = [episode("t2", 2), episode("t1", 1)].map((entry) => ({ ...entry, tv: { ...entry.tv!, seriesTitle: longTitle } }));
     const session = sessionOf(entries);
-    const onOpen = renderCard(session);
+    renderCard(session, "/history/tv/95396?scope=group&groupId=group-1");
     const card = screen.getByTestId("history-session");
     expectFixedStack(card);
     expect(session.entries.map((entry) => entry._id)).toEqual(["t2", "t1"]);
     expect(session.episodeSummary).toBe("S01 · E01–E02");
     expect(session.id).toBe("tv:95396:2024-05-10");
+    expect(within(card).getByText(longTitle)).toBeInTheDocument();
 
-    fireEvent.click(card);
-    expect(onOpen).toHaveBeenCalledTimes(1);
-    expect(onOpen).toHaveBeenCalledWith(session);
     card.focus();
     expect(card).toHaveFocus();
-    fireEvent.keyDown(card, { key: "Enter" });
     fireEvent.click(card);
-    expect(onOpen).toHaveBeenLastCalledWith(session);
+    expect(screen.getByTestId("location")).toHaveTextContent("/history/tv/95396?scope=group&groupId=group-1");
   });
 });

@@ -59,6 +59,7 @@
   position: relative;
   z-index: 1;
   flex: 1;
+  text-decoration: none;
   border-color: rgba(167, 139, 250, .3);
   /* Purple identity line down the left edge, inside the rounded border. */
   box-shadow: inset 3px 0 0 var(--tv-accent), 0 10px 26px rgba(0, 0, 0, .35);

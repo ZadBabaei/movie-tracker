@@ -346,15 +346,69 @@ their single-layer card verbatim.
   `Episodes` affordance. Rating is shown only when the session holds
   exactly one watch record (that record's own rating); multi-record
   sessions show none rather than a blended number.
-- Click still opens the temporary session-detail bridge from Phase 4
-  (exact `_id` per row → edit / delete / rate). Phase 6 replaces this with
-  `/history/tv/:seriesTmdbId`.
+- Click opened the temporary session-detail bridge from Phase 4 until
+  Phase 6 turned the card into a link to `/history/tv/:seriesTmdbId`.
 - Accessible name: `TV: <series>, <summary>, <n> episode watches on <date>`.
 - Reduced motion: no new animation; the existing hover lift and poster zoom
   are already disabled under `prefers-reduced-motion`.
 - Tests: `TvSessionCard.test.tsx` (badge, summary, fixed structure across
   1/3/10 watches, single-record rating only, artwork fallback chain, click
   + long title) and page-level assertions that movie cards get no stack.
+
+---
+
+# Phase 6 — Dedicated TV series history page (done)
+
+`/history/tv/:seriesTmdbId` combines TMDB's description of a series with
+Movie Tracker's record of the user's relationship with it. Every
+`WatchHistoryEntry` stays its own occurrence; nothing is merged or persisted.
+
+- **Route** (`client/src/App.tsx`, inside `ProtectedRoute`) → `pages/TvSeriesHistory.tsx`.
+  `:seriesTmdbId` must be a positive integer (`utils/seriesHistory.ts
+  parseSeriesTmdbId`); `?scope=personal` (default) or
+  `?scope=group&groupId=<ObjectId>`. Malformed id / group → an in-page
+  not-found state; nothing is requested from TMDB or the API.
+- **API** `GET /api/history/tv/:seriesTmdbId?scope=…&groupId=…`
+  (`server/routes/historyRoutes.ts`): authenticated; personal scope uses the
+  personal page's visibility (`participants` contains the user); group scope
+  requires a valid `groupId` (400), an existing group (404) and membership
+  (403) and returns only that group's rows. Sorted `watchedAt DESC, _id DESC`,
+  **not paginated** — the only limit is a 5 000-row safety cap
+  (`stats.truncated` says if it was hit). Same `serializeHistoryEntry`
+  shape as the other history responses, plus `stats { watchCount,
+  uniqueEpisodes, seasonsWatched, firstWatchedAt, latestWatchedAt }`.
+- **Card navigation**: the Phase 5 stacked card is now a `<Link>` whose
+  affordance reads `View Series`; personal cards link with
+  `?scope=personal`, group-tab cards with `?scope=group&groupId=<tab>`.
+  Movie cards are unchanged (button → entry detail).
+- **Page**: back link → hero (TMDB backdrop/poster, title, tagline, year,
+  status, seasons, episodes, runtime, genres, overview, TMDB rating) →
+  "You and this series" stats computed client-side from the returned
+  records (`summarizeSeriesHistory`) → cast strip from `getTvSeries().cast`
+  (12 shown, "Show all" toggle, no extra requests) → occurrences grouped
+  visually by watched month, one card per record (still, `S01E03`, episode
+  title, watched date, rating, location, group/participants, notes marker,
+  air date as secondary). TMDB and history load independently with their own
+  skeletons.
+- **Failure modes**: TMDB failure → degraded hero from the stored snapshots
+  (series title, poster/backdrop) + a `role="status"` warning, history
+  intact. History failure → hero + cast intact, error state with retry.
+  Zero rows → "No watched episodes found in this history scope."
+- **Entry detail** is the new shared `component/HistoryEntryDetailModal.tsx`
+  (extracted from WatchHistory, CSS moved to its own file): rating, edit
+  watched metadata and delete for exactly one `_id`, via the history store's
+  `updateEntry / deleteEntry / rateEntry` on both pages. The series page
+  mirrors results onto its own list and re-sorts. The Phase 4 session-detail
+  bridge (`selectedSession`, `session-entry` list, "All episodes that day",
+  its CSS) is removed; nothing else used it.
+- **Server tests** `tests/seriesHistory.test.ts` (auth, id/scope validation,
+  own-series-only incl. movie + other-series + other-user exclusion,
+  same-episode rewatches as distinct records in deterministic order with the
+  serialized snapshot intact, empty payload, group member/outsider/missing/
+  malformed group). The server `test` script now runs files serially
+  (`--test-concurrency=1`) because two suites share the test database.
+- **Client tests** `pages/TvSeriesHistory.test.tsx`, `utils/seriesHistory.test.ts`,
+  updated `TvSessionCard.test.tsx` / `WatchHistory.test.tsx`.
 
 ---
 
