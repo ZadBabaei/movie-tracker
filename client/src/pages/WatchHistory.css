@@ -369,7 +369,7 @@
 .history-tv-outcome button { min-height: 34px; padding: 0 12px; border: 1px solid var(--brand-gold); border-radius: var(--brand-radius); background: transparent; color: var(--brand-gold-bright); font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
 .history-tv-outcome button:disabled { opacity: .5; cursor: wait; }
 
-/* Temporary per-episode rows until the grouped TV session cards land. */
+/* Episode summary line shared by the TV session card and its detail. */
 .history-card-episode { display: block; margin-top: 2px; color: var(--brand-gold); font-size: .7rem; font-weight: 700; letter-spacing: .06em; }
 .history-details-episode { margin: -18px 42px 22px 0; color: var(--brand-gold); font-size: .78rem; font-weight: 700; letter-spacing: .08em; }
 
@@ -428,8 +428,7 @@
   .history-skeleton div { animation: none; }
 }
 
-/* ── TV session rows + temporary session detail (Phase 4; visuals land in Phase 5) ── */
-.history-card--session .history-card-action { color: var(--brand-gold); }
+/* ── Temporary session detail bridge (replaced by the series page in Phase 6) ── */
 .history-session-hint { margin: -10px 42px 18px 0; color: var(--brand-muted); font-size: .8rem; }
 .history-session-list { margin: 0; padding: 0; list-style: none; }
 .history-session-entry { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 14px; align-items: center; width: 100%; padding: 12px 6px; border: 0; border-top: 1px solid var(--brand-hairline-soft); background: transparent; color: var(--brand-ivory); text-align: left; cursor: pointer; }

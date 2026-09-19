@@ -322,6 +322,42 @@ count); the session will navigate to `/history/tv/:seriesTmdbId` from Phase 6.
 
 ---
 
+# Phase 5 — Permanent stacked TV history card (done)
+
+Presentation only. Grouping (`seriesTmdbId` + UTC calendar day → one card),
+pagination, the raw store and entry identities are untouched; movies keep
+their single-layer card verbatim.
+
+- `client/src/component/TvSessionCard.tsx` renders one TV session as a
+  **fixed three-layer stack**: a non-semantic `.history-tv-stack` wrapper
+  whose `::before` / `::after` are the two rear layers, and one real
+  `<button class="history-card history-card--tv">` in front. The count of
+  layers is CSS, so it cannot vary with `watchCount`; nothing is cloned.
+  Rear layers are `pointer-events: none`, sit under the front card and are
+  invisible to the accessibility tree.
+- Identity: purple accent line down the left edge (`box-shadow: inset`),
+  purple border/focus ring, and a real-text `TV` badge on the artwork —
+  the same purple used by the search-result badge.
+- Artwork: `sessionArtwork()` uses the session backdrop (16:10, cinematic)
+  and falls back once to the poster, then to `/default-avatar.png`, using
+  only what the timeline item already carries — no extra TMDB request.
+- Front card content: TV badge · series title · `episodeSummary` (unchanged
+  from Phase 4, e.g. `S01 · E02–E04`) · date · `N episode watch(es)` ·
+  `Episodes` affordance. Rating is shown only when the session holds
+  exactly one watch record (that record's own rating); multi-record
+  sessions show none rather than a blended number.
+- Click still opens the temporary session-detail bridge from Phase 4
+  (exact `_id` per row → edit / delete / rate). Phase 6 replaces this with
+  `/history/tv/:seriesTmdbId`.
+- Accessible name: `TV: <series>, <summary>, <n> episode watches on <date>`.
+- Reduced motion: no new animation; the existing hover lift and poster zoom
+  are already disabled under `prefers-reduced-motion`.
+- Tests: `TvSessionCard.test.tsx` (badge, summary, fixed structure across
+  1/3/10 watches, single-record rating only, artwork fallback chain, click
+  + long title) and page-level assertions that movie cards get no stack.
+
+---
+
 # Local development: which backend the client talks to
 
 `client/.env` (gitignored) usually carries the **production**

@@ -6,6 +6,7 @@ import GroupSelectModal, { WatchMetadata } from "../component/GroupSelectModal";
 import HistoryMediaSearch from "../component/HistoryMediaSearch";
 import Modal from "../component/Modal/Modal";
 import TvEpisodePicker from "../component/TvEpisodePicker";
+import TvSessionCard from "../component/TvSessionCard";
 import VerticalNavbar from "../component/VerticalNavbar";
 import { AddHistoryOutcome, useAddToHistory } from "../hooks/useAddToHistory";
 import { useSocket } from "../hooks/useSocket";
@@ -389,20 +390,7 @@ const WatchHistory: React.FC = () => {
                     item.kind === "movie" ? (
                       renderMovieCard(item.entry)
                     ) : (
-                      <button type="button" className="history-card history-card--session" data-testid="history-session" key={item.id} onClick={() => openSession(item)} aria-label={`View ${item.seriesTitle} episodes watched on ${formatCalendarDay(item.calendarDay)}`}>
-                        <span className="history-card-poster-wrap">
-                          <img className="history-card-poster" src={posterUrl(item.posterPath)} alt={`${item.seriesTitle} poster`} onError={(event) => { (event.currentTarget as HTMLImageElement).src = "/default-avatar.png"; }} />
-                        </span>
-                        <span className="history-card-body">
-                          <strong className="history-card-title">{item.seriesTitle}</strong>
-                          <span className="history-card-episode">{item.episodeSummary}</span>
-                          <span className="history-card-meta">
-                            <span>{formatCalendarDay(item.calendarDay)}</span>
-                            <span>{item.watchCount === 1 ? "1 episode watch" : `${item.watchCount} episode watches`}</span>
-                          </span>
-                          <span className="history-card-action">Episodes</span>
-                        </span>
-                      </button>
+                      <TvSessionCard key={item.id} session={item} formattedDay={formatCalendarDay(item.calendarDay)} onOpen={openSession} />
                     )
                   )}
                 </div>

@@ -198,6 +198,11 @@ describe("Watch History timeline", () => {
     expect(within(movieRow).getByRole("img", { name: /heat poster/i })).toHaveAttribute("src", "https://image.tmdb.org/t/p/w500/heat.jpg");
     expect(within(movieRow).getByText("9")).toBeInTheDocument();
     expect(movieRow).toHaveAccessibleName("View details for Heat");
+    // Movie cards stay single-layer: no stack wrapper, no TV class, no TV badge.
+    expect(movieRow).not.toHaveClass("history-card--tv");
+    expect(movieRow.closest(".history-tv-stack")).toBeNull();
+    expect(movieRow.parentElement).toHaveClass("history-period-list");
+    expect(within(movieRow).queryByText("TV")).not.toBeInTheDocument();
 
     const sessions = screen.getAllByTestId("history-session");
     expect(sessions).toHaveLength(2);
@@ -210,7 +215,17 @@ describe("Watch History timeline", () => {
     expect(within(may10).getByText("S01 \u00b7 E03 \u00d72, E04")).toBeInTheDocument();
     expect(within(may10).getByText("May 10, 2024")).toBeInTheDocument();
     expect(within(may10).getByText("3 episode watches")).toBeInTheDocument();
-    expect(within(may10).getByRole("img", { name: /lioness poster/i })).toHaveAttribute("src", "https://image.tmdb.org/t/p/w500/lioness.jpg");
+    expect(within(may10).getByRole("img", { name: /lioness artwork/i })).toHaveAttribute("src", "https://image.tmdb.org/t/p/w500/lioness-bd.jpg");
+    // Every TV session is one stacked card (wrapper + one front button), whatever its watch count.
+    sessions.forEach((card) => {
+      expect(card).toHaveClass("history-card--tv");
+      expect(within(card).getByText("TV")).toHaveClass("history-tv-badge");
+      const stack = card.parentElement as HTMLElement;
+      expect(stack).toHaveClass("history-tv-stack");
+      expect(stack.children).toHaveLength(1);
+    });
+    expect(screen.getAllByTestId("history-tv-stack")).toHaveLength(2);
+    expect(may12).toHaveAccessibleName("TV: Special Ops: Lioness, S01 · E05, 1 episode watch on May 12, 2024");
 
     expect(screen.getByText(/watch events/)).toHaveTextContent("5 watch events");
     const hero = document.querySelector(".history-hero-image") as HTMLImageElement;
