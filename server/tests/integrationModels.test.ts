@@ -1,74 +1,16 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
-import net from "node:net";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import { after, afterEach, before, test } from "node:test";
 import mongoose from "mongoose";
 import IntegrationMediaState from "../models/IntegrationMediaState";
 import UserIntegration from "../models/UserIntegration";
+import { IsolatedTestMongo, startIsolatedTestMongo } from "./helpers/testMongo";
 
-let mongoProcess: ReturnType<typeof spawn> | undefined;
-let mongoDirectory = "";
-
-const reservePort = async () =>
-  new Promise<number>((resolve, reject) => {
-    const server = net.createServer();
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address();
-      if (!address || typeof address === "string") {
-        server.close();
-        reject(new Error("Could not reserve a MongoDB test port."));
-        return;
-      }
-      server.close((error) => (error ? reject(error) : resolve(address.port)));
-    });
-  });
-
-const waitForPort = async (port: number, timeoutMs = 10_000) => {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const connected = await new Promise<boolean>((resolve) => {
-      const socket = net.createConnection({ host: "127.0.0.1", port });
-      socket.once("connect", () => {
-        socket.destroy();
-        resolve(true);
-      });
-      socket.once("error", () => resolve(false));
-    });
-    if (connected) return;
-    await new Promise((resolve) => setTimeout(resolve, 50));
-  }
-  throw new Error("Timed out waiting for isolated MongoDB test process.");
-};
+let testMongo: IsolatedTestMongo;
 
 before(async () => {
-  const port = await reservePort();
-  mongoDirectory = await mkdtemp(path.join(tmpdir(), "movie-tracker-integration-models-"));
-  mongoProcess = spawn(
-    "mongod",
-    ["--dbpath", mongoDirectory, "--port", String(port), "--bind_ip", "127.0.0.1", "--quiet"],
-    { stdio: ["ignore", "pipe", "pipe"] }
-  );
-
-  let mongoError = "";
-  mongoProcess.stderr?.on("data", (chunk) => {
-    mongoError += chunk.toString();
-  });
-  mongoProcess.once("error", (error) => {
-    mongoError += error.message;
-  });
-
-  try {
-    await waitForPort(port);
-    await mongoose.connect(`mongodb://127.0.0.1:${port}/movie_tracker_integration_models_test`);
-    await UserIntegration.syncIndexes();
-    await IntegrationMediaState.syncIndexes();
-  } catch (error) {
-    throw new Error(`Failed to start isolated MongoDB: ${mongoError || String(error)}`);
-  }
+  testMongo = await startIsolatedTestMongo("movie_tracker_integration_models_test");
+  await UserIntegration.syncIndexes();
+  await IntegrationMediaState.syncIndexes();
 });
 
 afterEach(async () => {
@@ -76,13 +18,7 @@ afterEach(async () => {
 });
 
 after(async () => {
-  await mongoose.disconnect();
-  if (mongoProcess && mongoProcess.exitCode === null) {
-    const exited = new Promise<void>((resolve) => mongoProcess?.once("exit", () => resolve()));
-    mongoProcess.kill();
-    await exited;
-  }
-  if (mongoDirectory) await rm(mongoDirectory, { recursive: true, force: true });
+  await testMongo.stop();
 });
 
 const fakeCredentialEnvelope = {
@@ -142,6 +78,27 @@ test("UserIntegration validates statuses and permits disconnected integrations w
     integrationInput({ status: "disconnected", credentialEnvelope: undefined })
   );
   assert.equal(disconnected.credentialEnvelope, undefined);
+});
+
+test("UserIntegration enforces lifecycle credential invariants when the envelope is selected", async () => {
+  await assert.rejects(
+    new UserIntegration(
+      integrationInput({ status: "connected", credentialEnvelope: undefined })
+    ).validate(),
+    /require a credential envelope/
+  );
+  await assert.rejects(
+    new UserIntegration(
+      integrationInput({ status: "disconnected", credentialEnvelope: fakeCredentialEnvelope })
+    ).validate(),
+    /cannot retain a credential envelope/
+  );
+
+  const connected = await UserIntegration.create(integrationInput());
+  const ordinaryRead = await UserIntegration.findById(connected._id);
+  assert.equal(ordinaryRead?.credentialEnvelope, undefined);
+  ordinaryRead!.lastErrorCode = "transient_provider_error";
+  await ordinaryRead!.save();
 });
 
 test("UserIntegration has no plaintext password or auth-key fields", async () => {

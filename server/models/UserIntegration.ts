@@ -76,6 +76,27 @@ const userIntegrationSchema = new Schema<IUserIntegration>(
 
 userIntegrationSchema.index({ userId: 1, provider: 1 }, { unique: true });
 
+userIntegrationSchema.pre("validate", function (next) {
+  // A normal query intentionally excludes the envelope. Skip cross-field
+  // checks when it was not selected so unrelated document saves remain safe.
+  if (!this.isNew && !this.isSelected("credentialEnvelope")) {
+    next();
+    return;
+  }
+  if (this.status === "connected" && !this.credentialEnvelope) {
+    next(new Error("Connected integrations require a credential envelope."));
+    return;
+  }
+  if (
+    (this.status === "disconnected" || this.status === "reauth_required") &&
+    this.credentialEnvelope
+  ) {
+    next(new Error(`${this.status} integrations cannot retain a credential envelope.`));
+    return;
+  }
+  next();
+});
+
 const UserIntegration: Model<IUserIntegration> =
   mongoose.models.UserIntegration ||
   mongoose.model<IUserIntegration>("UserIntegration", userIntegrationSchema);
