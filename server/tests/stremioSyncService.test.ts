@@ -162,6 +162,101 @@ test("provider refresh preserves every matching/import pipeline field", async ()
   assert.equal(state?.observedCredentialVersion, 2);
 });
 
+test("same-generation removed tombstones preserve known completion", async () => {
+  const integrationId = new mongoose.Types.ObjectId();
+  await ingestStremioMovieStates(
+    integrationId,
+    normalizeStremioMovieSnapshot([movieItem()]),
+    new Date("2026-01-01T00:00:00.000Z"),
+    1
+  );
+  await ingestStremioMovieStates(
+    integrationId,
+    normalizeStremioMovieSnapshot([
+      movieItem({
+        removed: true,
+        state: { timesWatched: 0, lastWatched: undefined },
+      }),
+    ]),
+    new Date("2026-02-01T00:00:00.000Z"),
+    1
+  );
+
+  const state = await IntegrationMediaState.findOne({ integrationId });
+  assert.equal(state?.completed, true);
+  assert.equal(state?.removed, true);
+  assert.equal(state?.observedCredentialVersion, 1);
+});
+
+test("new-generation removed tombstones do not inherit old-generation completion", async () => {
+  const integrationId = new mongoose.Types.ObjectId();
+  await ingestStremioMovieStates(
+    integrationId,
+    normalizeStremioMovieSnapshot([movieItem()]),
+    new Date("2026-01-01T00:00:00.000Z"),
+    1
+  );
+  await ingestStremioMovieStates(
+    integrationId,
+    normalizeStremioMovieSnapshot([
+      movieItem({
+        removed: true,
+        state: { timesWatched: 0, lastWatched: undefined },
+      }),
+    ]),
+    new Date("2026-02-01T00:00:00.000Z"),
+    2
+  );
+
+  const state = await IntegrationMediaState.findOne({ integrationId });
+  assert.equal(state?.completed, false);
+  assert.equal(state?.removed, true);
+  assert.equal(state?.observedCredentialVersion, 2);
+  assert.ok(state?.createdAt);
+});
+
+test("new-generation completed observations replace older incomplete state", async () => {
+  const integrationId = new mongoose.Types.ObjectId();
+  await ingestStremioMovieStates(
+    integrationId,
+    normalizeStremioMovieSnapshot([
+      movieItem({ state: { timesWatched: 0, lastWatched: undefined } }),
+    ]),
+    new Date("2026-01-01T00:00:00.000Z"),
+    1
+  );
+  await ingestStremioMovieStates(
+    integrationId,
+    normalizeStremioMovieSnapshot([movieItem()]),
+    new Date("2026-02-01T00:00:00.000Z"),
+    2
+  );
+
+  const state = await IntegrationMediaState.findOne({ integrationId });
+  assert.equal(state?.completed, true);
+  assert.equal(state?.observedCredentialVersion, 2);
+});
+
+test("a first removed incomplete observation starts with completion false", async () => {
+  const integrationId = new mongoose.Types.ObjectId();
+  await ingestStremioMovieStates(
+    integrationId,
+    normalizeStremioMovieSnapshot([
+      movieItem({
+        removed: true,
+        state: { timesWatched: 0, lastWatched: undefined },
+      }),
+    ]),
+    new Date("2026-02-01T00:00:00.000Z"),
+    2
+  );
+
+  const state = await IntegrationMediaState.findOne({ integrationId });
+  assert.equal(state?.completed, false);
+  assert.equal(state?.removed, true);
+  assert.equal(state?.observedCredentialVersion, 2);
+});
+
 test("older observations cannot overwrite newer provider fields and newer generations can advance them", async () => {
   const integrationId = new mongoose.Types.ObjectId();
   const newestSeenAt = new Date("2026-03-01T00:00:00.000Z");
@@ -177,7 +272,11 @@ test("older observations cannot overwrite newer provider fields and newer genera
   await ingestStremioMovieStates(
     integrationId,
     normalizeStremioMovieSnapshot([
-      movieItem({ revision: "stale-generation-1", removed: true }),
+      movieItem({
+        revision: "stale-generation-1",
+        removed: true,
+        state: { timesWatched: 0, lastWatched: undefined },
+      }),
     ]),
     staleSeenAt,
     1
@@ -187,6 +286,7 @@ test("older observations cannot overwrite newer provider fields and newer genera
   assert.equal(state?.observedCredentialVersion, 2);
   assert.equal(state?.providerRevision, "generation-2");
   assert.equal(state?.removed, false);
+  assert.equal(state?.completed, true);
   assert.equal(state?.lastSeenAt.toISOString(), newestSeenAt.toISOString());
 
   await ingestStremioMovieStates(
@@ -273,7 +373,12 @@ test("an old sync finishing after a new-generation sync cannot overwrite current
   await lifecycle.connect(userId.toString(), "person@example.test", "new-password");
   const newSyncService = createStremioSyncService({
     client: snapshotClient(async () => [
-      movieItem({ id: "tt1234567", revision: "new-shared", removed: true }),
+      movieItem({
+        id: "tt1234567",
+        revision: "new-shared",
+        removed: true,
+        state: { timesWatched: 0, lastWatched: undefined },
+      }),
     ]),
     cryptoService,
   });
@@ -295,6 +400,7 @@ test("an old sync finishing after a new-generation sync cannot overwrite current
   assert.equal(shared?.observedCredentialVersion, 2);
   assert.equal(shared?.providerRevision, "new-shared");
   assert.equal(shared?.removed, true);
+  assert.equal(shared?.completed, false);
   assert.equal(staleInsert?.observedCredentialVersion, 1);
   assert.equal(staleInsert?.providerRevision, "old-only");
   assert.equal(

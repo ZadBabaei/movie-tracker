@@ -63,20 +63,21 @@ const operationsFor = (
   upsert: boolean
 ): AnyBulkWriteOperation<IIntegrationMediaState>[] =>
   states.map((state) => {
-    const optionalSet: Record<string, unknown> = {};
-    const optionalUnset: Record<string, 1> = {};
-    if (state.providerRevision !== undefined) {
-      optionalSet.providerRevision = state.providerRevision;
-    } else {
-      optionalUnset.providerRevision = 1;
-    }
-    if (state.providerLastWatchedAt !== undefined) {
-      optionalSet.providerLastWatchedAt = state.providerLastWatchedAt;
-    } else {
-      optionalUnset.providerLastWatchedAt = 1;
-    }
-
     const preserveCompletedAfterRemoval = state.removed && !state.completed;
+    const completed = preserveCompletedAfterRemoval
+      ? {
+          $cond: [
+            {
+              $eq: [
+                { $ifNull: ["$observedCredentialVersion", 0] },
+                observedCredentialVersion,
+              ],
+            },
+            { $ifNull: ["$completed", false] },
+            false,
+          ],
+        }
+      : state.completed;
     return {
       updateOne: {
         filter: {
@@ -89,26 +90,34 @@ const operationsFor = (
             { observedCredentialVersion: { $exists: false } },
           ],
         },
-        update: {
-          $set: {
-            observedCredentialVersion,
-            ...(!preserveCompletedAfterRemoval ? { completed: state.completed } : {}),
-            removed: state.removed,
-            lastSeenAt: observedAt,
-            timestampConfidence: state.timestampConfidence,
-            ...optionalSet,
+        update: [
+          {
+            $set: {
+              integrationId,
+              providerMediaType: state.providerMediaType,
+              identifierNamespace: state.identifierNamespace,
+              providerItemId: { $literal: state.providerItemId },
+              completed,
+              removed: state.removed,
+              lastSeenAt: observedAt,
+              timestampConfidence: state.timestampConfidence,
+              providerRevision:
+                state.providerRevision === undefined
+                  ? "$$REMOVE"
+                  : { $literal: state.providerRevision },
+              providerLastWatchedAt:
+                state.providerLastWatchedAt === undefined
+                  ? "$$REMOVE"
+                  : state.providerLastWatchedAt,
+              matchStatus: { $ifNull: ["$matchStatus", "unresolved"] },
+              importStatus: { $ifNull: ["$importStatus", "pending"] },
+              createdAt: { $ifNull: ["$createdAt", "$$NOW"] },
+              // Completion and version are evaluated from the same pre-update
+              // document in this atomic aggregation stage.
+              observedCredentialVersion,
+            },
           },
-          ...(Object.keys(optionalUnset).length ? { $unset: optionalUnset } : {}),
-          $setOnInsert: {
-            integrationId,
-            providerMediaType: state.providerMediaType,
-            identifierNamespace: state.identifierNamespace,
-            providerItemId: state.providerItemId,
-            ...(preserveCompletedAfterRemoval ? { completed: false } : {}),
-            matchStatus: "unresolved",
-            importStatus: "pending",
-          },
-        },
+        ],
         upsert,
       },
     };
