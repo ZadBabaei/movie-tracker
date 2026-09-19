@@ -180,15 +180,25 @@ export const createStremioIntegrationService = ({
   },
 
   async disconnect(userId) {
-    const integration = await UserIntegration.findOne({
-      userId: new Types.ObjectId(userId),
-      provider: "stremio",
-    }).select("+credentialEnvelope");
+    // Destroy the locally stored credential before making any remote call.
+    // Returning the previous document ensures this request revokes only the
+    // credential displaced by its own atomic state transition.
+    const displaced = await UserIntegration.findOneAndUpdate(
+      {
+        userId: new Types.ObjectId(userId),
+        provider: "stremio",
+      },
+      {
+        $set: { status: "disconnected" },
+        $unset: { credentialEnvelope: 1, lastErrorCode: 1 },
+      },
+      { new: false, runValidators: true }
+    ).select("+credentialEnvelope");
 
     let remoteRevocationConfirmed = false;
-    if (integration?.credentialEnvelope) {
+    if (displaced?.credentialEnvelope) {
       try {
-        const authKey = cryptoService.decryptCredential(integration.credentialEnvelope);
+        const authKey = cryptoService.decryptCredential(displaced.credentialEnvelope);
         await client.logout(authKey);
         remoteRevocationConfirmed = true;
       } catch (error) {
@@ -201,13 +211,6 @@ export const createStremioIntegrationService = ({
       }
     }
 
-    if (integration) {
-      integration.status = "disconnected";
-      integration.credentialEnvelope = undefined;
-      integration.lastErrorCode = undefined;
-      await integration.save();
-    }
-
     return {
       provider: "stremio",
       status: "disconnected",
@@ -217,6 +220,9 @@ export const createStremioIntegrationService = ({
   },
 
   async markReauthRequired(userId) {
+    // Before Task 5 uses this transition for provider operations, it must be
+    // guarded by the credential/version observed by that operation. A stale
+    // request must never erase a newer successful reconnect.
     await UserIntegration.updateOne(
       { userId: new Types.ObjectId(userId), provider: "stremio" },
       {

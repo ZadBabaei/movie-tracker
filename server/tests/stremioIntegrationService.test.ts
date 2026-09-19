@@ -270,6 +270,85 @@ test("disconnect revokes remotely, removes local credentials, and is idempotent"
   assert.equal(stored?.credentialEnvelope, undefined);
 });
 
+test("disconnect cannot erase a credential connected while old-key revocation is blocked", async () => {
+  const userId = new mongoose.Types.ObjectId().toString();
+  await UserIntegration.create({
+    userId,
+    provider: "stremio",
+    status: "connected",
+    credentialEnvelope: cryptoService.encryptCredential("old-fake-auth-key"),
+  });
+
+  const revoked: string[] = [];
+  const oldRevocationStarted = deferred();
+  const releaseOldRevocation = deferred();
+  const client = clientWith({
+    login: async () => ({ authKey: "new-fake-auth-key" }),
+    logout: async (authKey) => {
+      if (authKey === "old-fake-auth-key") {
+        oldRevocationStarted.resolve();
+        await releaseOldRevocation.promise;
+      }
+      revoked.push(authKey);
+      return { revoked: true };
+    },
+  });
+  const service = createStremioIntegrationService({ client, cryptoService });
+
+  const disconnect = service.disconnect(userId);
+  await oldRevocationStarted.promise;
+  await service.connect(userId, "person@example.test", "new-password");
+  releaseOldRevocation.resolve();
+  await disconnect;
+
+  const integrations = await UserIntegration.find({ userId }).select("+credentialEnvelope");
+  assert.equal(integrations.length, 1);
+  assert.equal(integrations[0].status, "connected");
+  const finalAuthKey = cryptoService.decryptCredential(integrations[0].credentialEnvelope!);
+  assert.equal(finalAuthKey, "new-fake-auth-key");
+  assert.deepEqual(revoked, ["old-fake-auth-key"]);
+  assert.equal(revoked.includes(finalAuthKey), false);
+});
+
+test("disconnect winning after connect revokes both displaced sessions and leaves no credential", async () => {
+  const userId = new mongoose.Types.ObjectId().toString();
+  await UserIntegration.create({
+    userId,
+    provider: "stremio",
+    status: "connected",
+    credentialEnvelope: cryptoService.encryptCredential("old-fake-auth-key"),
+  });
+
+  const revoked: string[] = [];
+  const oldRevocationStarted = deferred();
+  const releaseOldRevocation = deferred();
+  const client = clientWith({
+    login: async () => ({ authKey: "new-fake-auth-key" }),
+    logout: async (authKey) => {
+      if (authKey === "old-fake-auth-key") {
+        oldRevocationStarted.resolve();
+        await releaseOldRevocation.promise;
+      }
+      revoked.push(authKey);
+      return { revoked: true };
+    },
+  });
+  const service = createStremioIntegrationService({ client, cryptoService });
+
+  const connect = service.connect(userId, "person@example.test", "new-password");
+  await oldRevocationStarted.promise;
+  const disconnect = await service.disconnect(userId);
+  releaseOldRevocation.resolve();
+  await connect;
+
+  const integrations = await UserIntegration.find({ userId }).select("+credentialEnvelope");
+  assert.equal(integrations.length, 1);
+  assert.equal(integrations[0].status, "disconnected");
+  assert.equal(integrations[0].credentialEnvelope, undefined);
+  assert.equal(disconnect.remoteRevocationConfirmed, true);
+  assert.deepEqual(new Set(revoked), new Set(["old-fake-auth-key", "new-fake-auth-key"]));
+});
+
 test("logout failure still destroys the local credential", async () => {
   const userId = new mongoose.Types.ObjectId().toString();
   const service = createStremioIntegrationService({
