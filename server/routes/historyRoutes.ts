@@ -119,18 +119,48 @@ router.get("/group/:groupId", authenticate, async (req, res) => {
 router.post("/", authenticate, async (req, res) => {
   try {
     const userId = req.user!.id;
-    const movieId = String(req.body?.movieId || "");
+    const requestedMovieId = String(req.body?.movieId || "");
     const scope = req.body?.scope === "group" ? "group" : "personal";
     const groupId = String(req.body?.groupId || "");
-    if (!mongoose.Types.ObjectId.isValid(movieId)) {
-      res.status(400).json({ msg: "Invalid movie id." });
-      return;
+    let movie;
+
+    if (requestedMovieId) {
+      if (!mongoose.Types.ObjectId.isValid(requestedMovieId)) {
+        res.status(400).json({ msg: "Invalid movie id." });
+        return;
+      }
+      movie = await Movie.findById(requestedMovieId);
+      if (!movie) {
+        res.status(404).json({ msg: "Movie not found" });
+        return;
+      }
+    } else {
+      const rawMovie = req.body?.movie;
+      const imdbID = String(rawMovie?.imdbID || "").trim();
+      const title = String(rawMovie?.title || "").trim();
+      if (!imdbID || !title || imdbID.length > 64 || title.length > 300) {
+        res.status(400).json({ msg: "Invalid movie data" });
+        return;
+      }
+
+      movie = await Movie.findOne({ imdbID });
+      if (!movie) {
+        try {
+          movie = await Movie.create({
+            title,
+            imdbID,
+            poster: rawMovie.poster_path,
+            vote_average: Number(rawMovie.vote_average) || 0,
+            addedBy: userId,
+          });
+        } catch (error: any) {
+          if (error?.code !== 11000) throw error;
+          movie = await Movie.findOne({ imdbID });
+          if (!movie) throw error;
+        }
+      }
     }
-    const movie = await Movie.findById(movieId);
-    if (!movie) {
-      res.status(404).json({ msg: "Movie not found" });
-      return;
-    }
+    const movieId = movie._id.toString();
     const watchedAt = parseDate(req.body?.watchedAt || req.body?.watchedDate);
     if (!watchedAt) {
       res.status(400).json({ msg: "Invalid watched date." });

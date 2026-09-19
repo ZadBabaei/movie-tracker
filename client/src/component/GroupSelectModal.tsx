@@ -29,6 +29,7 @@ interface GroupSelectModalProps {
   onSelect: (groupId: string, metadata?: WatchMetadata) => void;
   groups: GroupOption[];
   movieTitle: string;
+  submitting?: boolean;
 }
 
 const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
@@ -37,6 +38,7 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
   onSelect,
   groups,
   movieTitle,
+  submitting = false,
 }) => {
   // Step 1: group select, Step 2: when + where, Step 3: who
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -234,14 +236,16 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
                 <button
                   className="group-select-btn group-select-btn--skip"
                   onClick={handleSkip}
+                  disabled={submitting}
                 >
                   Skip All
                 </button>
                 <button
                   className="group-select-btn group-select-btn--done"
                   onClick={() => selectedGroupId === "personal" ? handleDone() : setStep(3)}
+                  disabled={submitting}
                 >
-                  {selectedGroupId === "personal" ? "Save to History" : <>Next <FaArrowRight style={{ marginLeft: 6 }} /></>}
+                  {selectedGroupId === "personal" && submitting ? "Saving…" : selectedGroupId === "personal" ? "Save to History" : <>Next <FaArrowRight style={{ marginLeft: 6 }} /></>}
                 </button>
               </div>
             </div>
@@ -301,6 +305,7 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
                 <button
                   className="group-select-btn group-select-btn--skip"
                   onClick={handleSkip}
+                  disabled={submitting}
                 >
                   Skip
                 </button>
@@ -308,8 +313,9 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
                   className="group-select-btn group-select-btn--done"
                   data-testid="group-select-done"
                   onClick={handleDone}
+                  disabled={submitting}
                 >
-                  Done
+                  {submitting ? "Saving…" : "Done"}
                 </button>
               </div>
             </div>

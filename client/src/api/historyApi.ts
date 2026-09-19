@@ -13,6 +13,23 @@ export interface HistoryQuery {
   limit?: number;
 }
 
+export interface DirectHistoryMovie {
+  imdbID: string;
+  title: string;
+  poster_path?: string;
+  vote_average?: number;
+}
+
+export interface CreateHistoryPayload {
+  movie: DirectHistoryMovie;
+  scope: "personal" | "group";
+  groupId?: string;
+  participants?: string[];
+  watchedAt: string;
+  watchedLocation: string;
+  watchedNotes: string;
+}
+
 export const fetchPersonalHistory = async (query: HistoryQuery = {}) => {
   const response = await apiClient.get("/api/history/personal", { ...auth(), params: query });
   return response.data;
@@ -21,6 +38,11 @@ export const fetchPersonalHistory = async (query: HistoryQuery = {}) => {
 export const fetchGroupHistory = async (groupId: string, query: HistoryQuery = {}) => {
   const response = await apiClient.get(`/api/history/group/${groupId}`, { ...auth(), params: query });
   return response.data;
+};
+
+export const createHistoryEntry = async (payload: CreateHistoryPayload) => {
+  const response = await apiClient.post("/api/history", payload, auth());
+  return response.data.entry;
 };
 
 export const updateHistoryEntry = async (

@@ -194,6 +194,30 @@
   cursor: pointer;
 }
 
+.history-add-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid var(--brand-gold);
+  border-radius: 2px;
+  background: var(--brand-gold);
+  color: var(--brand-gold-ink);
+  font-family: var(--font-sans);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease, color .18s ease;
+}
+
+.history-add-toggle:hover { background: var(--brand-gold-bright); border-color: var(--brand-gold-bright); }
+.history-add-toggle--open { background: transparent; color: var(--brand-gold-bright); }
+.history-quickadd { padding: 22px 0 4px; }
+
 .history-timeline { position: relative; padding-top: 12px; }
 .history-timeline::before {
   content: "";
@@ -357,6 +381,7 @@
   .history-filter-tabs { flex: 1; overflow-x: auto; }
   .history-filter-tabs button { flex: 0 0 auto; padding-inline: 9px; }
   .history-sort { width: 100%; margin-left: 0; justify-content: space-between; }
+  .history-add-toggle { width: 100%; justify-content: center; }
   .history-timeline::before { left: 7px; }
   .history-period { display: block; padding: 34px 0 18px 28px; }
   .history-period-label { position: relative; top: 0; margin-bottom: 15px; }

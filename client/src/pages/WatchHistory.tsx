@@ -1,9 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FaClock, FaMapMarkerAlt, FaSearch, FaStar, FaTrashAlt, FaUsers } from "react-icons/fa";
+import { FaClock, FaMapMarkerAlt, FaPlus, FaSearch, FaStar, FaTimes, FaTrashAlt, FaUsers } from "react-icons/fa";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import Modal from "../component/Modal/Modal";
+import GroupSelectModal, { WatchMetadata } from "../component/GroupSelectModal";
+import SearchBar from "../component/SearchBar";
 import VerticalNavbar from "../component/VerticalNavbar";
+import { createHistoryEntry, DirectHistoryMovie } from "../api/historyApi";
 import { useSocket } from "../hooks/useSocket";
 import { useGroupStore } from "../store/useGroupStore";
 import { HistoryEntry, useWatchHistoryStore } from "../store/useWatchHistoryStore";
@@ -58,6 +61,9 @@ const WatchHistory: React.FC = () => {
   const [editDate, setEditDate] = useState("");
   const [editLocation, setEditLocation] = useState("");
   const [editNotes, setEditNotes] = useState("");
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [pendingMovie, setPendingMovie] = useState<DirectHistoryMovie | null>(null);
+  const [addingHistory, setAddingHistory] = useState(false);
   const deepLinkApplied = useRef(false);
   const activeGroup = groupList.find((group) => group._id === activeTab);
   const isPersonal = activeTab === "personal";
@@ -196,6 +202,49 @@ const WatchHistory: React.FC = () => {
     }
   };
 
+  const toggleQuickAdd = () => {
+    setShowQuickAdd((current) => {
+      if (current) setPendingMovie(null);
+      return !current;
+    });
+  };
+
+  const selectMovieForHistory = (movie: DirectHistoryMovie) => {
+    setPendingMovie(movie);
+    setShowQuickAdd(false);
+  };
+
+  const saveDirectHistory = async (groupId: string, metadata?: WatchMetadata) => {
+    if (!pendingMovie || addingHistory) return;
+    const scope = groupId === "personal" ? "personal" : "group";
+    setAddingHistory(true);
+    try {
+      await createHistoryEntry({
+        movie: pendingMovie,
+        scope,
+        ...(scope === "group" ? { groupId, participants: metadata?.watchedWith || [] } : {}),
+        watchedAt: metadata?.watchedDate || new Date().toISOString().slice(0, 10),
+        watchedLocation: metadata?.watchedWhere?.trim() || "",
+        watchedNotes: metadata?.watchedNotes?.trim() || "",
+      });
+
+      if (scope === "personal") {
+        setActiveTab("personal");
+        await fetchPersonal();
+      } else {
+        setActiveTab(groupId);
+        await Promise.all([fetchGroup(groupId), fetchPersonal()]);
+      }
+      toast.success(`${pendingMovie.title} added to ${scope === "personal" ? "your" : "group"} watch history.`);
+      setPendingMovie(null);
+      setShowQuickAdd(false);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.msg || "Unable to add this movie to watch history.");
+    } finally {
+      setAddingHistory(false);
+    }
+  };
+
   return (
     <div className="history-page">
       <VerticalNavbar />
@@ -242,14 +291,29 @@ const WatchHistory: React.FC = () => {
               <option value="title">Title A–Z</option>
             </select>
           </label>
+          <button
+            type="button"
+            className={`history-add-toggle${showQuickAdd ? " history-add-toggle--open" : ""}`}
+            onClick={toggleQuickAdd}
+            aria-expanded={showQuickAdd}
+          >
+            {showQuickAdd ? <FaTimes aria-hidden="true" /> : <FaPlus aria-hidden="true" />}
+            <span>{showQuickAdd ? "Close" : "Add to History"}</span>
+          </button>
         </section>
+
+        {showQuickAdd && (
+          <div className="history-quickadd">
+            <SearchBar onMovieSelect={selectMovieForHistory} />
+          </div>
+        )}
 
         {activeLoading ? (
           <div className="history-skeleton" role="status" aria-label="Loading watch history">{Array.from({ length: 6 }).map((_, index) => <div key={index} />)}</div>
         ) : activeError ? (
           <section className="history-state"><h2>History unavailable</h2><p>{activeError}</p><button type="button" onClick={() => isPersonal ? fetchPersonal() : fetchGroup(activeTab)}>Try again</button></section>
         ) : visibleItems.length === 0 ? (
-          <section className="history-state"><h2>{bucket.items.length ? "No matching screenings" : "Your next movie night starts here"}</h2><p>{bucket.items.length ? "Try another title or clear the active filter." : isPersonal ? "Mark a movie as watched from your Watchlist and it will appear in your personal film diary." : "Movies marked watched by this group will collect here."}</p>{bucket.items.length ? <button type="button" onClick={() => { setSearch(""); setPeriodFilter("all"); }}>Clear filters</button> : null}</section>
+          <section className="history-state"><h2>{bucket.items.length ? "No matching screenings" : "Your next movie night starts here"}</h2><p>{bucket.items.length ? "Try another title or clear the active filter." : isPersonal ? "Add a movie you've watched, or mark one watched from your Watchlist." : "Add a watched movie directly, or mark one watched from this group's Watchlist."}</p>{bucket.items.length ? <button type="button" onClick={() => { setSearch(""); setPeriodFilter("all"); }}>Clear filters</button> : null}</section>
         ) : (
           <div className="history-timeline">
             {periods.map((period) => (
@@ -333,6 +397,17 @@ const WatchHistory: React.FC = () => {
           </div>
         ) : null}
       </Modal>
+
+      <GroupSelectModal
+        isOpen={!!pendingMovie}
+        onClose={() => {
+          if (!addingHistory) setPendingMovie(null);
+        }}
+        onSelect={saveDirectHistory}
+        groups={groupList}
+        movieTitle={pendingMovie?.title || ""}
+        submitting={addingHistory}
+      />
     </div>
   );
 };
