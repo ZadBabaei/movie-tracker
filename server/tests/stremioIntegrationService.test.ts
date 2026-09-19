@@ -37,6 +37,14 @@ const clientWith = ({
   logout = async () => ({ revoked: true as const }),
 }: Partial<StremioConnectionClient> = {}): StremioConnectionClient => ({ login, logout });
 
+const deferred = () => {
+  let resolve!: () => void;
+  const promise = new Promise<void>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+};
+
 test("first connection stores only an encrypted envelope and returns sanitized status", async () => {
   const userId = new mongoose.Types.ObjectId().toString();
   const service = createStremioIntegrationService({
@@ -144,6 +152,73 @@ test("successful reconnect replaces the credential, revokes the old session, and
   assert.equal(cryptoService.decryptCredential(stored!.credentialEnvelope!), "new-fake-auth-key");
   assert.deepEqual(revoked, ["old-fake-auth-key"]);
   assert.equal(await UserIntegration.countDocuments({ userId }), 1);
+});
+
+test("concurrent reconnects revoke every displaced key but never the final stored key", async () => {
+  const userId = new mongoose.Types.ObjectId().toString();
+  await UserIntegration.create({
+    userId,
+    provider: "stremio",
+    status: "connected",
+    credentialEnvelope: cryptoService.encryptCredential("old-fake-auth-key"),
+  });
+
+  const issuedKeys = ["key-a", "key-b"];
+  const revoked: string[] = [];
+  const oldRevocationStarted = deferred();
+  const releaseOldRevocation = deferred();
+  const client = clientWith({
+    login: async () => ({ authKey: issuedKeys.shift()! }),
+    logout: async (authKey) => {
+      if (authKey === "old-fake-auth-key") {
+        oldRevocationStarted.resolve();
+        await releaseOldRevocation.promise;
+      }
+      revoked.push(authKey);
+      return { revoked: true };
+    },
+  });
+  const service = createStremioIntegrationService({ client, cryptoService });
+
+  const reconnectA = service.connect(userId, "person@example.test", "password-a");
+  await oldRevocationStarted.promise;
+  const reconnectB = service.connect(userId, "person@example.test", "password-b");
+  await reconnectB;
+  releaseOldRevocation.resolve();
+  await reconnectA;
+
+  const integrations = await UserIntegration.find({ userId }).select("+credentialEnvelope");
+  assert.equal(integrations.length, 1);
+  const finalAuthKey = cryptoService.decryptCredential(integrations[0].credentialEnvelope!);
+  assert.equal(finalAuthKey, "key-b");
+  assert.deepEqual(new Set(revoked), new Set(["old-fake-auth-key", "key-a"]));
+  assert.equal(revoked.includes(finalAuthKey), false);
+});
+
+test("concurrent first connects retain one winner and revoke every superseded key", async () => {
+  const userId = new mongoose.Types.ObjectId().toString();
+  const issued = ["first-key-a", "first-key-b"];
+  const revoked: string[] = [];
+  const client = clientWith({
+    login: async () => ({ authKey: issued.shift()! }),
+    logout: async (authKey) => {
+      revoked.push(authKey);
+      return { revoked: true };
+    },
+  });
+  const service = createStremioIntegrationService({ client, cryptoService });
+
+  await Promise.all([
+    service.connect(userId, "person@example.test", "password-a"),
+    service.connect(userId, "person@example.test", "password-b"),
+  ]);
+
+  const integrations = await UserIntegration.find({ userId }).select("+credentialEnvelope");
+  assert.equal(integrations.length, 1);
+  const finalAuthKey = cryptoService.decryptCredential(integrations[0].credentialEnvelope!);
+  const superseded = ["first-key-a", "first-key-b"].filter((key) => key !== finalAuthKey);
+  assert.deepEqual(revoked, superseded);
+  assert.equal(revoked.includes(finalAuthKey), false);
 });
 
 test("old-session revocation failure does not roll back a successful reconnect", async () => {

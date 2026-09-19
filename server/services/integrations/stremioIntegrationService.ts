@@ -86,6 +86,42 @@ const validateConnectInput = (email: string, password: string) => {
   }
 };
 
+const isDuplicateKeyError = (error: unknown) =>
+  Boolean(error && typeof error === "object" && "code" in error && error.code === 11000);
+
+const swapCredential = async (
+  userId: Types.ObjectId,
+  credentialEnvelope: ICredentialEnvelope
+) => {
+  const filter = { userId, provider: "stremio" as const };
+  const update = {
+    $set: {
+      status: "connected" as const,
+      credentialEnvelope,
+    },
+    $unset: { lastErrorCode: 1 as const },
+  };
+  const swap = (upsert: boolean) =>
+    UserIntegration.findOneAndUpdate(filter, update, {
+      upsert,
+      new: false,
+      runValidators: true,
+      setDefaultsOnInsert: true,
+    }).select("+credentialEnvelope");
+
+  try {
+    return await swap(true);
+  } catch (error) {
+    // Concurrent first-time upserts may race on the unique user/provider index.
+    // Once one insert wins, retry as an update so this request atomically
+    // receives and later revokes the credential it actually displaced.
+    if (!isDuplicateKeyError(error)) throw error;
+    const displaced = await swap(false);
+    if (!displaced) throw error;
+    return displaced;
+  }
+};
+
 export const createStremioIntegrationService = ({
   client = stremioClient,
   cryptoService = { encryptCredential, decryptCredential },
@@ -110,29 +146,10 @@ export const createStremioIntegrationService = ({
     const { authKey } = await client.login(email, password);
     const newEnvelope = cryptoService.encryptCredential(authKey);
     const objectUserId = new Types.ObjectId(userId);
-    const existing = await UserIntegration.findOne({
-      userId: objectUserId,
-      provider: "stremio",
-    }).select("+credentialEnvelope");
 
-    let connected: IUserIntegration;
+    let displaced: IUserIntegration | null;
     try {
-      connected = await UserIntegration.findOneAndUpdate(
-        { userId: objectUserId, provider: "stremio" },
-        {
-          $set: {
-            status: "connected",
-            credentialEnvelope: newEnvelope,
-          },
-          $unset: { lastErrorCode: 1 },
-        },
-        {
-          upsert: true,
-          new: true,
-          runValidators: true,
-          setDefaultsOnInsert: true,
-        }
-      ).orFail();
+      displaced = await swapCredential(objectUserId, newEnvelope);
     } catch (error) {
       try {
         await client.logout(authKey);
@@ -142,9 +159,9 @@ export const createStremioIntegrationService = ({
       throw error;
     }
 
-    if (existing?.credentialEnvelope) {
+    if (displaced?.credentialEnvelope) {
       try {
-        const previousAuthKey = cryptoService.decryptCredential(existing.credentialEnvelope);
+        const previousAuthKey = cryptoService.decryptCredential(displaced.credentialEnvelope);
         if (previousAuthKey !== authKey) await client.logout(previousAuthKey);
       } catch (error) {
         const code = error instanceof StremioClientError ? error.code : "revocation_failed";
@@ -152,7 +169,14 @@ export const createStremioIntegrationService = ({
       }
     }
 
-    return statusView(connected);
+    return statusView({
+      provider: "stremio",
+      status: "connected",
+      lastSyncCompletedAt: displaced?.lastSyncCompletedAt,
+      lastSuccessfulSyncAt: displaced?.lastSuccessfulSyncAt,
+      lastSyncStatus: displaced?.lastSyncStatus,
+      lastErrorCode: undefined,
+    });
   },
 
   async disconnect(userId) {
