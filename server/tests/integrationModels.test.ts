@@ -162,7 +162,20 @@ test("IntegrationMediaState accepts movie and future TV episode states", async (
   );
 
   assert.equal(movie.providerMediaType, "movie");
+  assert.equal(movie.observedCredentialVersion, 0);
   assert.equal(episode.providerMediaType, "tv_episode");
+});
+
+test("legacy provider states hydrate with generation zero", async () => {
+  const integrationId = new mongoose.Types.ObjectId();
+  await IntegrationMediaState.collection.insertOne({
+    ...stateInput(integrationId),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
+  const state = await IntegrationMediaState.findOne({ integrationId });
+  assert.equal(state?.observedCredentialVersion, 0);
 });
 
 test("IntegrationMediaState enforces provider identity within an integration", async () => {
@@ -258,6 +271,18 @@ test("IntegrationMediaState rejects invalid enums and malformed TMDB IDs", async
       stateInput(new mongoose.Types.ObjectId(), { matchedTmdbId: 1.5 })
     ).validate(),
     /matchedTmdbId/
+  );
+  await assert.rejects(
+    new IntegrationMediaState(
+      stateInput(new mongoose.Types.ObjectId(), { observedCredentialVersion: -1 })
+    ).validate(),
+    /observedCredentialVersion/
+  );
+  await assert.rejects(
+    new IntegrationMediaState(
+      stateInput(new mongoose.Types.ObjectId(), { observedCredentialVersion: 1.5 })
+    ).validate(),
+    /observedCredentialVersion/
   );
 });
 

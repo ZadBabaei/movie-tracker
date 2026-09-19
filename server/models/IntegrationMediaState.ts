@@ -32,6 +32,7 @@ export interface IIntegrationMediaState extends Document {
   providerMediaType: ProviderMediaType;
   providerItemId: string;
   identifierNamespace: IdentifierNamespace;
+  observedCredentialVersion: number;
   providerRevision?: string;
   providerLastWatchedAt?: Date;
   completed: boolean;
@@ -73,6 +74,14 @@ const integrationMediaStateSchema = new Schema<IIntegrationMediaState>(
       type: String,
       enum: IDENTIFIER_NAMESPACES,
       required: true,
+    },
+    observedCredentialVersion: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
+      max: Number.MAX_SAFE_INTEGER,
+      validate: Number.isSafeInteger,
     },
     providerRevision: { type: String, maxlength: 1024 },
     providerLastWatchedAt: { type: Date },

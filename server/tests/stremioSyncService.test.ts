@@ -14,6 +14,7 @@ import {
 } from "../services/integrations/stremioClient";
 import {
   createStremioSyncService,
+  currentStremioProviderStateFilter,
   ingestStremioMovieStates,
   StremioSyncError,
 } from "../services/integrations/stremioSyncService";
@@ -101,6 +102,7 @@ test("first, repeated, and changed snapshots upsert one normalized provider stat
   ];
   await service.sync(userId.toString());
   const state = await IntegrationMediaState.findOne({ integrationId: integration._id });
+  assert.equal(state?.observedCredentialVersion, 1);
   assert.equal(state?.providerRevision, "revision-2");
   assert.equal(state?.removed, true);
   assert.equal(state?.completed, true);
@@ -143,6 +145,11 @@ test("provider refresh preserves every matching/import pipeline field", async ()
     }
   );
 
+  const lifecycle = createStremioIntegrationService({
+    client: lifecycleClient(),
+    cryptoService,
+  });
+  await lifecycle.connect(userId.toString(), "person@example.test", "new-password");
   await service.sync(userId.toString());
   const state = await IntegrationMediaState.findOne({ integrationId: integration._id });
   assert.equal(state?.matchStatus, "matched");
@@ -152,6 +159,150 @@ test("provider refresh preserves every matching/import pipeline field", async ()
   assert.equal(state?.importedHistoryEntryId?.toString(), historyId.toString());
   assert.equal(state?.importedAt?.toISOString(), importedAt.toISOString());
   assert.equal(state?.suppressionReason, "user_suppressed");
+  assert.equal(state?.observedCredentialVersion, 2);
+});
+
+test("older observations cannot overwrite newer provider fields and newer generations can advance them", async () => {
+  const integrationId = new mongoose.Types.ObjectId();
+  const newestSeenAt = new Date("2026-03-01T00:00:00.000Z");
+  const staleSeenAt = new Date("2026-02-01T00:00:00.000Z");
+  const laterSeenAt = new Date("2026-04-01T00:00:00.000Z");
+
+  await ingestStremioMovieStates(
+    integrationId,
+    normalizeStremioMovieSnapshot([movieItem({ revision: "generation-2" })]),
+    newestSeenAt,
+    2
+  );
+  await ingestStremioMovieStates(
+    integrationId,
+    normalizeStremioMovieSnapshot([
+      movieItem({ revision: "stale-generation-1", removed: true }),
+    ]),
+    staleSeenAt,
+    1
+  );
+
+  let state = await IntegrationMediaState.findOne({ integrationId });
+  assert.equal(state?.observedCredentialVersion, 2);
+  assert.equal(state?.providerRevision, "generation-2");
+  assert.equal(state?.removed, false);
+  assert.equal(state?.lastSeenAt.toISOString(), newestSeenAt.toISOString());
+
+  await ingestStremioMovieStates(
+    integrationId,
+    normalizeStremioMovieSnapshot([
+      movieItem({ revision: "generation-3", removed: true }),
+    ]),
+    laterSeenAt,
+    3
+  );
+  state = await IntegrationMediaState.findOne({ integrationId });
+  assert.equal(state?.observedCredentialVersion, 3);
+  assert.equal(state?.providerRevision, "generation-3");
+  assert.equal(state?.removed, true);
+  assert.equal(state?.lastSeenAt.toISOString(), laterSeenAt.toISOString());
+});
+
+test("reconnect keeps omitted old-account rows as non-current provenance", async () => {
+  const userId = new mongoose.Types.ObjectId();
+  const integration = await createConnectedIntegration(userId);
+  let snapshot = [movieItem({ id: "tt1111111", revision: "old-account" })];
+  const syncService = createStremioSyncService({
+    client: snapshotClient(async () => snapshot),
+    cryptoService,
+  });
+  const lifecycle = createStremioIntegrationService({
+    client: lifecycleClient(),
+    cryptoService,
+  });
+
+  await syncService.sync(userId.toString());
+  await lifecycle.connect(userId.toString(), "person@example.test", "new-password");
+  snapshot = [movieItem({ id: "tt2222222", revision: "new-account" })];
+  await syncService.sync(userId.toString());
+
+  const oldState = await IntegrationMediaState.findOne({
+    integrationId: integration._id,
+    providerItemId: "tt1111111",
+  });
+  const newState = await IntegrationMediaState.findOne({
+    integrationId: integration._id,
+    providerItemId: "tt2222222",
+  });
+  assert.equal(oldState?.observedCredentialVersion, 1);
+  assert.equal(newState?.observedCredentialVersion, 2);
+  assert.equal(
+    await IntegrationMediaState.countDocuments(
+      currentStremioProviderStateFilter(integration._id, 2)
+    ),
+    1
+  );
+});
+
+test("an old sync finishing after a new-generation sync cannot overwrite current rows", async () => {
+  const userId = new mongoose.Types.ObjectId();
+  const integration = await createConnectedIntegration(userId);
+  const oldIngestionStarted = deferred<void>();
+  const releaseOldIngestion = deferred<void>();
+  const oldSnapshot = [
+    movieItem({ id: "tt1234567", revision: "old-shared" }),
+    movieItem({ id: "tt7654321", revision: "old-only" }),
+  ];
+  const oldSyncService = createStremioSyncService({
+    client: snapshotClient(async () => oldSnapshot),
+    cryptoService,
+    ingest: async (integrationId, states, observedAt, credentialVersion) => {
+      oldIngestionStarted.resolve();
+      await releaseOldIngestion.promise;
+      return ingestStremioMovieStates(
+        integrationId,
+        states,
+        observedAt,
+        credentialVersion
+      );
+    },
+  });
+  const lifecycle = createStremioIntegrationService({
+    client: lifecycleClient(),
+    cryptoService,
+  });
+
+  const oldSync = oldSyncService.sync(userId.toString());
+  await oldIngestionStarted.promise;
+  await lifecycle.connect(userId.toString(), "person@example.test", "new-password");
+  const newSyncService = createStremioSyncService({
+    client: snapshotClient(async () => [
+      movieItem({ id: "tt1234567", revision: "new-shared", removed: true }),
+    ]),
+    cryptoService,
+  });
+  await newSyncService.sync(userId.toString());
+  releaseOldIngestion.resolve();
+  await assert.rejects(
+    oldSync,
+    (error: unknown) => error instanceof StremioSyncError && error.code === "integration_changed"
+  );
+
+  const shared = await IntegrationMediaState.findOne({
+    integrationId: integration._id,
+    providerItemId: "tt1234567",
+  });
+  const staleInsert = await IntegrationMediaState.findOne({
+    integrationId: integration._id,
+    providerItemId: "tt7654321",
+  });
+  assert.equal(shared?.observedCredentialVersion, 2);
+  assert.equal(shared?.providerRevision, "new-shared");
+  assert.equal(shared?.removed, true);
+  assert.equal(staleInsert?.observedCredentialVersion, 1);
+  assert.equal(staleInsert?.providerRevision, "old-only");
+  assert.equal(
+    await IntegrationMediaState.countDocuments(
+      currentStremioProviderStateFilter(integration._id, 2)
+    ),
+    1
+  );
 });
 
 test("missing snapshot items remain intact and removed rows cannot erase prior completion", async () => {
@@ -162,7 +313,7 @@ test("missing snapshot items remain intact and removed rows cannot erase prior c
     movieItem({ id: "tt1234567" }),
     movieItem({ id: "tt7654321" }),
   ]);
-  await ingestStremioMovieStates(integrationId, initial, firstSeen);
+  await ingestStremioMovieStates(integrationId, initial, firstSeen, 1);
 
   const refresh = normalizeStremioMovieSnapshot([
     movieItem({
@@ -171,24 +322,40 @@ test("missing snapshot items remain intact and removed rows cannot erase prior c
       state: { timesWatched: 0, lastWatched: undefined },
     }),
   ]);
-  await ingestStremioMovieStates(integrationId, refresh, secondSeen);
+  await ingestStremioMovieStates(integrationId, refresh, secondSeen, 1);
 
   const present = await IntegrationMediaState.findOne({ integrationId, providerItemId: "tt1234567" });
   const absent = await IntegrationMediaState.findOne({ integrationId, providerItemId: "tt7654321" });
   assert.equal(present?.removed, true);
   assert.equal(present?.completed, true);
   assert.equal(present?.lastSeenAt.toISOString(), secondSeen.toISOString());
+  assert.equal(present?.observedCredentialVersion, 1);
   assert.equal(absent?.completed, true);
   assert.equal(absent?.removed, false);
   assert.equal(absent?.lastSeenAt.toISOString(), firstSeen.toISOString());
+  assert.equal(absent?.observedCredentialVersion, 1);
+});
+
+test("ingestion rejects malformed credential generations before writing", async () => {
+  const integrationId = new mongoose.Types.ObjectId();
+  const normalized = normalizeStremioMovieSnapshot([movieItem()]);
+  await assert.rejects(
+    ingestStremioMovieStates(integrationId, normalized, new Date(), -1),
+    /nonnegative safe integer/
+  );
+  await assert.rejects(
+    ingestStremioMovieStates(integrationId, normalized, new Date(), 1.5),
+    /nonnegative safe integer/
+  );
+  assert.equal(await IntegrationMediaState.countDocuments({ integrationId }), 0);
 });
 
 test("concurrent state ingestion and identical syncs do not duplicate provider identities", async () => {
   const integrationId = new mongoose.Types.ObjectId();
   const normalized = normalizeStremioMovieSnapshot([movieItem()]);
   await Promise.all([
-    ingestStremioMovieStates(integrationId, normalized, new Date()),
-    ingestStremioMovieStates(integrationId, normalized, new Date()),
+    ingestStremioMovieStates(integrationId, normalized, new Date(), 1),
+    ingestStremioMovieStates(integrationId, normalized, new Date(), 1),
   ]);
   assert.equal(await IntegrationMediaState.countDocuments({ integrationId }), 1);
 

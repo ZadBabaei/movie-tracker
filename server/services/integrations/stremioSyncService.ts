@@ -59,6 +59,7 @@ const operationsFor = (
   integrationId: Types.ObjectId,
   states: NormalizedStremioMovieState[],
   observedAt: Date,
+  observedCredentialVersion: number,
   upsert: boolean
 ): AnyBulkWriteOperation<IIntegrationMediaState>[] =>
   states.map((state) => {
@@ -83,9 +84,14 @@ const operationsFor = (
           providerMediaType: state.providerMediaType,
           identifierNamespace: state.identifierNamespace,
           providerItemId: state.providerItemId,
+          $or: [
+            { observedCredentialVersion: { $lte: observedCredentialVersion } },
+            { observedCredentialVersion: { $exists: false } },
+          ],
         },
         update: {
           $set: {
+            observedCredentialVersion,
             ...(!preserveCompletedAfterRemoval ? { completed: state.completed } : {}),
             removed: state.removed,
             lastSeenAt: observedAt,
@@ -111,8 +117,12 @@ const operationsFor = (
 export const ingestStremioMovieStates = async (
   integrationId: Types.ObjectId,
   states: NormalizedStremioMovieState[],
-  observedAt: Date
+  observedAt: Date,
+  observedCredentialVersion: number
 ): Promise<IngestionResult> => {
+  if (!Number.isSafeInteger(observedCredentialVersion) || observedCredentialVersion < 0) {
+    throw new RangeError("observedCredentialVersion must be a nonnegative safe integer");
+  }
   // Full-snapshot absence is deliberately a no-op. Stremio exposes explicit
   // `removed` tombstones, so only rows actually observed in this snapshot are
   // updated; older provenance/import links are never deleted or fabricated.
@@ -123,7 +133,13 @@ export const ingestStremioMovieStates = async (
     const chunk = uniqueStates.slice(index, index + BULK_WRITE_SIZE);
     try {
       const result = await IntegrationMediaState.bulkWrite(
-        operationsFor(integrationId, chunk, observedAt, true),
+        operationsFor(
+          integrationId,
+          chunk,
+          observedAt,
+          observedCredentialVersion,
+          true
+        ),
         { ordered: false }
       );
       totals.upserted += result.upsertedCount;
@@ -132,7 +148,13 @@ export const ingestStremioMovieStates = async (
     } catch (error) {
       if (!duplicateOnly(error)) throw error;
       const retry = await IntegrationMediaState.bulkWrite(
-        operationsFor(integrationId, chunk, observedAt, false),
+        operationsFor(
+          integrationId,
+          chunk,
+          observedAt,
+          observedCredentialVersion,
+          false
+        ),
         { ordered: false }
       );
       totals.matched += retry.matchedCount;
@@ -141,6 +163,24 @@ export const ingestStremioMovieStates = async (
   }
   return totals;
 };
+
+// Downstream work may process only rows whose observation generation equals
+// the integration's current credential generation. Missing legacy values are
+// generation zero and remain eligible only while the integration is also zero.
+export const currentStremioProviderStateFilter = (
+  integrationId: Types.ObjectId,
+  credentialVersion: number
+) => ({
+  integrationId,
+  ...(credentialVersion === 0
+    ? {
+        $or: [
+          { observedCredentialVersion: 0 },
+          { observedCredentialVersion: { $exists: false } },
+        ],
+      }
+    : { observedCredentialVersion: credentialVersion }),
+});
 
 const versionCondition = (credentialVersion: number) =>
   credentialVersion === 0
@@ -206,7 +246,12 @@ export const createStremioSyncService = ({
       if (!stillCurrent) throw new StremioSyncError("integration_changed");
       const normalized = normalizeStremioMovieSnapshot(snapshot);
       const observedAt = now();
-      const ingestion = await ingest(integration._id, normalized, observedAt);
+      const ingestion = await ingest(
+        integration._id,
+        normalized,
+        observedAt,
+        credentialVersion
+      );
       const completedAt = now();
       const completion = await UserIntegration.updateOne(currentFilter, {
         $set: {
