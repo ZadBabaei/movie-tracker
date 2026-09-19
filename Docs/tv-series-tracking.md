@@ -319,3 +319,33 @@ count); the session will navigate to `/history/tv/:seriesTmdbId` from Phase 6.
 - Removed: the "Add TV Watch" button, its state, CSS and tests.
 - `server/package.json` `test` runs every `tests/**/*.test.ts`
   (`watchHistory.test.ts` + main's `historyRoutes.test.ts`).
+
+---
+
+# Local development: which backend the client talks to
+
+`client/.env` (gitignored) usually carries the **production**
+`VITE_API_BASE_URL`. A plain `npx vite` therefore sends every `/api` call to
+Railway — from a port that is not in the CORS allow-list the browser blocks it
+and axios reports a literal "Network Error"; from an allowed port it reaches a
+backend without the TV branch. Neither is a TV bug.
+
+Use the local-API mode, which ignores `VITE_API_BASE_URL` / `VITE_SOCKET_URL`
+and proxies `/api` + `/socket.io` to a local backend:
+
+```bash
+# backend (worktree, isolated test DB, port 5002)
+cd server && NODE_ENV=test PORT=5002 E2E_MONGODB_URI=mongodb://127.0.0.1:27017/movie-tracker-e2e JWT_SECRET=local-dev CORS_ORIGINS=http://127.0.0.1:3002 npx ts-node index.ts
+```
+
+```bash
+# client (worktree) — proxied to the backend above
+cd client && VITE_DEV_API_PROXY=http://127.0.0.1:5002 npm run dev:local -- --port 3002
+```
+
+`npm run dev:local` = `vite --mode localapi`. Vite prints
+`[movie-tracker] API calls are proxied to …` on start, and the browser console
+prints `[movie-tracker] API base: …` so a wrong target is visible immediately.
+Open **http://127.0.0.1:3002** (not `localhost` — the session token is
+per-origin). The main checkout's `server` config on port 5000 needs no
+`VITE_DEV_API_PROXY` (default `http://127.0.0.1:5000`).

@@ -60,6 +60,9 @@ describe("HistoryMediaSearch", () => {
     expect(tmdb.searchMedia).toHaveBeenCalledWith("lioness", expect.objectContaining({ signal: expect.any(AbortSignal) }));
     expect(rows).toHaveLength(3);
     expect(rows[0]).toHaveAttribute("data-kind", "tv");
+    expect(rows[0]).toHaveAccessibleName("TV series: Special Ops: Lioness (2023)");
+    expect(rows[1]).toHaveAccessibleName("Movie: Lioness (2008)");
+    expect(rows[2]).toHaveAccessibleName("Movie: Untitled");
     expect(within(rows[0]).getByText("TV")).toBeInTheDocument();
     expect(rows[0]).toHaveTextContent("Special Ops: Lioness");
     expect(rows[0]).toHaveTextContent("2023 · US");

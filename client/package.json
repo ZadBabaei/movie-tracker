@@ -36,6 +36,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:local": "vite --mode localapi",
     "start": "vite",
     "typecheck": "tsc --noEmit",
     "build": "npm run typecheck && vite build",

@@ -114,6 +114,7 @@ const HistoryMediaSearch: React.FC<HistoryMediaSearchProps> = ({
                 type="button"
                 className={`history-media-result history-media-result--${result.kind}`}
                 onClick={() => onSelect(result)}
+                aria-label={`${result.kind === "tv" ? "TV series" : "Movie"}: ${result.title}${result.year ? ` (${result.year})` : ""}`}
                 data-testid="history-media-result"
                 data-kind={result.kind}
               >
