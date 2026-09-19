@@ -281,3 +281,41 @@ Status: Phase 0 audit + Phase 1 data foundation complete.
   entry detail (edit/rate/delete by `_id`) with a back link. Session identity
   is the recomputed key, so edits/deletes/socket refreshes regroup live.
 - Hero copy: "N watch events" (raw count), media-neutral empty-state copy.
+
+
+---
+
+# Integration — unified "Add to History" (main `7d1ac096` merged)
+
+Product model (locked): one toolbar button, **+ Add to History**, opens one
+search for movies *and* TV series. Movie → watch details → save. TV → episode
+picker → same watch details → one record per episode. Main history groups TV
+by series + UTC day into a session card (Phase 5 gives it the fixed
+three-layer stacked look, which is a TV identity cue, never an episode
+count); the session will navigate to `/history/tv/:seriesTmdbId` from Phase 6.
+
+- `client/src/api/tmdb.ts` — `searchMedia()` → TMDB `/search/multi`,
+  normalized to `MediaSearchResult { kind: "movie" | "tv", tmdbId, title,
+  year, posterPath, overview, originCountry, … }`; people/other kinds dropped.
+  `searchTv()` and the movie-only `SearchBar.jsx` are untouched.
+- `client/src/component/HistoryMediaSearch.tsx` — history-only search box
+  (debounce, abort, ≥2 chars, loading/empty/error/retry) with a MOVIE / TV
+  badge, poster, year and origin country per row.
+- `client/src/component/TvEpisodePicker.tsx` — the former `AddTvWatchModal`
+  minus its search step; receives `{ seriesTmdbId, title }`, loads
+  `getTvSeries` / lazy `getTvSeason`, keeps Specials separate, disables
+  future-dated episodes, multi-select across tabs, "Back to search".
+- `client/src/hooks/useAddToHistory.ts` — one controller:
+  `closed → search → (tv_episodes) → watch_details`. Movie results save via
+  `createHistoryEntry({ movie: { imdbID: "tmdb-<id>", … } })` from main (no
+  `source`, Watchlist untouched); TV results save through `useAddTvWatch`
+  (one `POST /api/history` per episode, `allSettled`, retry-failed only).
+- `GroupSelectModal` carries both `watchTitle` (TV branch) and `submitting`
+  (main); `movieTitle` alias kept for Watchlist.
+- Server `POST /api/history`: strict `mediaType` (missing → movie);
+  `movie` → `movieId` **or** direct `movie{ imdbID, title, … }` with the
+  race-safe find-or-create by `imdbID`; `tv_episode` → `tv` identity, and any
+  `movieId` / `movie` is rejected.
+- Removed: the "Add TV Watch" button, its state, CSS and tests.
+- `server/package.json` `test` runs every `tests/**/*.test.ts`
+  (`watchHistory.test.ts` + main's `historyRoutes.test.ts`).

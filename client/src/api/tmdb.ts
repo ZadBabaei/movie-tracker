@@ -537,6 +537,96 @@ export interface SearchTvOptions extends TmdbRequestOptions {
   firstAirDateYear?: number;
 }
 
+// ---------------------------------------------------------------------------
+// Mixed movie + TV search (history "Add to History" only). Movie-only
+// surfaces keep using their own /search/movie call.
+// ---------------------------------------------------------------------------
+
+export type MediaSearchKind = "movie" | "tv";
+
+export interface MediaSearchResult {
+  kind: MediaSearchKind;
+  tmdbId: number;
+  title: string;
+  originalTitle: string | null;
+  year: number | null;
+  /** Full release / first-air date when TMDB has it. */
+  date: string | null;
+  posterPath: string | null;
+  backdropPath: string | null;
+  overview: string | null;
+  voteAverage: number | null;
+  popularity: number | null;
+  originCountry: string[];
+}
+
+export interface MediaSearchPage {
+  page: number;
+  totalPages: number;
+  totalResults: number;
+  results: MediaSearchResult[];
+}
+
+/** One /search/multi row → app result; people and unknown kinds → null. */
+export const normalizeMediaSearchResult = (raw: unknown): MediaSearchResult | null => {
+  const item = asRecord(raw);
+  const kind = item.media_type === "movie" || item.media_type === "tv" ? (item.media_type as MediaSearchKind) : null;
+  const tmdbId = asId(item.id);
+  if (!kind || tmdbId === null) return null;
+  const title = kind === "movie" ? asText(item.title) ?? asText(item.original_title) : asText(item.name) ?? asText(item.original_name);
+  if (!title) return null;
+  const date = asDate(kind === "movie" ? item.release_date : item.first_air_date);
+  return {
+    kind,
+    tmdbId,
+    title,
+    originalTitle: kind === "movie" ? asText(item.original_title) : asText(item.original_name),
+    year: date ? Number(date.slice(0, 4)) : null,
+    date,
+    posterPath: asPath(item.poster_path),
+    backdropPath: asPath(item.backdrop_path),
+    overview: asText(item.overview),
+    voteAverage: asNumber(item.vote_average),
+    popularity: asNumber(item.popularity),
+    originCountry: asStrings(item.origin_country),
+  };
+};
+
+export const normalizeMediaSearchPage = (raw: unknown): MediaSearchPage => {
+  const page = asRecord(raw);
+  return {
+    page: asInt(page.page, 1) ?? 1,
+    totalPages: asInt(page.total_pages) ?? 0,
+    totalResults: asInt(page.total_results) ?? 0,
+    results: compact(asArray(page.results).map(normalizeMediaSearchResult)),
+  };
+};
+
+export interface SearchMediaOptions extends TmdbRequestOptions {
+  page?: number;
+  includeAdult?: boolean;
+}
+
+/**
+ * GET /search/multi — one provider-ranked list of movies and TV series.
+ * People and other kinds are dropped. Blank queries resolve to an empty page.
+ */
+export const searchMedia = async (query: string, options: SearchMediaOptions = {}): Promise<MediaSearchPage> => {
+  const trimmed = query.trim();
+  if (!trimmed) return { page: 1, totalPages: 0, totalResults: 0, results: [] };
+  const raw = await tmdbGet<unknown>(
+    "/search/multi",
+    {
+      query: trimmed,
+      page: options.page,
+      include_adult: options.includeAdult ? "true" : "false",
+      language: options.language ?? DEFAULT_LANGUAGE,
+    },
+    options.signal
+  );
+  return normalizeMediaSearchPage(raw);
+};
+
 /** GET /search/tv — empty or whitespace queries resolve to an empty page. */
 export const searchTv = async (query: string, options: SearchTvOptions = {}): Promise<TvSearchPage> => {
   const trimmed = query.trim();

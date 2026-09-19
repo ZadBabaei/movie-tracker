@@ -12,18 +12,73 @@ const historyApi = vi.hoisted(() => ({
   updateHistoryEntry: vi.fn(),
   deleteHistoryEntry: vi.fn(),
   rateHistoryEntry: vi.fn(),
+  createHistoryEntry: vi.fn(),
+  createTvEpisodeHistoryEntries: vi.fn(),
 }));
+const toastMock = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), warn: vi.fn() }));
+vi.mock("react-toastify", () => ({ toast: toastMock }));
 vi.mock("../api/historyApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../api/historyApi")>();
   return { ...actual, ...historyApi };
 });
 vi.mock("../store/useGroupStore", () => ({
-  useGroupStore: () => ({ groupList: [], fetchGroups: vi.fn().mockResolvedValue(undefined) }),
+  useGroupStore: () => ({ groupList: [{ _id: "group-1", name: "Movie Club", slug: "movie-club" }], fetchGroups: vi.fn().mockResolvedValue(undefined) }),
 }));
 vi.mock("../hooks/useSocket", () => ({ useSocket: () => ({ on: vi.fn(), off: vi.fn() }) }));
 vi.mock("../component/VerticalNavbar", () => ({ default: () => null }));
-vi.mock("../component/AddTvWatchModal", () => ({
-  default: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div data-testid="tv-picker-stub">picker</div> : null),
+// The unified search and the episode picker have their own suites; here they
+// are stubs that emit the shapes the page has to handle.
+const arrival = { kind: "movie" as const, tmdbId: 329865, title: "Arrival", originalTitle: null, year: 2016, date: "2016-11-10", posterPath: "/arrival.jpg", backdropPath: null, overview: null, voteAverage: 7.9, popularity: 50, originCountry: [] };
+const lioness = { kind: "tv" as const, tmdbId: 199925, title: "Special Ops: Lioness", originalTitle: null, year: 2023, date: "2023-07-23", posterPath: "/lioness.jpg", backdropPath: null, overview: null, voteAverage: 7.9, popularity: 90, originCountry: ["US"] };
+vi.mock("../component/HistoryMediaSearch", () => ({
+  default: ({ onSelect }: { onSelect: (result: any) => void }) => (
+    <div data-testid="media-search-stub">
+      <button type="button" onClick={() => onSelect(arrival)}>Choose Arrival</button>
+      <button type="button" onClick={() => onSelect(lioness)}>Choose Lioness</button>
+    </div>
+  ),
+}));
+
+const pickerSeries = { seriesTmdbId: 199925, seriesTitle: "Special Ops: Lioness", posterPath: "/lioness.jpg", backdropPath: "/lioness-bd.jpg" };
+const pickerEpisode = (episodeNumber: number) => ({
+  seriesTmdbId: 199925,
+  episodeTmdbId: 4321000 + episodeNumber,
+  seasonNumber: 1,
+  episodeNumber,
+  episodeTitle: `Ep ${episodeNumber}`,
+  airDate: "2023-07-23",
+  runtime: 45,
+  stillPath: null,
+  overview: null,
+  voteAverage: null,
+  voteCount: null,
+  productionCode: null,
+  cast: [],
+  guestStars: [],
+  crew: [],
+  externalIds: null,
+});
+vi.mock("../component/TvEpisodePicker", () => ({
+  default: ({ isOpen, series, onSelect, onBack }: any) =>
+    isOpen ? (
+      <div role="dialog" aria-label="Episode picker">
+        <span>Picker for {series?.title} #{series?.seriesTmdbId}</span>
+        <button type="button" onClick={() => onSelect({ series: pickerSeries, episodes: [pickerEpisode(1), pickerEpisode(2)] })}>Pick E01 E02</button>
+        <button type="button" onClick={onBack}>Back to search</button>
+      </div>
+    ) : null,
+}));
+
+vi.mock("../component/GroupSelectModal", () => ({
+  default: ({ isOpen, watchTitle, movieTitle, onSelect, onClose, submitting }: any) =>
+    isOpen ? (
+      <div role="dialog" aria-label="Watch details">
+        <span>Watch details for {watchTitle ?? movieTitle}</span>
+        <button type="button" disabled={submitting} onClick={() => onSelect("personal", { watchedDate: "2026-09-18", watchedWhere: "Home", watchedWith: [], watchedNotes: "A quiet rewatch" })}>Save personal</button>
+        <button type="button" disabled={submitting} onClick={() => onSelect("group-1", { watchedDate: "2026-09-19", watchedWhere: "Cinema", watchedWith: ["member-1", "member-2"], watchedNotes: "Opening night" })}>Save group</button>
+        <button type="button" disabled={submitting} onClick={onClose}>Cancel details</button>
+      </div>
+    ) : null,
 }));
 
 const member = { _id: "u1", name: "Zad", avatar: "" };
@@ -101,7 +156,28 @@ beforeEach(() => {
   historyApi.updateHistoryEntry.mockReset();
   historyApi.deleteHistoryEntry.mockReset();
   historyApi.deleteHistoryEntry.mockResolvedValue({});
+  historyApi.fetchGroupHistory.mockReset();
+  historyApi.fetchGroupHistory.mockResolvedValue({ items: [], nextCursor: null, stats: { total: 0, latestWatchedAt: null } });
+  historyApi.createHistoryEntry.mockReset();
+  historyApi.createHistoryEntry.mockResolvedValue({ _id: "history-1" });
+  historyApi.createTvEpisodeHistoryEntries.mockReset();
+  historyApi.createTvEpisodeHistoryEntries.mockImplementation(async (episodes: any[]) => ({
+    succeeded: episodes.map((episode) => ({ episode, entry: { _id: `h-${episode.episodeNumber}` } })),
+    failed: [],
+  }));
+  Object.values(toastMock).forEach((mock) => mock.mockReset());
 });
+
+const openAddFlow = () => fireEvent.click(screen.getByRole("button", { name: /add to history/i }));
+const chooseArrival = () => {
+  openAddFlow();
+  fireEvent.click(screen.getByRole("button", { name: /choose arrival/i }));
+};
+const chooseLionessEpisodes = () => {
+  openAddFlow();
+  fireEvent.click(screen.getByRole("button", { name: /choose lioness/i }));
+  fireEvent.click(screen.getByRole("button", { name: /pick e01 e02/i }));
+};
 
 const renderPage = () =>
   render(
@@ -239,11 +315,150 @@ describe("Watch History timeline", () => {
     expect(summaries).toEqual(["S01 \u00b7 E05", "S01 \u00b7 E04", "S01 \u00b7 E03 \u00d72"]);
   });
 
-  test("exposes an Add TV Watch entry point that opens the picker", async () => {
+});
+
+describe("Add to History (unified movie + TV)", () => {
+  test("shows one Add to History control that toggles the unified search", async () => {
     renderPage();
     await screen.findAllByTestId("history-row");
-    expect(screen.queryByTestId("tv-picker-stub")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /add tv watch/i }));
-    await waitFor(() => expect(screen.getByTestId("tv-picker-stub")).toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: /add tv watch/i })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /add to history/i })).toHaveLength(1);
+
+    openAddFlow();
+    expect(screen.getByTestId("media-search-stub")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^close$/i })).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(screen.getByRole("button", { name: /^close$/i }));
+    expect(screen.queryByTestId("media-search-stub")).not.toBeInTheDocument();
+  });
+
+  test("a movie result opens watch details directly and hides the search", async () => {
+    renderPage();
+    await screen.findAllByTestId("history-row");
+    chooseArrival();
+    expect(screen.getByRole("dialog", { name: /watch details/i })).toHaveTextContent("Watch details for Arrival");
+    expect(screen.queryByTestId("media-search-stub")).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: /episode picker/i })).not.toBeInTheDocument();
+  });
+
+  test("personal movie save sends the direct-history payload without source and refreshes personal history", async () => {
+    renderPage();
+    await screen.findAllByTestId("history-row");
+    historyApi.fetchPersonalHistory.mockClear();
+    chooseArrival();
+    fireEvent.click(screen.getByRole("button", { name: /save personal/i }));
+
+    await waitFor(() => expect(historyApi.createHistoryEntry).toHaveBeenCalledTimes(1));
+    const payload = historyApi.createHistoryEntry.mock.calls[0][0];
+    expect(payload).toEqual({
+      movie: { imdbID: "tmdb-329865", title: "Arrival", poster_path: "https://image.tmdb.org/t/p/w500/arrival.jpg", vote_average: 7.9 },
+      scope: "personal",
+      watchedAt: "2026-09-18",
+      watchedLocation: "Home",
+      watchedNotes: "A quiet rewatch",
+    });
+    expect(payload).not.toHaveProperty("source");
+    expect(payload).not.toHaveProperty("movieId");
+    await waitFor(() => expect(historyApi.fetchPersonalHistory).toHaveBeenCalled());
+    expect(historyApi.createTvEpisodeHistoryEntries).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: /watch details/i })).not.toBeInTheDocument());
+    expect(toastMock.success).toHaveBeenCalledWith("Arrival added to your watch history.");
+  });
+
+  test("group movie save carries groupId and participants and refreshes both histories", async () => {
+    renderPage();
+    await screen.findAllByTestId("history-row");
+    chooseArrival();
+    fireEvent.click(screen.getByRole("button", { name: /save group/i }));
+
+    await waitFor(() => expect(historyApi.createHistoryEntry).toHaveBeenCalledTimes(1));
+    expect(historyApi.createHistoryEntry.mock.calls[0][0]).toMatchObject({
+      scope: "group",
+      groupId: "group-1",
+      participants: ["member-1", "member-2"],
+      watchedAt: "2026-09-19",
+      watchedLocation: "Cinema",
+      watchedNotes: "Opening night",
+    });
+    expect(historyApi.createHistoryEntry.mock.calls[0][0]).not.toHaveProperty("source");
+    await waitFor(() => {
+      expect(historyApi.fetchGroupHistory).toHaveBeenCalledWith("group-1", expect.anything());
+      expect(historyApi.fetchPersonalHistory).toHaveBeenCalled();
+    });
+  });
+
+  test("a failed movie save shows the backend message and keeps the selection open", async () => {
+    historyApi.createHistoryEntry.mockRejectedValue({ response: { data: { msg: "History service unavailable" } } });
+    renderPage();
+    await screen.findAllByTestId("history-row");
+    historyApi.fetchPersonalHistory.mockClear();
+    chooseArrival();
+    fireEvent.click(screen.getByRole("button", { name: /save personal/i }));
+
+    await waitFor(() => expect(toastMock.error).toHaveBeenCalledWith("History service unavailable"));
+    expect(screen.getByRole("dialog", { name: /watch details/i })).toHaveTextContent("Arrival");
+    expect(historyApi.fetchPersonalHistory).not.toHaveBeenCalled();
+  });
+
+  test("a TV result opens the episode picker, then the same watch details, and saves one record per episode", async () => {
+    renderPage();
+    await screen.findAllByTestId("history-row");
+    openAddFlow();
+    fireEvent.click(screen.getByRole("button", { name: /choose lioness/i }));
+
+    const picker = screen.getByRole("dialog", { name: /episode picker/i });
+    expect(picker).toHaveTextContent("Picker for Special Ops: Lioness #199925");
+    expect(screen.queryByRole("dialog", { name: /watch details/i })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("media-search-stub")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /pick e01 e02/i }));
+    const details = screen.getByRole("dialog", { name: /watch details/i });
+    expect(details).toHaveTextContent("Watch details for Special Ops: Lioness \u00b7 S01 \u00b7 E01\u2013E02");
+    expect(screen.queryByRole("dialog", { name: /episode picker/i })).not.toBeInTheDocument();
+
+    historyApi.fetchPersonalHistory.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: /save personal/i }));
+    await waitFor(() => expect(historyApi.createTvEpisodeHistoryEntries).toHaveBeenCalledTimes(1));
+    const [episodes, details2] = historyApi.createTvEpisodeHistoryEntries.mock.calls[0];
+    expect(episodes.map((episode: any) => episode.episodeNumber)).toEqual([1, 2]);
+    expect(episodes.every((episode: any) => !("movieId" in episode) && episode.seriesTmdbId === 199925)).toBe(true);
+    expect(details2).toMatchObject({ scopeId: "personal", watchedAt: "2026-09-18", watchedLocation: "Home", watchedNotes: "A quiet rewatch" });
+    expect(historyApi.createHistoryEntry).not.toHaveBeenCalled();
+    await waitFor(() => expect(historyApi.fetchPersonalHistory).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: /watch details/i })).not.toBeInTheDocument());
+    expect(toastMock.success).toHaveBeenCalledWith("2 episodes of Special Ops: Lioness saved to history.");
+  });
+
+  test("back from the picker returns to the search", async () => {
+    renderPage();
+    await screen.findAllByTestId("history-row");
+    openAddFlow();
+    fireEvent.click(screen.getByRole("button", { name: /choose lioness/i }));
+    fireEvent.click(screen.getByRole("button", { name: /back to search/i }));
+    expect(screen.queryByRole("dialog", { name: /episode picker/i })).not.toBeInTheDocument();
+    expect(screen.getByTestId("media-search-stub")).toBeInTheDocument();
+  });
+
+  test("TV partial failure is reported and retry resends only the failed episode", async () => {
+    historyApi.createTvEpisodeHistoryEntries.mockImplementationOnce(async (episodes: any[]) => ({
+      succeeded: [{ episode: episodes[0], entry: { _id: "h-1" } }],
+      failed: [{ episode: episodes[1], message: "Server hiccup" }],
+    }));
+    renderPage();
+    await screen.findAllByTestId("history-row");
+    chooseLionessEpisodes();
+    fireEvent.click(screen.getByRole("button", { name: /save group/i }));
+
+    const banner = await screen.findByTestId("tv-outcome");
+    expect(banner).toHaveTextContent("1 saved, 1 failed");
+    expect(banner).toHaveTextContent("S01E02 (Server hiccup)");
+    expect(toastMock.warn).toHaveBeenCalled();
+    await waitFor(() => expect(historyApi.fetchGroupHistory).toHaveBeenCalledWith("group-1", expect.anything()));
+
+    fireEvent.click(screen.getByRole("button", { name: /retry failed/i }));
+    await waitFor(() => expect(historyApi.createTvEpisodeHistoryEntries).toHaveBeenCalledTimes(2));
+    const [retried, retryDetails] = historyApi.createTvEpisodeHistoryEntries.mock.calls[1];
+    expect(retried.map((episode: any) => episode.episodeNumber)).toEqual([2]);
+    expect(retryDetails).toMatchObject({ scopeId: "group-1", participants: ["member-1", "member-2"] });
+    await waitFor(() => expect(screen.queryByTestId("tv-outcome")).not.toBeInTheDocument());
   });
 });

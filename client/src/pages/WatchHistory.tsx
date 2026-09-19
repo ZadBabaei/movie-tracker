@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FaClock, FaMapMarkerAlt, FaSearch, FaStar, FaTrashAlt, FaTv, FaUsers } from "react-icons/fa";
+import { FaClock, FaMapMarkerAlt, FaPlus, FaSearch, FaStar, FaTimes, FaTrashAlt, FaUsers } from "react-icons/fa";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
-import AddTvWatchModal from "../component/AddTvWatchModal";
 import GroupSelectModal, { WatchMetadata } from "../component/GroupSelectModal";
+import HistoryMediaSearch from "../component/HistoryMediaSearch";
 import Modal from "../component/Modal/Modal";
+import TvEpisodePicker from "../component/TvEpisodePicker";
 import VerticalNavbar from "../component/VerticalNavbar";
-import { describeEpisodeSelection, TvWatchOutcome, TvWatchSelection, useAddTvWatch } from "../hooks/useAddTvWatch";
+import { AddHistoryOutcome, useAddToHistory } from "../hooks/useAddToHistory";
 import { useSocket } from "../hooks/useSocket";
 import { useGroupStore } from "../store/useGroupStore";
 import { HistoryEntry, useWatchHistoryStore } from "../store/useWatchHistoryStore";
@@ -77,43 +78,9 @@ const WatchHistory: React.FC = () => {
   const [editLocation, setEditLocation] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const deepLinkApplied = useRef(false);
-  const [tvPickerOpen, setTvPickerOpen] = useState(false);
   const activeGroup = groupList.find((group) => group._id === activeTab);
   const isPersonal = activeTab === "personal";
   const socket = useSocket(isPersonal ? "" : activeTab);
-
-  // Episodes land in the scope they were saved to and, because personal history
-  // also lists group watches the user took part in, in the personal bucket.
-  const refreshAfterTvSave = useCallback(
-    async (outcome: TvWatchOutcome) => {
-      const refreshes = [fetchPersonal()];
-      if (outcome.scopeId !== "personal") refreshes.push(fetchGroup(outcome.scopeId));
-      await Promise.all(refreshes);
-    },
-    [fetchGroup, fetchPersonal]
-  );
-  const tvWatch = useAddTvWatch({ onSaved: refreshAfterTvSave });
-
-  const handleTvSelection = (selection: TvWatchSelection) => {
-    setTvPickerOpen(false);
-    tvWatch.setPending(selection);
-  };
-
-  const handleTvDetails = async (scopeId: string, metadata?: WatchMetadata) => {
-    const outcome = await tvWatch.submit(scopeId, metadata);
-    if (!outcome) return;
-    if (outcome.failed.length === 0) {
-      toast.success(`${outcome.succeeded} episode${outcome.succeeded === 1 ? "" : "s"} of ${outcome.seriesTitle} saved to history.`);
-    } else if (outcome.succeeded === 0) {
-      toast.error(`Couldn't save ${outcome.seriesTitle} — no episodes were recorded.`);
-    } else {
-      toast.warn(`${outcome.succeeded} saved, ${outcome.failed.length} failed for ${outcome.seriesTitle}.`);
-    }
-  };
-
-  const pendingTvTitle = tvWatch.pending
-    ? `${tvWatch.pending.series.seriesTitle} · ${describeEpisodeSelection(tvWatch.pending.episodes)}`
-    : "";
 
   const setActiveTab = useCallback((tab: string) => {
     localStorage.setItem(ACTIVE_TAB_KEY, tab);
@@ -121,6 +88,34 @@ const WatchHistory: React.FC = () => {
     setSearch("");
     setPeriodFilter("all");
   }, []);
+
+  // One flow for movies and TV: search → (episodes) → watch details → save.
+  // Saves land in the scope they were recorded to and, because personal history
+  // also lists group watches the user took part in, in the personal bucket.
+  const handleSaved = useCallback(
+    async (outcome: AddHistoryOutcome) => {
+      if (outcome.kind === "movie") {
+        toast.success(`${outcome.title} added to ${outcome.scopeId === "personal" ? "your" : "group"} watch history.`);
+      } else if (outcome.failed.length === 0) {
+        toast.success(`${outcome.succeeded} episode${outcome.succeeded === 1 ? "" : "s"} of ${outcome.seriesTitle} saved to history.`);
+      } else {
+        toast.warn(`${outcome.succeeded} saved, ${outcome.failed.length} failed for ${outcome.seriesTitle}.`);
+      }
+      setActiveTab(outcome.scopeId);
+      const refreshes = [fetchPersonal()];
+      if (outcome.scopeId !== "personal") refreshes.push(fetchGroup(outcome.scopeId));
+      await Promise.all(refreshes);
+    },
+    [fetchGroup, fetchPersonal, setActiveTab]
+  );
+  const addFlow = useAddToHistory({ onSaved: handleSaved, onError: (message) => toast.error(message) });
+
+  const handleDetailsSubmit = async (scopeId: string, metadata?: WatchMetadata) => {
+    const outcome = await addFlow.submitDetails(scopeId, metadata);
+    if (outcome && outcome.kind === "tv" && outcome.succeeded === 0) {
+      toast.error(`Couldn't save ${outcome.seriesTitle} — no episodes were recorded.`);
+    }
+  };
 
   useEffect(() => {
     void fetchGroups().finally(() => setGroupsLoaded(true));
@@ -344,23 +339,36 @@ const WatchHistory: React.FC = () => {
               <option value="title">Title A–Z</option>
             </select>
           </label>
-          <button type="button" className="history-add-tv" onClick={() => setTvPickerOpen(true)} data-testid="add-tv-watch">
-            <FaTv aria-hidden="true" /> Add TV Watch
+          <button
+            type="button"
+            className={`history-add-toggle${addFlow.step !== "closed" ? " history-add-toggle--open" : ""}`}
+            onClick={addFlow.toggle}
+            aria-expanded={addFlow.step !== "closed"}
+            data-testid="add-to-history"
+          >
+            {addFlow.step !== "closed" ? <FaTimes aria-hidden="true" /> : <FaPlus aria-hidden="true" />}
+            <span>{addFlow.step !== "closed" ? "Close" : "Add to History"}</span>
           </button>
         </section>
 
-        {tvWatch.outcome && tvWatch.outcome.failed.length > 0 && (
+        {addFlow.step === "search" && (
+          <div className="history-quickadd">
+            <HistoryMediaSearch onSelect={addFlow.selectSearchResult} />
+          </div>
+        )}
+
+        {addFlow.tvOutcome && addFlow.tvOutcome.failed.length > 0 && (
           <section className="history-tv-outcome" role="alert" data-testid="tv-outcome">
             <p>
-              <strong>{tvWatch.outcome.seriesTitle}:</strong> {tvWatch.outcome.succeeded} saved,{" "}
-              {tvWatch.outcome.failed.length} failed —{" "}
-              {tvWatch.outcome.failed.map((item) => `${formatEpisodeCode(item.episode)} (${item.message})`).join(", ")}
+              <strong>{addFlow.tvOutcome.seriesTitle}:</strong> {addFlow.tvOutcome.succeeded} saved,{" "}
+              {addFlow.tvOutcome.failed.length} failed —{" "}
+              {addFlow.tvOutcome.failed.map((item) => `${formatEpisodeCode(item.episode)} (${item.message})`).join(", ")}
             </p>
             <div>
-              <button type="button" onClick={() => tvWatch.retryFailed()} disabled={tvWatch.submitting}>
-                {tvWatch.submitting ? "Retrying…" : "Retry failed"}
+              <button type="button" onClick={() => addFlow.retryFailedEpisodes()} disabled={addFlow.submitting}>
+                {addFlow.submitting ? "Retrying…" : "Retry failed"}
               </button>
-              <button type="button" onClick={tvWatch.dismissOutcome}>Dismiss</button>
+              <button type="button" onClick={addFlow.dismissTvOutcome}>Dismiss</button>
             </div>
           </section>
         )}
@@ -370,7 +378,7 @@ const WatchHistory: React.FC = () => {
         ) : activeError ? (
           <section className="history-state"><h2>History unavailable</h2><p>{activeError}</p><button type="button" onClick={() => isPersonal ? fetchPersonal() : fetchGroup(activeTab)}>Try again</button></section>
         ) : visibleItems.length === 0 ? (
-          <section className="history-state"><h2>{bucket.items.length ? "No matching screenings" : "Your next movie night starts here"}</h2><p>{bucket.items.length ? "Try another title or clear the active filter." : isPersonal ? "Mark a movie as watched from your Watchlist, or add a TV watch above, and it will appear in your personal diary." : "Movies and episodes marked watched by this group will collect here."}</p>{bucket.items.length ? <button type="button" onClick={() => { setSearch(""); setPeriodFilter("all"); }}>Clear filters</button> : null}</section>
+          <section className="history-state"><h2>{bucket.items.length ? "No matching screenings" : "Your next movie night starts here"}</h2><p>{bucket.items.length ? "Try another title or clear the active filter." : isPersonal ? "Add something you've watched, or mark a movie watched from your Watchlist." : "Add something this group watched, or mark a movie watched from the group's Watchlist."}</p>{bucket.items.length ? <button type="button" onClick={() => { setSearch(""); setPeriodFilter("all"); }}>Clear filters</button> : null}</section>
         ) : (
           <div className="history-timeline">
             {periods.map((period) => (
@@ -404,13 +412,20 @@ const WatchHistory: React.FC = () => {
         )}
       </main>
 
-      <AddTvWatchModal isOpen={tvPickerOpen} onClose={() => setTvPickerOpen(false)} onSelect={handleTvSelection} />
+      <TvEpisodePicker
+        isOpen={addFlow.step === "tv_episodes"}
+        series={addFlow.pending?.kind === "tv_series" ? { seriesTmdbId: addFlow.pending.seriesTmdbId, title: addFlow.pending.title } : null}
+        onClose={addFlow.close}
+        onBack={addFlow.backToSearch}
+        onSelect={addFlow.selectEpisodes}
+      />
       <GroupSelectModal
-        isOpen={!!tvWatch.pending}
-        onClose={() => tvWatch.setPending(null)}
-        onSelect={handleTvDetails}
+        isOpen={addFlow.step === "watch_details"}
+        onClose={addFlow.close}
+        onSelect={handleDetailsSubmit}
         groups={groupList}
-        watchTitle={pendingTvTitle}
+        watchTitle={addFlow.detailsTitle}
+        submitting={addFlow.submitting}
       />
 
       <Modal isOpen={!!selected || !!selectedSession} onClose={closeDetails} size="lg" ariaLabel="Watch history details" className="history-details-modal">

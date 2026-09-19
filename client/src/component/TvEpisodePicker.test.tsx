@@ -2,10 +2,9 @@ import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { TvEpisodeDetails, TvSeasonDetails, TvSeriesDetails } from "../api/tmdb";
-import AddTvWatchModal, { isUpcomingEpisode, pickDefaultSeason } from "./AddTvWatchModal";
+import TvEpisodePicker, { isUpcomingEpisode, pickDefaultSeason } from "./TvEpisodePicker";
 
 const tmdb = vi.hoisted(() => ({
-  searchTv: vi.fn(),
   getTvSeries: vi.fn(),
   getTvSeason: vi.fn(),
 }));
@@ -94,33 +93,11 @@ const seasonDetails = (seasonNumber: number, episodes: TvEpisodeDetails[]): TvSe
   episodes,
 });
 
-const searchResult = (seriesTmdbId: number, seriesTitle: string, firstAirDate: string | null) => ({
-  seriesTmdbId,
-  seriesTitle,
-  originalTitle: null,
-  overview: null,
-  posterPath: null,
-  backdropPath: null,
-  firstAirDate,
-  voteAverage: null,
-  voteCount: null,
-  popularity: null,
-  genreIds: [],
-  originCountry: [],
-});
-
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   vi.setSystemTime(new Date(`${TODAY}T12:00:00Z`));
-  tmdb.searchTv.mockReset();
   tmdb.getTvSeries.mockReset();
   tmdb.getTvSeason.mockReset();
-  tmdb.searchTv.mockResolvedValue({
-    page: 1,
-    totalPages: 1,
-    totalResults: 2,
-    results: [searchResult(199925, "Special Ops: Lioness", "2023-07-23"), searchResult(4711, "Lioness", null)],
-  });
   tmdb.getTvSeries.mockResolvedValue(series);
   tmdb.getTvSeason.mockImplementation(async (_id: number, seasonNumber: number) => {
     if (seasonNumber === 0) return seasonDetails(0, [episode(0, 1, { episodeTitle: "Behind the scenes" })]);
@@ -140,19 +117,14 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-const renderModal = (onSelect = vi.fn(), onClose = vi.fn()) => {
-  render(<AddTvWatchModal isOpen onClose={onClose} onSelect={onSelect} />);
-  return { onSelect, onClose };
+const seed = { seriesTmdbId: 199925, title: "Special Ops: Lioness" };
+
+const renderPicker = (onSelect = vi.fn(), onClose = vi.fn(), onBack = vi.fn()) => {
+  render(<TvEpisodePicker isOpen series={seed} onClose={onClose} onBack={onBack} onSelect={onSelect} />);
+  return { onSelect, onClose, onBack };
 };
 
-const typeQuery = (text: string) => fireEvent.change(screen.getByTestId("tv-search-input"), { target: { value: text } });
 const click = (element: HTMLElement) => fireEvent.click(element);
-
-const searchFor = async (text: string) => {
-  typeQuery(text);
-  vi.advanceTimersByTime(350);
-  return waitFor(() => expect(screen.getAllByTestId("tv-search-result").length).toBeGreaterThan(0));
-};
 
 describe("default season and upcoming rules", () => {
   test("picks the latest regular season that has started airing", () => {
@@ -169,41 +141,11 @@ describe("default season and upcoming rules", () => {
   });
 });
 
-describe("AddTvWatchModal", () => {
-  test("searches TV through searchTv with debounce, minimum length and cancellation", async () => {
-    renderModal();
-    typeQuery("l");
-    vi.advanceTimersByTime(400);
-    expect(tmdb.searchTv).not.toHaveBeenCalled();
-
-    await searchFor("lioness");
-    expect(tmdb.searchTv).toHaveBeenCalledTimes(1);
-    expect(tmdb.searchTv).toHaveBeenCalledWith("lioness", expect.objectContaining({ signal: expect.any(AbortSignal) }));
-
-    const results = screen.getAllByTestId("tv-search-result");
-    expect(results[0]).toHaveTextContent("Special Ops: Lioness");
-    expect(results[0]).toHaveTextContent("2023");
-    expect(results[1]).toHaveTextContent("Year unknown");
-  });
-
-  test("shows an error with retry when search fails, and empty state when nothing matches", async () => {
-    tmdb.searchTv.mockRejectedValueOnce(new Error("boom"));
-    renderModal();
-    typeQuery("lioness");
-    vi.advanceTimersByTime(350);
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent(/search failed/i);
-
-    tmdb.searchTv.mockResolvedValueOnce({ page: 1, totalPages: 0, totalResults: 0, results: [] });
-    click(within(alert).getByRole("button", { name: /try again/i }));
-    vi.advanceTimersByTime(350);
-    await waitFor(() => expect(screen.getByText(/no series found/i)).toBeInTheDocument());
-  });
-
-  test("selecting a series loads details, defaults to the latest aired season and lazy-loads only that season", async () => {
-    renderModal();
-    await searchFor("lioness");
-    click(screen.getAllByTestId("tv-search-result")[0]);
+describe("TvEpisodePicker", () => {
+  test("loads the seeded series, defaults to the latest aired season and lazy-loads only that season", async () => {
+    renderPicker();
+    expect(screen.getByRole("heading", { name: "Special Ops: Lioness" })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(/loading seasons/i);
 
     await screen.findByTestId("tv-add-episodes-step");
     expect(tmdb.getTvSeries).toHaveBeenCalledWith(199925, expect.anything());
@@ -220,9 +162,7 @@ describe("AddTvWatchModal", () => {
   });
 
   test("future-dated episodes are disabled; undated ones stay selectable", async () => {
-    renderModal();
-    await searchFor("lioness");
-    click(screen.getAllByTestId("tv-search-result")[0]);
+    renderPicker();
     const boxes = await screen.findAllByTestId("tv-episode-checkbox");
     await waitFor(() => expect(boxes).toHaveLength(4));
     expect(boxes[2]).toBeDisabled();
@@ -237,9 +177,7 @@ describe("AddTvWatchModal", () => {
   });
 
   test("Season 0 is a separate tab and loads lazily on demand", async () => {
-    renderModal();
-    await searchFor("lioness");
-    click(screen.getAllByTestId("tv-search-result")[0]);
+    renderPicker();
     await screen.findAllByTestId("tv-episode-checkbox");
 
     click(screen.getByRole("tab", { name: /specials/i }));
@@ -256,9 +194,7 @@ describe("AddTvWatchModal", () => {
 
   test("continue emits the series and the selected episodes in order, across seasons", async () => {
     const onSelect = vi.fn();
-    renderModal(onSelect);
-    await searchFor("lioness");
-    click(screen.getAllByTestId("tv-search-result")[0]);
+    renderPicker(onSelect);
     const boxes = await screen.findAllByTestId("tv-episode-checkbox");
 
     const continueButton = screen.getByTestId("tv-add-continue");
@@ -279,28 +215,31 @@ describe("AddTvWatchModal", () => {
     expect(selection.episodes.every((item: TvEpisodeDetails) => !("movieId" in item))).toBe(true);
   });
 
-  test("season load failure shows a retry; series load failure returns to results", async () => {
+  test("season load failure shows a retry; series load failure can be retried; back returns to search", async () => {
     tmdb.getTvSeason.mockRejectedValueOnce(new Error("down"));
-    renderModal();
-    await searchFor("lioness");
-    click(screen.getAllByTestId("tv-search-result")[0]);
+    const { onBack } = renderPicker();
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(/couldn't load this season/i);
     click(within(alert).getByRole("button", { name: /try again/i }));
     await screen.findAllByTestId("tv-episode-checkbox");
 
     click(screen.getByRole("button", { name: /back to search/i }));
-    tmdb.getTvSeries.mockRejectedValueOnce(new Error("down"));
-    await searchFor("lioness");
-    click(screen.getAllByTestId("tv-search-result")[0]);
-    expect(await screen.findByRole("alert")).toHaveTextContent(/couldn't load that series/i);
-    expect(screen.getByRole("button", { name: /back to results/i })).toBeInTheDocument();
+    expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  test("closing the modal resets the flow", async () => {
-    const onClose = vi.fn();
-    renderModal(vi.fn(), onClose);
-    await searchFor("lioness");
+  test("series load failure offers retry and then recovers", async () => {
+    tmdb.getTvSeries.mockRejectedValueOnce(new Error("down"));
+    renderPicker();
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/couldn't load that series/i);
+    click(within(alert).getByRole("button", { name: /try again/i }));
+    await screen.findByTestId("tv-add-episodes-step");
+    expect(tmdb.getTvSeries).toHaveBeenCalledTimes(2);
+  });
+
+  test("closing the picker calls onClose", async () => {
+    const { onClose } = renderPicker();
+    await screen.findByTestId("tv-add-episodes-step");
     click(screen.getByRole("button", { name: /close dialog/i }));
     expect(onClose).toHaveBeenCalled();
   });

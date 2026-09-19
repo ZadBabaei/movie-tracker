@@ -1,31 +1,36 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FaArrowLeft, FaSearch } from "react-icons/fa";
+import { FaArrowLeft } from "react-icons/fa";
 import {
   getTvSeason,
   getTvSeries,
   isTmdbError,
-  searchTv,
   tmdbImageUrl,
   tvSeasonLabel,
   TvEpisodeDetails,
-  TvSearchResult,
   TvSeasonDetails,
   TvSeasonSummary,
   TvSeriesDetails,
 } from "../api/tmdb";
 import { describeEpisodeSelection, TvWatchSelection } from "../hooks/useAddTvWatch";
 import Modal from "./Modal/Modal";
-import "./AddTvWatchModal.css";
+import "./TvEpisodePicker.css";
 
-interface AddTvWatchModalProps {
+export interface TvEpisodePickerSeries {
+  seriesTmdbId: number;
+  /** Shown while the full series details load. */
+  title?: string;
+}
+
+interface TvEpisodePickerProps {
   isOpen: boolean;
+  /** The series chosen in the unified Add-to-History search. */
+  series: TvEpisodePickerSeries | null;
   onClose: () => void;
+  /** "Back to search" — the caller returns to the search step. */
+  onBack?: () => void;
   /** Called with the confirmed series + aired episodes; the caller collects watch details next. */
   onSelect: (selection: TvWatchSelection) => void;
 }
-
-const MIN_QUERY_LENGTH = 2;
-const SEARCH_DEBOUNCE_MS = 300;
 
 // Same date convention the rest of the mark-watched flow uses (UTC calendar
 // day). Local-calendar semantics are settled in the timeline-grouping phase.
@@ -70,17 +75,10 @@ const friendlyError = (error: unknown, fallback: string) => {
 const episodeKey = (episode: Pick<TvEpisodeDetails, "seasonNumber" | "episodeNumber">) =>
   `${episode.seasonNumber}:${episode.episodeNumber}`;
 
-const AddTvWatchModal: React.FC<AddTvWatchModalProps> = ({ isOpen, onClose, onSelect }) => {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<TvSearchResult[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState("");
-  const [searchAttempt, setSearchAttempt] = useState(0);
-
+const TvEpisodePicker: React.FC<TvEpisodePickerProps> = ({ isOpen, series: seed, onClose, onBack, onSelect }) => {
   const [series, setSeries] = useState<TvSeriesDetails | null>(null);
-  const [seriesLoading, setSeriesLoading] = useState(false);
   const [seriesError, setSeriesError] = useState("");
-  const [pendingSeriesId, setPendingSeriesId] = useState<number | null>(null);
+  const [seriesAttempt, setSeriesAttempt] = useState(0);
 
   const [activeSeason, setActiveSeason] = useState<number | null>(null);
   const [seasons, setSeasons] = useState<Record<number, TvSeasonDetails>>({});
@@ -96,14 +94,8 @@ const AddTvWatchModal: React.FC<AddTvWatchModalProps> = ({ isOpen, onClose, onSe
   const reset = useCallback(() => {
     seriesAbort.current?.abort();
     seasonAbort.current?.abort();
-    setQuery("");
-    setResults([]);
-    setSearching(false);
-    setSearchError("");
     setSeries(null);
-    setSeriesLoading(false);
     setSeriesError("");
-    setPendingSeriesId(null);
     setActiveSeason(null);
     setSeasons({});
     setSeasonLoading(null);
@@ -114,38 +106,6 @@ const AddTvWatchModal: React.FC<AddTvWatchModalProps> = ({ isOpen, onClose, onSe
   useEffect(() => {
     if (!isOpen) reset();
   }, [isOpen, reset]);
-
-  // Debounced, cancellable series search.
-  useEffect(() => {
-    if (!isOpen || series || pendingSeriesId !== null) return undefined;
-    const trimmed = query.trim();
-    if (trimmed.length < MIN_QUERY_LENGTH) {
-      setResults([]);
-      setSearching(false);
-      setSearchError("");
-      return undefined;
-    }
-    const controller = new AbortController();
-    const timer = setTimeout(async () => {
-      setSearching(true);
-      setSearchError("");
-      try {
-        const page = await searchTv(trimmed, { signal: controller.signal });
-        if (controller.signal.aborted) return;
-        setResults(page.results);
-      } catch (error) {
-        if (controller.signal.aborted || (isTmdbError(error) && error.kind === "aborted")) return;
-        setResults([]);
-        setSearchError(friendlyError(error, "Search failed. Please try again."));
-      } finally {
-        if (!controller.signal.aborted) setSearching(false);
-      }
-    }, SEARCH_DEBOUNCE_MS);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [isOpen, pendingSeriesId, query, searchAttempt, series]);
 
   const loadSeason = useCallback(
     async (seriesTmdbId: number, seasonNumber: number) => {
@@ -175,38 +135,26 @@ const AddTvWatchModal: React.FC<AddTvWatchModalProps> = ({ isOpen, onClose, onSe
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSeason, series, seasonAttempt]);
 
-  const chooseSeries = async (seriesTmdbId: number) => {
-    seriesAbort.current?.abort();
+  // Load the chosen series whenever the picker opens for a (new) series.
+  useEffect(() => {
+    if (!isOpen || !seed) return undefined;
+    reset();
     const controller = new AbortController();
     seriesAbort.current = controller;
-    setPendingSeriesId(seriesTmdbId);
-    setSeriesLoading(true);
-    setSeriesError("");
-    try {
-      const details = await getTvSeries(seriesTmdbId, { signal: controller.signal });
-      if (controller.signal.aborted) return;
-      setSeries(details);
-      setActiveSeason(pickDefaultSeason(details.seasons, today));
-    } catch (error) {
-      if (controller.signal.aborted || (isTmdbError(error) && error.kind === "aborted")) return;
-      setSeriesError(friendlyError(error, "Couldn't load that series. Please try again."));
-    } finally {
-      if (!controller.signal.aborted) setSeriesLoading(false);
-    }
-  };
-
-  const backToSearch = () => {
-    seriesAbort.current?.abort();
-    seasonAbort.current?.abort();
-    setSeries(null);
-    setSeriesError("");
-    setPendingSeriesId(null);
-    setActiveSeason(null);
-    setSeasons({});
-    setSeasonLoading(null);
-    setSeasonError("");
-    setSelected(new Map());
-  };
+    (async () => {
+      try {
+        const details = await getTvSeries(seed.seriesTmdbId, { signal: controller.signal });
+        if (controller.signal.aborted) return;
+        setSeries(details);
+        setActiveSeason(pickDefaultSeason(details.seasons, today));
+      } catch (error) {
+        if (controller.signal.aborted || (isTmdbError(error) && error.kind === "aborted")) return;
+        setSeriesError(friendlyError(error, "Couldn't load that series. Please try again."));
+      }
+    })();
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, seed?.seriesTmdbId, seriesAttempt]);
 
   const toggleEpisode = (episode: TvEpisodeDetails) => {
     if (isUpcomingEpisode(episode, today)) return;
@@ -242,79 +190,33 @@ const AddTvWatchModal: React.FC<AddTvWatchModalProps> = ({ isOpen, onClose, onSe
     onSelect({ series, episodes: selectedEpisodes });
   };
 
-  const showSearch = !series;
-
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="lg" ariaLabel="Add a TV watch" className="tv-add-modal">
-      {showSearch ? (
-        <div className="tv-add-step" data-testid="tv-add-search-step">
-          <p className="tv-add-kicker">Add TV watch</p>
-          <h2 className="tv-add-heading">Which series did you watch?</h2>
-          <label className="tv-add-search">
-            <FaSearch aria-hidden="true" />
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search TV series…"
-              aria-label="Search TV series"
-              autoComplete="off"
-              data-testid="tv-search-input"
-            />
-          </label>
-
-          {seriesError && (
+    <Modal isOpen={isOpen} onClose={onClose} size="lg" ariaLabel="Choose episodes to add to history" className="tv-add-modal">
+      {!series ? (
+        <div className="tv-add-step" data-testid="tv-add-loading-step">
+          {onBack && (
+            <button type="button" className="tv-add-back" onClick={onBack}>
+              <FaArrowLeft aria-hidden="true" /> Back to search
+            </button>
+          )}
+          <p className="tv-add-kicker">TV series</p>
+          <h2 className="tv-add-heading">{seed?.title || "Loading series"}</h2>
+          {seriesError ? (
             <div className="tv-add-error" role="alert">
               <p>{seriesError}</p>
-              {pendingSeriesId !== null && (
-                <button type="button" onClick={() => chooseSeries(pendingSeriesId)}>Try again</button>
-              )}
-              <button type="button" onClick={() => { setSeriesError(""); setPendingSeriesId(null); }}>Back to results</button>
+              <button type="button" onClick={() => setSeriesAttempt((value) => value + 1)}>Try again</button>
             </div>
-          )}
-
-          {seriesLoading ? (
-            <p className="tv-add-status" role="status">Loading series…</p>
-          ) : searching ? (
-            <p className="tv-add-status" role="status">Searching…</p>
-          ) : searchError ? (
-            <div className="tv-add-error" role="alert">
-              <p>{searchError}</p>
-              <button type="button" onClick={() => setSearchAttempt((value) => value + 1)}>Try again</button>
-            </div>
-          ) : query.trim().length >= MIN_QUERY_LENGTH && results.length === 0 && !seriesError ? (
-            <p className="tv-add-status">No series found for “{query.trim()}”.</p>
-          ) : results.length > 0 && !seriesError ? (
-            <ul className="tv-add-results" aria-label="Series results">
-              {results.map((result) => (
-                <li key={result.seriesTmdbId}>
-                  <button type="button" className="tv-add-result" onClick={() => chooseSeries(result.seriesTmdbId)} data-testid="tv-search-result">
-                    {result.posterPath ? (
-                      <img src={tmdbImageUrl(result.posterPath, "w185")} alt="" />
-                    ) : (
-                      <span className="tv-add-result-noart" aria-hidden="true">TV</span>
-                    )}
-                    <span className="tv-add-result-body">
-                      <strong>{result.seriesTitle}</strong>
-                      <span>
-                        {yearOf(result.firstAirDate) || "Year unknown"}
-                        {result.originCountry.length ? ` · ${result.originCountry.join(", ")}` : ""}
-                      </span>
-                      {result.overview && <small>{result.overview}</small>}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
           ) : (
-            <p className="tv-add-status">Type at least {MIN_QUERY_LENGTH} characters to search.</p>
+            <p className="tv-add-status" role="status">Loading seasons and episodes…</p>
           )}
         </div>
       ) : (
         <div className="tv-add-step" data-testid="tv-add-episodes-step">
-          <button type="button" className="tv-add-back" onClick={backToSearch}>
-            <FaArrowLeft aria-hidden="true" /> Back to search
-          </button>
+          {onBack && (
+            <button type="button" className="tv-add-back" onClick={onBack}>
+              <FaArrowLeft aria-hidden="true" /> Back to search
+            </button>
+          )}
 
           <header className="tv-add-series">
             {series.backdropPath && <img className="tv-add-series-backdrop" src={tmdbImageUrl(series.backdropPath, "w780")} alt="" aria-hidden="true" />}
@@ -436,4 +338,4 @@ const AddTvWatchModal: React.FC<AddTvWatchModalProps> = ({ isOpen, onClose, onSe
   );
 };
 
-export default AddTvWatchModal;
+export default TvEpisodePicker;

@@ -190,11 +190,12 @@ router.post("/", authenticate, async (req, res) => {
       res.status(400).json({ msg: `Unsupported media type. Use one of: ${MEDIA_TYPES.join(", ")}.` });
       return;
     }
-    const movieId = String(req.body?.movieId || "");
+    const requestedMovieId = String(req.body?.movieId || "");
     const scope = req.body?.scope === "group" ? "group" : "personal";
     const groupId = String(req.body?.groupId || "");
 
-    // Exactly one identity: a Movie document, or a TMDB series/season/episode.
+    // Exactly one identity: a Movie document (existing id, or a searched movie
+    // that is found-or-created by imdbID), or a TMDB series/season/episode.
     let movie: any = null;
     let tv: IWatchHistoryTvEpisode | undefined;
     if (mediaType === "movie") {
@@ -202,17 +203,46 @@ router.post("/", authenticate, async (req, res) => {
         res.status(400).json({ msg: "Movie history entries cannot include TV episode data." });
         return;
       }
-      if (!mongoose.Types.ObjectId.isValid(movieId)) {
-        res.status(400).json({ msg: "Invalid movie id." });
-        return;
-      }
-      movie = await Movie.findById(movieId);
-      if (!movie) {
-        res.status(404).json({ msg: "Movie not found" });
-        return;
+      if (requestedMovieId) {
+        if (!mongoose.Types.ObjectId.isValid(requestedMovieId)) {
+          res.status(400).json({ msg: "Invalid movie id." });
+          return;
+        }
+        movie = await Movie.findById(requestedMovieId);
+        if (!movie) {
+          res.status(404).json({ msg: "Movie not found" });
+          return;
+        }
+      } else {
+        const rawMovie = req.body?.movie;
+        const imdbID = String(rawMovie?.imdbID || "").trim();
+        const title = String(rawMovie?.title || "").trim();
+        if (!imdbID || !title || imdbID.length > 64 || title.length > 300) {
+          res.status(400).json({ msg: "Invalid movie data" });
+          return;
+        }
+
+        movie = await Movie.findOne({ imdbID });
+        if (!movie) {
+          try {
+            movie = await Movie.create({
+              title,
+              imdbID,
+              poster: rawMovie.poster_path,
+              vote_average: Number(rawMovie.vote_average) || 0,
+              addedBy: userId,
+            });
+          } catch (error: any) {
+            // Two clients adding the same new movie at once: the loser of the
+            // unique-index race re-reads the winner's document.
+            if (error?.code !== 11000) throw error;
+            movie = await Movie.findOne({ imdbID });
+            if (!movie) throw error;
+          }
+        }
       }
     } else {
-      if (movieId) {
+      if (requestedMovieId || req.body?.movie) {
         res.status(400).json({ msg: "TV episode history entries cannot reference a movie." });
         return;
       }
@@ -223,6 +253,7 @@ router.post("/", authenticate, async (req, res) => {
       }
       tv = parsed;
     }
+    const movieId = movie ? movie._id.toString() : "";
     const watchedAt = parseDate(req.body?.watchedAt || req.body?.watchedDate);
     if (!watchedAt) {
       res.status(400).json({ msg: "Invalid watched date." });

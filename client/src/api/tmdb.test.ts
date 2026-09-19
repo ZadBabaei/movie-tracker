@@ -6,6 +6,7 @@ import {
   getTvSeries,
   getTvSeriesExternalIds,
   isTmdbError,
+  searchMedia,
   normalizeExternalIds,
   normalizeTvEpisodeDetails,
   normalizeTvSearchPage,
@@ -296,6 +297,33 @@ describe("requests", () => {
 
     fetchMock.mockClear();
     expect(await searchTv("   ")).toEqual({ page: 1, totalPages: 0, totalResults: 0, results: [] });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test("searchMedia hits /search/multi once, keeps movies + tv only, and skips blank queries", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        page: 1,
+        total_pages: 1,
+        total_results: 3,
+        results: [
+          { media_type: "tv", id: 199925, name: "Special Ops: Lioness", first_air_date: "2023-07-23", origin_country: ["US"] },
+          { media_type: "person", id: 1, name: "Someone" },
+          { media_type: "movie", id: 55555, title: "Lioness", release_date: "2008-05-01" },
+        ],
+      })
+    );
+    const page = await searchMedia("  lioness ");
+    expect(page.results.map((result) => `${result.kind}:${result.tmdbId}`)).toEqual(["tv:199925", "movie:55555"]);
+    expect(page.results[0]).toMatchObject({ title: "Special Ops: Lioness", year: 2023, originCountry: ["US"] });
+    expect(page.results[1]).toMatchObject({ title: "Lioness", year: 2008, posterPath: null });
+    const url = requestedUrl();
+    expect(url.pathname).toBe("/3/search/multi");
+    expect(url.searchParams.get("query")).toBe("lioness");
+    expect(url.searchParams.get("include_adult")).toBe("false");
+
+    fetchMock.mockClear();
+    expect(await searchMedia("   ")).toEqual({ page: 1, totalPages: 0, totalResults: 0, results: [] });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
