@@ -6,6 +6,7 @@ import Group from "../models/Groups";
 import Movie from "../models/movie";
 import User from "../models/user";
 import WatchHistoryEntry from "../models/WatchHistoryEntry";
+import { suppressStremioImportAfterHistoryDelete } from "../services/integrations/stremioHistoryImportService";
 import { getIO } from "../socket";
 import { serializeHistoryEntry, syncLegacyGroupHistory } from "../utils/watchHistory";
 
@@ -263,7 +264,7 @@ const loadAuthorizedEntry = async (req: Request, res: Response, action: string) 
     res.status(400).json({ msg: "Invalid history entry." });
     return null;
   }
-  const entry = await WatchHistoryEntry.findById(entryId);
+  const entry = await WatchHistoryEntry.findById(entryId).select("+integrationMediaStateId");
   if (!entry) {
     res.status(404).json({ msg: "History entry not found." });
     return null;
@@ -338,6 +339,7 @@ router.delete("/:historyEntryId", authenticate, async (req, res) => {
       await Group.updateOne({ _id: entry.legacyGroupId }, { $pull: { movies: { _id: entry.legacyHistoryItemId } } });
     }
     await entry.deleteOne();
+    await suppressStremioImportAfterHistoryDelete(entry);
     if (entry.groupId) getIO().to(entry.groupId.toString()).emit("group:history_deleted", { historyEntryId: entry._id.toString() });
     res.json({ msg: "History entry deleted", historyEntryId: entry._id.toString() });
   } catch (error) {

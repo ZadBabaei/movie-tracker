@@ -17,6 +17,7 @@ export interface IWatchHistoryEntry extends Document {
   watchedLocation: string;
   watchedNotes: string;
   ratings: IWatchHistoryRating[];
+  integrationMediaStateId?: Types.ObjectId;
   legacyGroupId?: Types.ObjectId;
   legacyHistoryItemId?: Types.ObjectId;
   createdAt?: Date;
@@ -44,6 +45,11 @@ const watchHistoryEntrySchema = new Schema<IWatchHistoryEntry>(
     watchedLocation: { type: String, default: "", trim: true, maxlength: 300 },
     watchedNotes: { type: String, default: "", trim: true, maxlength: 2000 },
     ratings: { type: [ratingSchema], default: [] },
+    integrationMediaStateId: {
+      type: Schema.Types.ObjectId,
+      ref: "IntegrationMediaState",
+      select: false,
+    },
     legacyGroupId: { type: Schema.Types.ObjectId, ref: "Group" },
     legacyHistoryItemId: { type: Schema.Types.ObjectId },
   },
@@ -52,6 +58,13 @@ const watchHistoryEntrySchema = new Schema<IWatchHistoryEntry>(
 
 watchHistoryEntrySchema.index({ participants: 1, watchedAt: -1, _id: -1 });
 watchHistoryEntrySchema.index({ groupId: 1, watchedAt: -1, _id: -1 });
+watchHistoryEntrySchema.index(
+  { integrationMediaStateId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { integrationMediaStateId: { $exists: true } },
+  }
+);
 watchHistoryEntrySchema.index(
   { legacyGroupId: 1, legacyHistoryItemId: 1 },
   {
