@@ -3,8 +3,8 @@ import {
   TimestampConfidence,
 } from "../../models/IntegrationMediaState";
 import { StremioLibraryItemDto } from "./stremioClient";
+import { normalizeImdbTitleId } from "./imdbTitleId";
 
-const IMDB_ID = /^tt\d{7,12}$/i;
 const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/;
 
 export interface NormalizedStremioMovieState {
@@ -31,14 +31,14 @@ export const normalizeStremioMovie = (
   if (item.type !== "movie") return null;
   const rawId = item.id?.trim();
   if (!rawId) return null;
-  const imdb = IMDB_ID.test(rawId);
-  const providerItemId = imdb ? rawId.toLowerCase() : rawId;
+  const imdbId = normalizeImdbTitleId(rawId);
+  const providerItemId = imdbId ?? rawId;
   const providerLastWatchedAt = validProviderDate(item.state.lastWatched);
 
   return {
     providerMediaType: "movie",
     providerItemId,
-    identifierNamespace: imdb ? "imdb" : "provider",
+    identifierNamespace: imdbId ? "imdb" : "provider",
     providerRevision: item.revision,
     providerLastWatchedAt,
     completed:

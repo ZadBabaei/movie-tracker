@@ -71,6 +71,33 @@ test("TMDB resolver reads TMDB_API_KEY from the server environment at request ti
   }
 });
 
+test("TMDB resolver accepts the full Task-5 IMDb range and normalizes uppercase", async () => {
+  const requestedPaths: string[] = [];
+  const resolver = createTmdbMovieResolver({
+    apiKey: "server-test-key",
+    fetchImpl: (async (url) => {
+      requestedPaths.push(new URL(String(url)).pathname);
+      return jsonResponse({ movie_results: [] });
+    }) as typeof fetch,
+  });
+  for (const imdbId of [
+    "tt1234567",
+    "tt1234567890",
+    "tt12345678901",
+    "tt123456789012",
+    "TT123456789012",
+  ]) {
+    assert.equal(await resolver.resolveByImdbId(imdbId), null);
+  }
+  assert.deepEqual(requestedPaths, [
+    "/3/find/tt1234567",
+    "/3/find/tt1234567890",
+    "/3/find/tt12345678901",
+    "/3/find/tt123456789012",
+    "/3/find/tt123456789012",
+  ]);
+});
+
 test("TMDB resolver treats zero movie and TV-only results as movie missing", async () => {
   for (const payload of [
     { movie_results: [] },
@@ -160,10 +187,18 @@ test("TMDB resolver rejects unsafe identifiers and missing or non-HTTPS configur
     resolver.resolveByImdbId("tt2543164"),
     errorCode("tmdb_configuration_missing")
   );
-  await assert.rejects(
-    resolver.resolveByImdbId("../../secret"),
-    errorCode("tmdb_invalid_imdb_id")
-  );
+  for (const value of [
+    "1234567",
+    "../../tt1234567",
+    "tt1234abc",
+    "tt123456",
+    "tt1234567890123",
+  ]) {
+    await assert.rejects(
+      resolver.resolveByImdbId(value),
+      errorCode("tmdb_invalid_imdb_id")
+    );
+  }
   assert.equal(requests, 0);
   assert.throws(
     () => createTmdbMovieResolver({ apiKey: "key", baseUrl: "http://api.example.test" }),

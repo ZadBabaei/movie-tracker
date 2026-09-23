@@ -5,6 +5,7 @@ import IntegrationMediaState, {
 } from "../../models/IntegrationMediaState";
 import Movie, { IMovie } from "../../models/movie";
 import UserIntegration from "../../models/UserIntegration";
+import { isValidImdbTitleId } from "./imdbTitleId";
 import { currentStremioProviderStateFilter } from "./stremioSyncService";
 import tmdbMovieResolver, {
   ResolvedTmdbMovie,
@@ -167,7 +168,10 @@ export const createStremioMovieMatchService = ({
       };
 
       const processState = async (state: IIntegrationMediaState): Promise<StremioMovieMatchResult> => {
-        if (state.identifierNamespace !== "imdb") {
+        if (
+          state.identifierNamespace !== "imdb" ||
+          !isValidImdbTitleId(state.providerItemId)
+        ) {
           return (await transition(state, "unsupported_identifier"))
             ? "unsupported_identifier"
             : "integration_changed";
@@ -188,6 +192,14 @@ export const createStremioMovieMatchService = ({
             ? "matched"
             : "integration_changed";
         } catch (error) {
+          if (
+            error instanceof TmdbMovieResolverError &&
+            error.code === "tmdb_invalid_imdb_id"
+          ) {
+            return (await transition(state, "unsupported_identifier"))
+              ? "unsupported_identifier"
+              : "integration_changed";
+          }
           const errorCode =
             error instanceof TmdbMovieResolverError
               ? error.code

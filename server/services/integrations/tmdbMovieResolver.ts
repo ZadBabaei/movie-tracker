@@ -1,6 +1,7 @@
+import { normalizeImdbTitleId } from "./imdbTitleId";
+
 const TMDB_API_BASE_URL = "https://api.themoviedb.org/3";
 const DEFAULT_TIMEOUT_MS = 10_000;
-const IMDB_ID_PATTERN = /^tt\d{7,10}$/;
 
 export type TmdbMovieResolverErrorCode =
   | "tmdb_configuration_missing"
@@ -83,7 +84,8 @@ export const createTmdbMovieResolver = ({
 
   return {
     async resolveByImdbId(imdbId) {
-      if (!IMDB_ID_PATTERN.test(imdbId)) {
+      const normalizedImdbId = normalizeImdbTitleId(imdbId);
+      if (!normalizedImdbId) {
         throw new TmdbMovieResolverError("tmdb_invalid_imdb_id");
       }
       const activeApiKey = apiKey ?? process.env.TMDB_API_KEY;
@@ -91,7 +93,9 @@ export const createTmdbMovieResolver = ({
         throw new TmdbMovieResolverError("tmdb_configuration_missing");
       }
 
-      const url = new URL(`${parsedBaseUrl.toString().replace(/\/$/, "")}/find/${imdbId}`);
+      const url = new URL(
+        `${parsedBaseUrl.toString().replace(/\/$/, "")}/find/${normalizedImdbId}`
+      );
       url.searchParams.set("api_key", activeApiKey);
       url.searchParams.set("external_source", "imdb_id");
       url.searchParams.set("language", "en-US");

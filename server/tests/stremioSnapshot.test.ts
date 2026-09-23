@@ -5,6 +5,10 @@ import {
   normalizeStremioMovieSnapshot,
 } from "../services/integrations/stremioSnapshot";
 import { StremioLibraryItemDto } from "../services/integrations/stremioClient";
+import {
+  isValidImdbTitleId,
+  normalizeImdbTitleId,
+} from "../services/integrations/imdbTitleId";
 
 const movieItem = (overrides: Partial<StremioLibraryItemDto> = {}): StremioLibraryItemDto => ({
   id: "tt1234567",
@@ -28,6 +32,36 @@ test("movie completion normalization preserves IMDb identity and provider timest
   assert.equal(normalized?.providerRevision, "opaque-mtime-value");
   assert.equal(normalized?.providerLastWatchedAt?.toISOString(), "2026-01-01T12:00:00.000Z");
   assert.equal(normalized?.timestampConfidence, "provider_last_watched");
+});
+
+test("shared IMDb title contract accepts 7 through 12 digits and normalizes case", () => {
+  const accepted = [
+    "tt1234567",
+    "tt1234567890",
+    "tt12345678901",
+    "tt123456789012",
+    "TT123456789012",
+  ];
+  for (const value of accepted) {
+    assert.equal(isValidImdbTitleId(value), true, value);
+    assert.equal(normalizeImdbTitleId(value), value.toLowerCase(), value);
+    const normalized = normalizeStremioMovie(movieItem({ id: value }));
+    assert.equal(normalized?.identifierNamespace, "imdb", value);
+    assert.equal(normalized?.providerItemId, value.toLowerCase(), value);
+  }
+});
+
+test("shared IMDb title contract rejects malformed and out-of-range values", () => {
+  for (const value of [
+    "1234567",
+    "../../tt1234567",
+    "tt1234abc",
+    "tt123456",
+    "tt1234567890123",
+  ]) {
+    assert.equal(isValidImdbTitleId(value), false, value);
+    assert.equal(normalizeImdbTitleId(value), null, value);
+  }
 });
 
 test("removed completed movies remain completed and rewatch counts stay boolean-only", () => {

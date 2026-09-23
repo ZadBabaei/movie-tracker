@@ -9,6 +9,7 @@ import {
   ResolvedTmdbMovie,
   TmdbMovieResolver,
   TmdbMovieResolverError,
+  TmdbMovieResolverErrorCode,
 } from "../services/integrations/tmdbMovieResolver";
 import { IsolatedTestMongo, startIsolatedTestMongo } from "./helpers/testMongo";
 
@@ -272,6 +273,57 @@ test("resolver failures become sanitized retryable states and can later converge
   stored = await IntegrationMediaState.findById(state._id);
   assert.equal(stored?.matchStatus, "matched");
   assert.equal(stored?.lastErrorCode, undefined);
+});
+
+test("structurally invalid IMDb candidates become terminal unsupported states without a request", async () => {
+  const integration = await createIntegration();
+  const state = await createState(integration._id, { providerItemId: "tt1234abc" });
+  let requests = 0;
+  const service = createStremioMovieMatchService({
+    resolver: resolver(async () => {
+      requests += 1;
+      throw new Error("must not be called");
+    }),
+  });
+
+  const summary = await service.matchCurrentStremioMovies(integration.userId.toString());
+  const stored = await IntegrationMediaState.findById(state._id);
+  assert.equal(summary.unsupported, 1);
+  assert.equal(summary.retryableErrors, 0);
+  assert.equal(requests, 0);
+  assert.equal(stored?.matchStatus, "unsupported_identifier");
+  assert.equal(stored?.lastErrorCode, undefined);
+});
+
+test("transient TMDB failures remain retryable matching states", async () => {
+  const integration = await createIntegration();
+  const cases = [
+    ["tt1000001", "tmdb_network_error"],
+    ["tt1000002", "tmdb_rate_limited"],
+    ["tt1000003", "tmdb_unavailable"],
+    ["tt1000004", "tmdb_protocol_error"],
+  ] as const;
+  for (const [providerItemId] of cases) {
+    await createState(integration._id, { providerItemId });
+  }
+  const codes = new Map<string, TmdbMovieResolverErrorCode>(cases);
+  const service = createStremioMovieMatchService({
+    resolver: resolver(async (imdbId) => {
+      throw new TmdbMovieResolverError(codes.get(imdbId)!);
+    }),
+  });
+
+  const summary = await service.matchCurrentStremioMovies(integration.userId.toString());
+  assert.equal(summary.retryableErrors, cases.length);
+  assert.equal(summary.unsupported, 0);
+  for (const [providerItemId, errorCode] of cases) {
+    const stored = await IntegrationMediaState.findOne({
+      integrationId: integration._id,
+      providerItemId,
+    });
+    assert.equal(stored?.matchStatus, "retryable_error");
+    assert.equal(stored?.lastErrorCode, errorCode);
+  }
 });
 
 test("reconnect during TMDB lookup prevents stale Movie creation and state writes", async () => {
