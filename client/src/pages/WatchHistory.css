@@ -330,34 +330,19 @@
 .history-state p { margin: 12px auto 0; max-width: 52ch; color: #b8b0a2; line-height: 1.6; }
 .history-state button { min-height: 42px; margin-top: 22px; padding: 0 18px; border: 1px solid var(--brand-gold); border-radius: var(--brand-radius); background: transparent; color: var(--brand-gold-bright); cursor: pointer; }
 
-.history-details-modal { padding: 0; overflow: hidden; }
-.history-details { display: grid; grid-template-columns: minmax(180px, 230px) minmax(0, 1fr); min-height: 420px; }
-.history-details-poster { width: 100%; height: 100%; min-height: 420px; object-fit: cover; background: var(--brand-black); }
-.history-details-body { padding: 34px 32px 30px; overflow-y: auto; }
-.history-details-context { margin: 0 42px 10px 0; color: var(--brand-gold); font-size: .7rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
-.history-details-body h2 { margin: 0 42px 24px 0; color: var(--brand-ivory); font-family: var(--font-serif); font-size: 1.8rem; font-weight: 500; line-height: 1.15; text-wrap: balance; }
-.history-detail-facts { display: grid; gap: 14px; }
-.history-detail-facts p { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 11px; margin: 0; color: #c1b9aa; font-size: .85rem; line-height: 1.45; }
-.history-detail-facts > p > svg { margin-top: 3px; color: var(--brand-gold); }
-.history-detail-facts span { display: flex; flex-direction: column; gap: 3px; }
-.history-detail-facts small { color: #9b9488; font-size: .65rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
-.history-details blockquote { margin: 24px 0 0; padding: 14px 0; border-top: 1px solid var(--brand-hairline-soft); border-bottom: 1px solid var(--brand-hairline-soft); color: #c1b9aa; font-size: .86rem; font-style: italic; line-height: 1.6; }
-.history-rating-control { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 24px; color: #b8b0a2; font-size: .82rem; }
-.history-rating-control select { min-height: 40px; padding: 0 10px; border: 1px solid var(--brand-hairline); border-radius: var(--brand-radius); background: var(--brand-black); color: var(--brand-ivory); }
-.history-detail-actions, .history-edit-form > div, .history-delete-confirm > div { display: flex; justify-content: flex-end; gap: 10px; margin-top: 26px; }
-.history-detail-actions button, .history-edit-form button, .history-delete-confirm button { min-height: 42px; padding: 0 15px; border: 1px solid var(--brand-hairline-soft); border-radius: var(--brand-radius); background: transparent; color: #c1b9aa; cursor: pointer; }
-.history-detail-actions button { display: inline-flex; align-items: center; gap: 7px; }
-.history-detail-actions button:hover, .history-edit-form button:hover { border-color: var(--brand-gold); color: var(--brand-ivory); }
-.history-detail-actions .danger, .history-delete-confirm .danger { border-color: rgba(168, 74, 70, .65); color: #ffb6b1; }
-.history-edit-form { display: grid; gap: 16px; }
-.history-edit-form label { display: grid; gap: 7px; color: #b8b0a2; font-size: .78rem; font-weight: 600; }
-.history-edit-form input, .history-edit-form textarea { width: 100%; padding: 11px 12px; border: 1px solid var(--brand-hairline-soft); border-radius: var(--brand-radius); outline: 0; background: rgba(243, 238, 228, .035); color: var(--brand-ivory); line-height: 1.45; }
-.history-edit-form input:focus, .history-edit-form textarea:focus { border-color: var(--brand-gold); }
-.history-edit-form textarea { resize: vertical; }
-.history-edit-form .primary { border-color: var(--brand-gold); background: var(--brand-gold); color: var(--brand-gold-ink); font-weight: 700; }
-.history-delete-confirm { margin-top: 18px; padding: 16px; border: 1px solid rgba(168, 74, 70, .45); background: rgba(168, 74, 70, .08); }
-.history-delete-confirm p { margin: 0; color: #ffd1ce; font-size: .82rem; line-height: 1.5; }
-.history-delete-confirm > div { margin-top: 12px; }
+
+
+/* ── TV submission outcome banner ── */
+
+.history-tv-outcome { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin-top: 18px; padding: 12px 16px; border: 1px solid rgba(140, 47, 47, .55); border-radius: var(--brand-radius); color: #e6c9c9; font-size: .84rem; line-height: 1.45; }
+.history-tv-outcome p { flex: 1 1 320px; margin: 0; }
+.history-tv-outcome strong { color: var(--brand-ivory); }
+.history-tv-outcome div { display: flex; gap: 8px; }
+.history-tv-outcome button { min-height: 34px; padding: 0 12px; border: 1px solid var(--brand-gold); border-radius: var(--brand-radius); background: transparent; color: var(--brand-gold-bright); font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
+.history-tv-outcome button:disabled { opacity: .5; cursor: wait; }
+
+/* Episode summary line shared by the TV session card and its detail. */
+.history-card-episode { display: block; margin-top: 2px; color: var(--brand-gold); font-size: .7rem; font-weight: 700; letter-spacing: .06em; }
 
 @media (max-width: 980px) {
   .history-hero-inner, .history-main { width: calc(100% - 128px); }
@@ -391,21 +376,12 @@
   .history-period-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 10px; }
   .history-card { padding: 7px; border-radius: 10px; }
   .history-card-body { padding-inline: 2px; }
-  .history-details { grid-template-columns: 106px minmax(0, 1fr); min-height: 340px; }
-  .history-details-poster { min-height: 250px; align-self: stretch; }
-  .history-details-body { padding: 27px 18px 22px; }
-  .history-details-body h2 { font-size: 1.35rem; }
-  .history-detail-actions { flex-direction: column; }
-  .history-detail-actions button { justify-content: center; }
 }
 
 @media (max-width: 420px) {
   .history-period-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .history-card-title { font-size: .78rem; }
   .history-card-people { align-items: flex-start; flex-direction: column; }
-  .history-details { display: block; }
-  .history-details-poster { width: 96px; height: 144px; min-height: 0; margin: 24px 0 0 18px; }
-  .history-details-body { padding-top: 18px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

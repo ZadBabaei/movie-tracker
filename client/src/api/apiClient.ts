@@ -23,6 +23,12 @@ export const API_BASE_URL = normalizeApiBaseUrl(
 
 export const LOCAL_API_BASE_URL = "http://127.0.0.1:5000";
 
+// Dev-only: say out loud which backend this bundle talks to, so a dev server
+// silently pointed at the production API is caught in the console.
+if (import.meta.env.DEV) {
+  console.info(`[movie-tracker] API base: ${API_BASE_URL || `${window.location.origin} (relative, via the Vite proxy)`}`);
+}
+
 export const apiUrl = (path: string) => {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   return API_BASE_URL ? `${API_BASE_URL}${normalizedPath}` : normalizedPath;

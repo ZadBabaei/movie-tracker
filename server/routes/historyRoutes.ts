@@ -5,7 +5,11 @@ import { isGroupMember } from "../middleware/groupAccess";
 import Group from "../models/Groups";
 import Movie from "../models/movie";
 import User from "../models/user";
-import WatchHistoryEntry from "../models/WatchHistoryEntry";
+import WatchHistoryEntry, {
+  IWatchHistoryTvEpisode,
+  MEDIA_TYPES,
+  WatchHistoryMediaType,
+} from "../models/WatchHistoryEntry";
 import { getIO } from "../socket";
 import { serializeHistoryEntry, syncLegacyGroupHistory } from "../utils/watchHistory";
 
@@ -25,20 +29,82 @@ const parseDate = (value: unknown): Date | null => {
 
 const parseLimit = (value: unknown) => Math.min(Math.max(Number(value) || 48, 1), 100);
 
-const buildSearchMovieIds = async (search: unknown) => {
+// Search matches movie titles (via the Movie collection) or the series title
+// snapshot on episode rows. Returns null when there is no search term.
+const buildSearchFilter = async (search: unknown) => {
   const query = String(search || "").trim();
   if (!query) return null;
   const safe = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const movies = await Movie.find({ title: { $regex: safe, $options: "i" } }).select("_id").limit(200).lean();
-  return movies.map((movie) => movie._id);
+  return {
+    $or: [
+      { movieId: { $in: movies.map((movie) => movie._id) } },
+      { mediaType: "tv_episode", "tv.seriesTitle": { $regex: safe, $options: "i" } },
+    ],
+  };
+};
+
+const entryTitle = (item: ReturnType<typeof serializeHistoryEntry>) =>
+  item.movie?.title || item.tv?.seriesTitle || "";
+
+// Request input is stricter than stored data: an absent value keeps the
+// pre-TV contract (movie), but an unknown value is rejected rather than
+// silently treated as a movie. `resolveMediaType` remains the lenient reader
+// for persisted documents only.
+const parseRequestMediaType = (value: unknown): WatchHistoryMediaType | null => {
+  if (value === undefined || value === null || value === "") return "movie";
+  return MEDIA_TYPES.includes(value as WatchHistoryMediaType) ? (value as WatchHistoryMediaType) : null;
+};
+
+const optionalInteger = (value: unknown, min: number) => {
+  if (value === undefined || value === null || value === "") return undefined;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= min ? parsed : NaN;
+};
+
+const optionalText = (value: unknown, maxLength: number) => {
+  const text = String(value ?? "").trim();
+  return text ? text.slice(0, maxLength) : undefined;
+};
+
+// Validates the TV identity + snapshot fields from a request body. Returns a
+// string error for the client, or the normalized subdocument.
+const parseTvEpisode = (raw: unknown): IWatchHistoryTvEpisode | string => {
+  const body = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const seriesTmdbId = optionalInteger(body.seriesTmdbId, 1);
+  const seasonNumber = optionalInteger(body.seasonNumber, 0);
+  const episodeNumber = optionalInteger(body.episodeNumber, 1);
+  if (seriesTmdbId === undefined || seasonNumber === undefined || episodeNumber === undefined) {
+    return "TV episodes require seriesTmdbId, seasonNumber and episodeNumber.";
+  }
+  if ([seriesTmdbId, seasonNumber, episodeNumber].some((value) => Number.isNaN(value))) {
+    return "TV episode identifiers must be whole numbers.";
+  }
+  const episodeTmdbId = optionalInteger(body.episodeTmdbId, 1);
+  if (Number.isNaN(episodeTmdbId)) return "episodeTmdbId must be a whole number.";
+  const seriesTitle = optionalText(body.seriesTitle, 300);
+  if (!seriesTitle) return "TV episodes require a seriesTitle.";
+  const airDateRaw = body.airDate ? new Date(String(body.airDate)) : null;
+  return {
+    seriesTmdbId,
+    seasonNumber,
+    episodeNumber,
+    episodeTmdbId,
+    seriesTitle,
+    episodeTitle: optionalText(body.episodeTitle, 300),
+    posterPath: optionalText(body.posterPath, 500),
+    backdropPath: optionalText(body.backdropPath, 500),
+    stillPath: optionalText(body.stillPath, 500),
+    airDate: airDateRaw && !Number.isNaN(airDateRaw.getTime()) ? airDateRaw : undefined,
+  };
 };
 
 const readEntries = async (req: Request, res: Response, baseQuery: Record<string, unknown>) => {
   const userId = req.user!.id;
   const limit = parseLimit(req.query.limit);
   const query: Record<string, any> = { ...baseQuery };
-  const movieIds = await buildSearchMovieIds(req.query.search);
-  if (movieIds) query.movieId = { $in: movieIds };
+  const searchFilter = await buildSearchFilter(req.query.search);
+  if (searchFilter) query.$and = [searchFilter];
 
   const year = Number(req.query.year);
   if (Number.isInteger(year) && year >= 1900 && year <= 2200) {
@@ -67,7 +133,7 @@ const readEntries = async (req: Request, res: Response, baseQuery: Record<string
   const page = documents.slice(0, limit);
   let items = page.map((entry) => serializeHistoryEntry(entry, userId));
   const sort = String(req.query.sort || "recent");
-  if (sort === "title") items = items.sort((a, b) => a.movie.title.localeCompare(b.movie.title));
+  if (sort === "title") items = items.sort((a, b) => entryTitle(a).localeCompare(entryTitle(b)));
   if (sort === "rating") items = items.sort((a, b) => (b.averageRating ?? -1) - (a.averageRating ?? -1));
 
   res.json({
@@ -116,51 +182,148 @@ router.get("/group/:groupId", authenticate, async (req, res) => {
   }
 });
 
+// Every authorized watch occurrence of one TV series, for the dedicated
+// series page. Deliberately not paginated: the page shows the user's complete
+// relationship with a series, and each occurrence (including same-episode
+// rewatches) is returned as its own record. The cap only guards against a
+// runaway document; a real history never approaches it.
+const SERIES_HISTORY_CAP = 5000;
+
+router.get("/tv/:seriesTmdbId", authenticate, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const seriesTmdbId = Number(req.params.seriesTmdbId);
+    if (!/^[0-9]+$/.test(String(req.params.seriesTmdbId)) || !Number.isSafeInteger(seriesTmdbId) || seriesTmdbId < 1) {
+      res.status(400).json({ msg: "Invalid series id." });
+      return;
+    }
+
+    const scope = req.query.scope === undefined || req.query.scope === "" ? "personal" : String(req.query.scope);
+    const query: Record<string, unknown> = { mediaType: "tv_episode", "tv.seriesTmdbId": seriesTmdbId };
+    if (scope === "personal") {
+      query.participants = new mongoose.Types.ObjectId(userId);
+    } else if (scope === "group") {
+      const groupId = String(req.query.groupId || "");
+      if (!mongoose.Types.ObjectId.isValid(groupId)) {
+        res.status(400).json({ msg: "Invalid group id." });
+        return;
+      }
+      const group = await Group.findById(groupId).select("members creator").lean();
+      if (!group) {
+        res.status(404).json({ msg: "Group not found" });
+        return;
+      }
+      if (!isGroupMember(group, userId)) {
+        res.status(403).json({ msg: "Only group members can view this history." });
+        return;
+      }
+      query.groupId = new mongoose.Types.ObjectId(groupId);
+    } else {
+      res.status(400).json({ msg: "Invalid scope. Use personal or group." });
+      return;
+    }
+
+    const documents = await WatchHistoryEntry.find(query)
+      .sort({ watchedAt: -1, _id: -1 })
+      .limit(SERIES_HISTORY_CAP)
+      .populate(POPULATE)
+      .lean();
+    const items = documents.map((entry) => serializeHistoryEntry(entry, userId));
+    const episodeKeys = new Set(items.map((item) => `${item.tv?.seasonNumber}:${item.tv?.episodeNumber}`));
+    const seasons = new Set(items.map((item) => item.tv?.seasonNumber));
+
+    res.json({
+      seriesTmdbId,
+      scope,
+      groupId: scope === "group" ? String(req.query.groupId) : null,
+      items,
+      stats: {
+        watchCount: items.length,
+        uniqueEpisodes: episodeKeys.size,
+        seasonsWatched: seasons.size,
+        firstWatchedAt: items.length ? items[items.length - 1].watchedAt : null,
+        latestWatchedAt: items.length ? items[0].watchedAt : null,
+        truncated: documents.length === SERIES_HISTORY_CAP,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching series watch history:", error);
+    res.status(500).json({ msg: "Failed to fetch series watch history" });
+  }
+});
+
 router.post("/", authenticate, async (req, res) => {
   try {
     const userId = req.user!.id;
+    const mediaType = parseRequestMediaType(req.body?.mediaType);
+    if (!mediaType) {
+      res.status(400).json({ msg: `Unsupported media type. Use one of: ${MEDIA_TYPES.join(", ")}.` });
+      return;
+    }
     const requestedMovieId = String(req.body?.movieId || "");
     const scope = req.body?.scope === "group" ? "group" : "personal";
     const groupId = String(req.body?.groupId || "");
-    let movie;
 
-    if (requestedMovieId) {
-      if (!mongoose.Types.ObjectId.isValid(requestedMovieId)) {
-        res.status(400).json({ msg: "Invalid movie id." });
+    // Exactly one identity: a Movie document (existing id, or a searched movie
+    // that is found-or-created by imdbID), or a TMDB series/season/episode.
+    let movie: any = null;
+    let tv: IWatchHistoryTvEpisode | undefined;
+    if (mediaType === "movie") {
+      if (req.body?.tv) {
+        res.status(400).json({ msg: "Movie history entries cannot include TV episode data." });
         return;
       }
-      movie = await Movie.findById(requestedMovieId);
-      if (!movie) {
-        res.status(404).json({ msg: "Movie not found" });
-        return;
-      }
-    } else {
-      const rawMovie = req.body?.movie;
-      const imdbID = String(rawMovie?.imdbID || "").trim();
-      const title = String(rawMovie?.title || "").trim();
-      if (!imdbID || !title || imdbID.length > 64 || title.length > 300) {
-        res.status(400).json({ msg: "Invalid movie data" });
-        return;
-      }
+      if (requestedMovieId) {
+        if (!mongoose.Types.ObjectId.isValid(requestedMovieId)) {
+          res.status(400).json({ msg: "Invalid movie id." });
+          return;
+        }
+        movie = await Movie.findById(requestedMovieId);
+        if (!movie) {
+          res.status(404).json({ msg: "Movie not found" });
+          return;
+        }
+      } else {
+        const rawMovie = req.body?.movie;
+        const imdbID = String(rawMovie?.imdbID || "").trim();
+        const title = String(rawMovie?.title || "").trim();
+        if (!imdbID || !title || imdbID.length > 64 || title.length > 300) {
+          res.status(400).json({ msg: "Invalid movie data" });
+          return;
+        }
 
-      movie = await Movie.findOne({ imdbID });
-      if (!movie) {
-        try {
-          movie = await Movie.create({
-            title,
-            imdbID,
-            poster: rawMovie.poster_path,
-            vote_average: Number(rawMovie.vote_average) || 0,
-            addedBy: userId,
-          });
-        } catch (error: any) {
-          if (error?.code !== 11000) throw error;
-          movie = await Movie.findOne({ imdbID });
-          if (!movie) throw error;
+        movie = await Movie.findOne({ imdbID });
+        if (!movie) {
+          try {
+            movie = await Movie.create({
+              title,
+              imdbID,
+              poster: rawMovie.poster_path,
+              vote_average: Number(rawMovie.vote_average) || 0,
+              addedBy: userId,
+            });
+          } catch (error: any) {
+            // Two clients adding the same new movie at once: the loser of the
+            // unique-index race re-reads the winner's document.
+            if (error?.code !== 11000) throw error;
+            movie = await Movie.findOne({ imdbID });
+            if (!movie) throw error;
+          }
         }
       }
+    } else {
+      if (requestedMovieId || req.body?.movie) {
+        res.status(400).json({ msg: "TV episode history entries cannot reference a movie." });
+        return;
+      }
+      const parsed = parseTvEpisode(req.body?.tv);
+      if (typeof parsed === "string") {
+        res.status(400).json({ msg: parsed });
+        return;
+      }
+      tv = parsed;
     }
-    const movieId = movie._id.toString();
+    const movieId = movie ? movie._id.toString() : "";
     const watchedAt = parseDate(req.body?.watchedAt || req.body?.watchedDate);
     if (!watchedAt) {
       res.status(400).json({ msg: "Invalid watched date." });
@@ -195,25 +358,31 @@ router.post("/", authenticate, async (req, res) => {
       const participantIds = requested.length ? requested : [userId];
       participants = participantIds.map((id: string) => new mongoose.Types.ObjectId(id));
 
-      const legacyEntry = {
-        movieId: movie._id,
-        watchedDate: watchedAt,
-        watchedAt,
-        watchedWhere: String(req.body?.watchedLocation || req.body?.watchedWhere || "").trim(),
-        watchedLocation: String(req.body?.watchedLocation || req.body?.watchedWhere || "").trim(),
-        watchedWith: participants,
-        watchedNotes: String(req.body?.watchedNotes || "").trim(),
-        ratings: [],
-      };
-      group.movies.push(legacyEntry as any);
-      legacyHistoryItemId = (group.movies[group.movies.length - 1] as any)._id;
-      await group.save();
+      // Group.movies[] is the legacy movie-only history; episodes live solely
+      // in WatchHistoryEntry and are never mirrored there.
+      if (movie) {
+        const legacyEntry = {
+          movieId: movie._id,
+          watchedDate: watchedAt,
+          watchedAt,
+          watchedWhere: String(req.body?.watchedLocation || req.body?.watchedWhere || "").trim(),
+          watchedLocation: String(req.body?.watchedLocation || req.body?.watchedWhere || "").trim(),
+          watchedWith: participants,
+          watchedNotes: String(req.body?.watchedNotes || "").trim(),
+          ratings: [],
+        };
+        group.movies.push(legacyEntry as any);
+        legacyHistoryItemId = (group.movies[group.movies.length - 1] as any)._id;
+        await group.save();
+      }
     }
 
     let entry;
     try {
       entry = await WatchHistoryEntry.create({
-        movieId: movie._id,
+        mediaType,
+        movieId: movie ? movie._id : undefined,
+        tv,
         scope,
         groupId: scope === "group" ? group._id : undefined,
         createdBy: userId,
@@ -221,7 +390,7 @@ router.post("/", authenticate, async (req, res) => {
         watchedAt,
         watchedLocation: String(req.body?.watchedLocation || req.body?.watchedWhere || "").trim(),
         watchedNotes: String(req.body?.watchedNotes || "").trim(),
-        legacyGroupId: scope === "group" ? group._id : undefined,
+        legacyGroupId: scope === "group" && legacyHistoryItemId ? group._id : undefined,
         legacyHistoryItemId,
       });
     } catch (error) {
@@ -231,7 +400,8 @@ router.post("/", authenticate, async (req, res) => {
       throw error;
     }
 
-    const source = String(req.body?.source || "");
+    // Watchlists are movie-only, so `source` has nothing to pull for episodes.
+    const source = movie ? String(req.body?.source || "") : "";
     try {
       if (source === "personal") {
         await User.updateOne({ _id: userId }, { $pull: { watchlist: movie._id } });

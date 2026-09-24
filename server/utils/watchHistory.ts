@@ -1,6 +1,6 @@
 import mongoose, { Types } from "mongoose";
 import Group from "../models/Groups";
-import WatchHistoryEntry from "../models/WatchHistoryEntry";
+import WatchHistoryEntry, { resolveMediaType } from "../models/WatchHistoryEntry";
 
 const objectId = (value: unknown): Types.ObjectId | null => {
   const id = String(value ?? "");
@@ -55,6 +55,9 @@ export const syncLegacyGroupHistory = async (
           filter: { legacyGroupId: group._id, legacyHistoryItemId: historyItemId },
           update: {
             $setOnInsert: {
+              // Group.movies[] only ever holds movies; TV episodes never enter
+              // the legacy array, so this sync stays movie-only.
+              mediaType: "movie",
               movieId,
               scope: "group",
               groupId: group._id,
@@ -100,11 +103,33 @@ export const getRatingSummary = (entry: any, currentUserId: string) => {
   return { ratings, ratingCount, averageRating, currentUserRating };
 };
 
+const serializeTvEpisode = (tv: any) => ({
+  seriesTmdbId: Number(tv?.seriesTmdbId) || 0,
+  seasonNumber: Number(tv?.seasonNumber) || 0,
+  episodeNumber: Number(tv?.episodeNumber) || 0,
+  episodeTmdbId: tv?.episodeTmdbId ? Number(tv.episodeTmdbId) : null,
+  seriesTitle: tv?.seriesTitle || "Untitled series",
+  episodeTitle: tv?.episodeTitle || "",
+  posterPath: tv?.posterPath || "",
+  backdropPath: tv?.backdropPath || "",
+  stillPath: tv?.stillPath || "",
+  airDate: tv?.airDate || null,
+});
+
+// Title used for title sorting regardless of media type.
+export const getHistoryEntryTitle = (entry: any): string => {
+  if (resolveMediaType(entry?.mediaType) === "tv_episode") return entry?.tv?.seriesTitle || "";
+  const movie = entry?.movieId;
+  return movie && typeof movie === "object" ? movie.title || "" : "";
+};
+
 export const serializeHistoryEntry = (entry: any, currentUserId: string) => {
+  const mediaType = resolveMediaType(entry.mediaType);
   const movie = entry.movieId || {};
   const group = entry.groupId && typeof entry.groupId === "object" ? entry.groupId : null;
   return {
     _id: entry._id?.toString?.() || String(entry._id),
+    mediaType,
     scope: entry.scope,
     group: group
       ? { _id: group._id?.toString?.() || String(group._id), name: group.name, slug: group.slug }
@@ -112,13 +137,19 @@ export const serializeHistoryEntry = (entry: any, currentUserId: string) => {
     createdBy: entry.createdBy?._id
       ? { _id: entry.createdBy._id.toString(), name: entry.createdBy.name, avatar: entry.createdBy.avatar || "" }
       : { _id: entry.createdBy?.toString?.() || String(entry.createdBy || "") },
-    movie: {
-      _id: movie._id?.toString?.() || String(movie._id || movie),
-      title: movie.title || "Untitled movie",
-      imdbID: movie.imdbID || "",
-      poster: movie.poster || "",
-      vote_average: Number(movie.vote_average) || 0,
-    },
+    // Movies keep the shape existing clients depend on; episodes get `tv` and
+    // a null `movie` so a consumer can never mistake one for the other.
+    movie:
+      mediaType === "movie"
+        ? {
+            _id: movie._id?.toString?.() || String(movie._id || movie),
+            title: movie.title || "Untitled movie",
+            imdbID: movie.imdbID || "",
+            poster: movie.poster || "",
+            vote_average: Number(movie.vote_average) || 0,
+          }
+        : null,
+    tv: mediaType === "tv_episode" ? serializeTvEpisode(entry.tv) : null,
     participants: (entry.participants || []).map((participant: any) => ({
       _id: participant._id?.toString?.() || participant.toString?.() || String(participant),
       name: participant.name || "Member",
