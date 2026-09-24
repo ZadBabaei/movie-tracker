@@ -72,6 +72,39 @@ test("first connection stores only an encrypted envelope and returns sanitized s
   assert.equal(serialized.includes("fake-auth-key"), false);
 });
 
+test("integration listing exposes lifecycle timestamps and never credential data", async () => {
+  const userId = new mongoose.Types.ObjectId();
+  const lastSyncStartedAt = new Date("2026-09-24T10:00:00.000Z");
+  const lastSyncCompletedAt = new Date("2026-09-24T10:00:01.000Z");
+  const lastSuccessfulSyncAt = new Date("2026-09-24T10:00:01.000Z");
+  await UserIntegration.create({
+    userId,
+    provider: "stremio",
+    status: "connected",
+    credentialEnvelope: cryptoService.encryptCredential("secret-auth-key"),
+    credentialVersion: 1,
+    lastSyncStartedAt,
+    lastSyncCompletedAt,
+    lastSuccessfulSyncAt,
+    lastSyncStatus: "success",
+    lastErrorCode: "bounded_code",
+  });
+
+  const service = createStremioIntegrationService({ client: clientWith(), cryptoService });
+  const [status] = await service.listForUser(userId.toString());
+  assert.deepEqual(status, {
+    provider: "stremio",
+    status: "connected",
+    connected: true,
+    lastSyncStartedAt,
+    lastSyncCompletedAt,
+    lastSuccessfulSyncAt,
+    lastSyncStatus: "success",
+    lastErrorCode: "bounded_code",
+  });
+  assert.equal(/credential|authKey|secret-auth-key/i.test(JSON.stringify(status)), false);
+});
+
 test("connection service rejects malformed or oversized credentials before provider login", async () => {
   let loginCalled = false;
   const service = createStremioIntegrationService({

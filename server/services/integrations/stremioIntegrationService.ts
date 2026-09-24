@@ -16,6 +16,7 @@ export interface SanitizedIntegrationStatus {
   provider: "stremio";
   status: IUserIntegration["status"];
   connected: boolean;
+  lastSyncStartedAt: Date | null;
   lastSyncCompletedAt: Date | null;
   lastSuccessfulSyncAt: Date | null;
   lastSyncStatus: IUserIntegration["lastSyncStatus"] | null;
@@ -50,6 +51,7 @@ const statusView = (integration: Pick<
   IUserIntegration,
   | "provider"
   | "status"
+  | "lastSyncStartedAt"
   | "lastSyncCompletedAt"
   | "lastSuccessfulSyncAt"
   | "lastSyncStatus"
@@ -58,6 +60,7 @@ const statusView = (integration: Pick<
   provider: integration.provider,
   status: integration.status,
   connected: integration.status === "connected",
+  lastSyncStartedAt: integration.lastSyncStartedAt || null,
   lastSyncCompletedAt: integration.lastSyncCompletedAt || null,
   lastSuccessfulSyncAt: integration.lastSuccessfulSyncAt || null,
   lastSyncStatus: integration.lastSyncStatus || null,
@@ -134,7 +137,7 @@ export const createStremioIntegrationService = ({
       userId: new Types.ObjectId(userId),
     })
       .select(
-        "provider status lastSyncCompletedAt lastSuccessfulSyncAt lastSyncStatus lastErrorCode"
+        "provider status lastSyncStartedAt lastSyncCompletedAt lastSuccessfulSyncAt lastSyncStatus lastErrorCode"
       )
       .sort({ provider: 1 })
       .lean<IUserIntegration[]>();
@@ -172,6 +175,7 @@ export const createStremioIntegrationService = ({
     return statusView({
       provider: "stremio",
       status: "connected",
+      lastSyncStartedAt: displaced?.lastSyncStartedAt,
       lastSyncCompletedAt: displaced?.lastSyncCompletedAt,
       lastSuccessfulSyncAt: displaced?.lastSuccessfulSyncAt,
       lastSyncStatus: displaced?.lastSyncStatus,

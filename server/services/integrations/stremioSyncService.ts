@@ -19,6 +19,7 @@ const BULK_WRITE_SIZE = 500;
 
 export type StremioSyncErrorCode =
   | "integration_not_connected"
+  | "integration_reauth_required"
   | "integration_changed"
   | "credential_decryption_failed";
 
@@ -218,6 +219,9 @@ export const createStremioSyncService = ({
       userId: new Types.ObjectId(userId),
       provider: "stremio",
     }).select("+credentialEnvelope");
+    if (integration?.status === "reauth_required") {
+      throw new StremioSyncError("integration_reauth_required");
+    }
     if (integration?.status !== "connected" || !integration.credentialEnvelope) {
       throw new StremioSyncError("integration_not_connected");
     }

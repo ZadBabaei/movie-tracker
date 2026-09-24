@@ -5,6 +5,10 @@ import stremioIntegrationService, {
   StremioIntegrationService,
 } from "../services/integrations/stremioIntegrationService";
 import { StremioClientError } from "../services/integrations/stremioClient";
+import stremioPipelineService, {
+  StremioPipelineError,
+  StremioPipelineService,
+} from "../services/integrations/stremioPipelineService";
 
 const EMAIL_MAX_LENGTH = 320;
 const PASSWORD_MAX_LENGTH = 1024;
@@ -33,14 +37,36 @@ const providerFailure = (error: unknown, res: Response) => {
   res.status(500).json({ msg: "Integration request failed." });
 };
 
-export const createIntegrationRouter = (
-  service: StremioIntegrationService = stremioIntegrationService
-) => {
+const pipelineFailure = (error: unknown, res: Response) => {
+  if (!(error instanceof StremioPipelineError)) {
+    res.status(500).json({ msg: "Stremio sync failed.", code: "stremio_sync_failed" });
+    return;
+  }
+  const statusByCode: Record<StremioPipelineError["code"], number> = {
+    stremio_not_connected: 409,
+    stremio_reauth_required: 401,
+    stremio_provider_unavailable: 503,
+    integration_changed: 409,
+    stremio_sync_failed: 500,
+  };
+  res.status(statusByCode[error.code]).json({
+    msg: "Stremio sync could not be completed.",
+    code: error.code,
+  });
+};
+
+export const createIntegrationRouter = ({
+  lifecycleService = stremioIntegrationService,
+  pipelineService = stremioPipelineService,
+}: {
+  lifecycleService?: StremioIntegrationService;
+  pipelineService?: StremioPipelineService;
+} = {}) => {
   const router = express.Router();
 
   router.get("/", authenticate, async (req: Request, res: Response) => {
     try {
-      res.json({ integrations: await service.listForUser(req.user!.id) });
+      res.json({ integrations: await lifecycleService.listForUser(req.user!.id) });
     } catch {
       res.status(500).json({ msg: "Unable to load integrations." });
     }
@@ -61,16 +87,24 @@ export const createIntegrationRouter = (
     }
 
     try {
-      const integration = await service.connect(req.user!.id, email, password);
+      const integration = await lifecycleService.connect(req.user!.id, email, password);
       res.json({ integration });
     } catch (error) {
       providerFailure(error, res);
     }
   });
 
+  router.post("/stremio/sync", authenticate, async (req: Request, res: Response) => {
+    try {
+      res.json(await pipelineService.syncCurrentStremioIntegration(req.user!.id));
+    } catch (error) {
+      pipelineFailure(error, res);
+    }
+  });
+
   router.delete("/stremio", authenticate, async (req: Request, res: Response) => {
     try {
-      res.json(await service.disconnect(req.user!.id));
+      res.json(await lifecycleService.disconnect(req.user!.id));
     } catch (error) {
       providerFailure(error, res);
     }
