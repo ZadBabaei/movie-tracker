@@ -47,13 +47,13 @@ const versionCondition = (credentialVersion: number) =>
 
 const stateVersionCondition = (credentialVersion: number) =>
   credentialVersion === 0
-    ? {
-        $or: [
-          { observedCredentialVersion: 0 },
-          { observedCredentialVersion: { $exists: false } },
-        ],
-      }
+    ? { $or: [{ observedCredentialVersion: 0 }, { observedCredentialVersion: { $exists: false } }] }
     : { observedCredentialVersion: credentialVersion };
+
+const reservationVersionCondition = (credentialVersion: number | undefined) =>
+  credentialVersion === undefined
+    ? { importReservationCredentialVersion: { $exists: false } }
+    : { importReservationCredentialVersion: credentialVersion };
 
 const isDuplicateKey = (error: unknown) =>
   Boolean(error && typeof error === "object" && (error as { code?: number }).code === 11000);
@@ -66,12 +66,14 @@ const safeExistingHistory = (
   state: IIntegrationMediaState,
   ownerId: Types.ObjectId
 ) =>
+  entry.integrationMediaStateId?.toString() === state._id.toString() &&
   entry.scope === "personal" &&
   entry.movieId.toString() === state.matchedMovieId?.toString() &&
   entry.createdBy.toString() === ownerId.toString() &&
   !entry.groupId &&
   entry.participants.length === 1 &&
-  entry.participants[0].toString() === ownerId.toString();
+  entry.participants[0].toString() === ownerId.toString() &&
+  validProviderWatchTime(entry.watchedAt);
 
 export const suppressStremioImportAfterHistoryDelete = async (
   entry: Pick<IWatchHistoryEntry, "_id" | "integrationMediaStateId">
@@ -84,11 +86,12 @@ export const suppressStremioImportAfterHistoryDelete = async (
       importedHistoryEntryId: entry._id,
     },
     {
-      $set: {
-        importStatus: "suppressed",
-        suppressionReason: "local_history_deleted",
+      $set: { importStatus: "suppressed", suppressionReason: "local_history_deleted" },
+      $unset: {
+        importedHistoryEntryId: 1,
+        importReservationCredentialVersion: 1,
+        lastErrorCode: 1,
       },
-      $unset: { importedHistoryEntryId: 1, lastErrorCode: 1 },
     }
   );
   return result.matchedCount === 1;
@@ -98,10 +101,12 @@ export const createStremioHistoryImportService = ({
   concurrency = DEFAULT_CONCURRENCY,
   now = () => new Date(),
   createHistoryEntry = (payload: HistoryCreatePayload) => WatchHistoryEntry.create(payload),
+  beforeFinalize = async () => undefined,
 }: {
   concurrency?: number;
   now?: () => Date;
   createHistoryEntry?: (payload: HistoryCreatePayload) => Promise<IWatchHistoryEntry>;
+  beforeFinalize?: () => Promise<void>;
 } = {}) => {
   if (!Number.isSafeInteger(concurrency) || concurrency < 1 || concurrency > 32) {
     throw new RangeError("concurrency must be an integer between 1 and 32");
@@ -140,7 +145,6 @@ export const createStremioHistoryImportService = ({
         importStatus: "pending",
         matchedMovieId: { $exists: true },
         matchedTmdbId: { $exists: true },
-        importedHistoryEntryId: { $exists: false },
       });
       const summary: StremioHistoryImportSummary = {
         examined: candidates.length,
@@ -165,140 +169,110 @@ export const createStremioHistoryImportService = ({
 
       const recordPendingError = async (
         state: IIntegrationMediaState,
-        lastErrorCode: "provider_watch_time_unknown" | "matched_movie_inconsistent"
+        lastErrorCode:
+          | "provider_watch_time_unknown"
+          | "matched_movie_inconsistent"
+          | "history_provenance_conflict"
       ) => {
         if (!(await UserIntegration.exists(integrationFilter))) return false;
         const result = await IntegrationMediaState.updateOne(
-          { ...stateFilter(state), importedHistoryEntryId: { $exists: false } },
+          stateFilter(state),
           { $set: { lastErrorCode }, $unset: { suppressionReason: 1 } }
         );
         return result.matchedCount === 1;
       };
 
-      const clearReservation = async (
+      const releaseReservation = async (
         state: IIntegrationMediaState,
         historyEntryId: Types.ObjectId,
+        reservationVersion: number | undefined,
         lastErrorCode?: string
       ) => {
-        await IntegrationMediaState.updateOne(
+        const result = await IntegrationMediaState.updateOne(
           {
             _id: state._id,
             integrationId: integration._id,
             importStatus: "pending",
             importedHistoryEntryId: historyEntryId,
+            ...reservationVersionCondition(reservationVersion),
           },
           {
             ...(lastErrorCode ? { $set: { lastErrorCode: lastErrorCode.slice(0, 128) } } : {}),
-            $unset: { importedHistoryEntryId: 1 },
+            $unset: {
+              importedHistoryEntryId: 1,
+              importReservationCredentialVersion: 1,
+            },
           }
         );
+        return result.matchedCount === 1;
       };
 
-      const removeUnfinalizedHistory = async (
+      const removeOwnedUnfinalizedHistory = async (
+        state: IIntegrationMediaState,
+        historyEntryId: Types.ObjectId,
+        reservationVersion: number | undefined
+      ) => {
+        const released = await releaseReservation(state, historyEntryId, reservationVersion);
+        if (released) {
+          await WatchHistoryEntry.deleteOne({
+            _id: historyEntryId,
+            integrationMediaStateId: state._id,
+          });
+          return;
+        }
+        const current = await IntegrationMediaState.findById(state._id)
+          .select("importStatus importedHistoryEntryId")
+          .lean();
+        if (
+          current?.importStatus !== "imported" ||
+          current.importedHistoryEntryId?.toString() !== historyEntryId.toString()
+        ) {
+          await WatchHistoryEntry.deleteOne({
+            _id: historyEntryId,
+            integrationMediaStateId: state._id,
+          });
+        }
+      };
+
+      const findReservedHistory = async (
         state: IIntegrationMediaState,
         historyEntryId: Types.ObjectId
       ) => {
-        await WatchHistoryEntry.deleteOne({
-          _id: historyEntryId,
+        const exact = await WatchHistoryEntry.findById(historyEntryId)
+          .select("+integrationMediaStateId");
+        if (exact) return { exact, conflictingProvenanceId: undefined };
+        const conflictingProvenance = await WatchHistoryEntry.findOne({
           integrationMediaStateId: state._id,
-        });
-        await clearReservation(state, historyEntryId);
+        }).select("_id");
+        return { exact: null, conflictingProvenanceId: conflictingProvenance?._id };
       };
 
-      const processState = async (state: IIntegrationMediaState): Promise<ImportResult> => {
-        if (!validProviderWatchTime(state.providerLastWatchedAt)) {
-          return (await recordPendingError(state, "provider_watch_time_unknown"))
-            ? "timestamp_unavailable"
-            : "integration_changed";
-        }
-
-        const movie = await Movie.findOne({
-          _id: state.matchedMovieId,
-          imdbID: `tmdb-${state.matchedTmdbId}`,
-        }).select("_id imdbID");
-        if (!movie) {
-          return (await recordPendingError(state, "matched_movie_inconsistent"))
-            ? "invalid_match"
-            : "integration_changed";
-        }
-        if (!(await UserIntegration.exists(integrationFilter))) return "integration_changed";
-
-        let historyEntryId = new Types.ObjectId();
-        const claim = await IntegrationMediaState.updateOne(
-          { ...stateFilter(state), importedHistoryEntryId: { $exists: false } },
-          {
-            $set: { importedHistoryEntryId: historyEntryId },
-            $unset: { lastErrorCode: 1, suppressionReason: 1 },
-          }
-        );
-        if (claim.matchedCount !== 1) {
-          const current = await IntegrationMediaState.findById(state._id)
-            .select("importStatus importedHistoryEntryId")
-            .lean();
-          return current?.importStatus === "imported" || current?.importedHistoryEntryId
-            ? "already_imported"
-            : "integration_changed";
-        }
-
+      const finalizeReservation = async (
+        state: IIntegrationMediaState,
+        historyEntryId: Types.ObjectId
+      ): Promise<ImportResult> => {
+        await beforeFinalize();
         if (!(await UserIntegration.exists(integrationFilter))) {
-          await clearReservation(state, historyEntryId);
-          return "integration_changed";
-        }
-
-        let historyEntry: IWatchHistoryEntry;
-        try {
-          historyEntry = await createHistoryEntry({
-            _id: historyEntryId,
-            movieId: movie._id,
-            scope: "personal",
-            createdBy: ownerId,
-            participants: [ownerId],
-            watchedAt: state.providerLastWatchedAt,
-            watchedLocation: "",
-            watchedNotes: "",
-            ratings: [],
-            integrationMediaStateId: state._id,
-          });
-        } catch (error) {
-          if (!isDuplicateKey(error)) {
-            await clearReservation(state, historyEntryId, "history_import_failed");
-            throw error;
-          }
-          const existing = await WatchHistoryEntry.findOne({
-            integrationMediaStateId: state._id,
-          }).select("+integrationMediaStateId");
-          if (!existing || !safeExistingHistory(existing, state, ownerId)) {
-            await clearReservation(state, historyEntryId, "history_provenance_conflict");
-            return "invalid_match";
-          }
-          const reservation = await IntegrationMediaState.updateOne(
-            {
-              _id: state._id,
-              importStatus: "pending",
-              importedHistoryEntryId: historyEntryId,
-            },
-            { $set: { importedHistoryEntryId: existing._id } }
+          await removeOwnedUnfinalizedHistory(
+            state,
+            historyEntryId,
+            state.importReservationCredentialVersion
           );
-          if (reservation.matchedCount !== 1) return "integration_changed";
-          historyEntry = existing;
-          historyEntryId = existing._id;
-        }
-
-        if (!(await UserIntegration.exists(integrationFilter))) {
-          await removeUnfinalizedHistory(state, historyEntryId);
           return "integration_changed";
         }
         const finalized = await IntegrationMediaState.updateOne(
           {
             ...stateFilter(state),
             importedHistoryEntryId: historyEntryId,
+            importReservationCredentialVersion: credentialVersion,
           },
           {
-            $set: {
-              importStatus: "imported",
-              importedAt: now(),
+            $set: { importStatus: "imported", importedAt: now() },
+            $unset: {
+              importReservationCredentialVersion: 1,
+              lastErrorCode: 1,
+              suppressionReason: 1,
             },
-            $unset: { lastErrorCode: 1, suppressionReason: 1 },
           }
         );
         if (finalized.matchedCount === 1) return "imported";
@@ -312,8 +286,152 @@ export const createStremioHistoryImportService = ({
         ) {
           return "already_imported";
         }
-        await removeUnfinalizedHistory(state, historyEntryId);
+        await removeOwnedUnfinalizedHistory(
+          state,
+          historyEntryId,
+          state.importReservationCredentialVersion
+        );
         return "integration_changed";
+      };
+
+      const processFreshState = async (
+        state: IIntegrationMediaState,
+        movieId: Types.ObjectId
+      ): Promise<ImportResult> => {
+        if (!(await UserIntegration.exists(integrationFilter))) return "integration_changed";
+        const historyEntryId = new Types.ObjectId();
+        const claim = await IntegrationMediaState.updateOne(
+          { ...stateFilter(state), importedHistoryEntryId: { $exists: false } },
+          {
+            $set: {
+              importedHistoryEntryId: historyEntryId,
+              importReservationCredentialVersion: credentialVersion,
+            },
+            $unset: { lastErrorCode: 1, suppressionReason: 1 },
+          }
+        );
+        if (claim.matchedCount !== 1) {
+          const current = await IntegrationMediaState.findById(state._id)
+            .select("importStatus importedHistoryEntryId")
+            .lean();
+          return current?.importStatus === "imported" || current?.importedHistoryEntryId
+            ? "already_imported"
+            : "integration_changed";
+        }
+        state.importedHistoryEntryId = historyEntryId;
+        state.importReservationCredentialVersion = credentialVersion;
+
+        if (!(await UserIntegration.exists(integrationFilter))) {
+          await releaseReservation(state, historyEntryId, credentialVersion);
+          return "integration_changed";
+        }
+
+        let historyEntry: IWatchHistoryEntry;
+        try {
+          historyEntry = await createHistoryEntry({
+            _id: historyEntryId,
+            movieId,
+            scope: "personal",
+            createdBy: ownerId,
+            participants: [ownerId],
+            watchedAt: state.providerLastWatchedAt!,
+            watchedLocation: "",
+            watchedNotes: "",
+            ratings: [],
+            integrationMediaStateId: state._id,
+          });
+        } catch (error) {
+          if (!isDuplicateKey(error)) {
+            await releaseReservation(
+              state,
+              historyEntryId,
+              credentialVersion,
+              "history_import_failed"
+            );
+            throw error;
+          }
+          const existing = await WatchHistoryEntry.findById(historyEntryId)
+            .select("+integrationMediaStateId");
+          if (!existing || !safeExistingHistory(existing, state, ownerId)) {
+            await recordPendingError(state, "history_provenance_conflict");
+            return "invalid_match";
+          }
+          historyEntry = existing;
+        }
+
+        if (!safeExistingHistory(historyEntry, state, ownerId)) {
+          await recordPendingError(state, "history_provenance_conflict");
+          return "invalid_match";
+        }
+        return finalizeReservation(state, historyEntryId);
+      };
+
+      const processReservedState = async (
+        state: IIntegrationMediaState,
+        movieId: Types.ObjectId
+      ): Promise<ImportResult> => {
+        const historyEntryId = state.importedHistoryEntryId!;
+        const reservationVersion = state.importReservationCredentialVersion;
+        const { exact, conflictingProvenanceId } = await findReservedHistory(
+          state,
+          historyEntryId
+        );
+
+        if (reservationVersion !== credentialVersion) {
+          const released = await releaseReservation(state, historyEntryId, reservationVersion);
+          if (!released) return "already_imported";
+          if (exact?.integrationMediaStateId?.equals(state._id)) {
+            await WatchHistoryEntry.deleteOne({
+              _id: historyEntryId,
+              integrationMediaStateId: state._id,
+            });
+          } else if (conflictingProvenanceId) {
+            await WatchHistoryEntry.deleteOne({
+              _id: conflictingProvenanceId,
+              integrationMediaStateId: state._id,
+            });
+          }
+          state.importedHistoryEntryId = undefined;
+          state.importReservationCredentialVersion = undefined;
+          return processFreshState(state, movieId);
+        }
+
+        if (
+          (exact && !safeExistingHistory(exact, state, ownerId)) ||
+          (!exact && conflictingProvenanceId)
+        ) {
+          return (await recordPendingError(state, "history_provenance_conflict"))
+            ? "invalid_match"
+            : "integration_changed";
+        }
+
+        if (exact) return finalizeReservation(state, historyEntryId);
+
+        const released = await releaseReservation(state, historyEntryId, reservationVersion);
+        if (!released) return "already_imported";
+        state.importedHistoryEntryId = undefined;
+        state.importReservationCredentialVersion = undefined;
+        return processFreshState(state, movieId);
+      };
+
+      const processState = async (state: IIntegrationMediaState): Promise<ImportResult> => {
+        if (!validProviderWatchTime(state.providerLastWatchedAt)) {
+          return (await recordPendingError(state, "provider_watch_time_unknown"))
+            ? "timestamp_unavailable"
+            : "integration_changed";
+        }
+        const movie = await Movie.findOne({
+          _id: state.matchedMovieId,
+          imdbID: `tmdb-${state.matchedTmdbId}`,
+        }).select("_id imdbID");
+        if (!movie) {
+          return (await recordPendingError(state, "matched_movie_inconsistent"))
+            ? "invalid_match"
+            : "integration_changed";
+        }
+        return state.importedHistoryEntryId
+          ? processReservedState(state, movie._id)
+          : processFreshState(state, movie._id);
       };
 
       let nextIndex = 0;

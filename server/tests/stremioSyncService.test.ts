@@ -139,6 +139,7 @@ test("provider refresh preserves every matching/import pipeline field", async ()
         matchedTmdbId: 123,
         importStatus: "suppressed",
         importedHistoryEntryId: historyId,
+        importReservationCredentialVersion: 1,
         importedAt,
         suppressionReason: "user_suppressed",
       },
@@ -157,6 +158,7 @@ test("provider refresh preserves every matching/import pipeline field", async ()
   assert.equal(state?.matchedTmdbId, 123);
   assert.equal(state?.importStatus, "suppressed");
   assert.equal(state?.importedHistoryEntryId?.toString(), historyId.toString());
+  assert.equal(state?.importReservationCredentialVersion, 1);
   assert.equal(state?.importedAt?.toISOString(), importedAt.toISOString());
   assert.equal(state?.suppressionReason, "user_suppressed");
   assert.equal(state?.observedCredentialVersion, 2);

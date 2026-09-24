@@ -43,6 +43,7 @@ export interface IIntegrationMediaState extends Document {
   matchedTmdbId?: number;
   importStatus: IntegrationImportStatus;
   importedHistoryEntryId?: Types.ObjectId;
+  importReservationCredentialVersion?: number;
   importedAt?: Date;
   timestampConfidence?: TimestampConfidence;
   suppressionReason?: IntegrationSuppressionReason;
@@ -110,6 +111,12 @@ const integrationMediaStateSchema = new Schema<IIntegrationMediaState>(
     importedHistoryEntryId: {
       type: Schema.Types.ObjectId,
       ref: "WatchHistoryEntry",
+    },
+    importReservationCredentialVersion: {
+      type: Number,
+      min: 0,
+      max: Number.MAX_SAFE_INTEGER,
+      validate: Number.isSafeInteger,
     },
     importedAt: { type: Date },
     timestampConfidence: {

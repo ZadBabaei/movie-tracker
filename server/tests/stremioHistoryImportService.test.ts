@@ -321,6 +321,218 @@ test("concurrent importers and the provenance index permit only one automatic hi
   );
 });
 
+test("abandoned reservation without history is recovered and imported", async () => {
+  const integration = await createIntegration();
+  const movie = await createMovie();
+  const abandonedId = new mongoose.Types.ObjectId();
+  const state = await createState(integration._id, movie._id, {
+    importedHistoryEntryId: abandonedId,
+    importReservationCredentialVersion: 2,
+  });
+
+  const summary = await createStremioHistoryImportService()
+    .importCurrentStremioMovies(integration.userId.toString());
+  const stored = await IntegrationMediaState.findById(state._id);
+  const histories = await WatchHistoryEntry.find({ integrationMediaStateId: state._id });
+  assert.equal(summary.imported, 1);
+  assert.equal(histories.length, 1);
+  assert.notEqual(histories[0]._id.toString(), abandonedId.toString());
+  assert.equal(stored?.importStatus, "imported");
+  assert.equal(stored?.importedHistoryEntryId?.toString(), histories[0]._id.toString());
+  assert.equal(stored?.importReservationCredentialVersion, undefined);
+});
+
+test("valid history created before a crash is reused and finalized idempotently", async () => {
+  const integration = await createIntegration();
+  const movie = await createMovie();
+  const reservedId = new mongoose.Types.ObjectId();
+  const state = await createState(integration._id, movie._id, {
+    importedHistoryEntryId: reservedId,
+    importReservationCredentialVersion: 2,
+  });
+  await WatchHistoryEntry.create({
+    _id: reservedId,
+    movieId: movie._id,
+    scope: "personal",
+    createdBy: integration.userId,
+    participants: [integration.userId],
+    watchedAt,
+    watchedLocation: "",
+    watchedNotes: "",
+    ratings: [],
+    integrationMediaStateId: state._id,
+  });
+  const service = createStremioHistoryImportService();
+  assert.equal((await service.importCurrentStremioMovies(integration.userId.toString())).imported, 1);
+  assert.equal((await service.importCurrentStremioMovies(integration.userId.toString())).examined, 0);
+
+  const stored = await IntegrationMediaState.findById(state._id);
+  assert.equal(await WatchHistoryEntry.countDocuments({ integrationMediaStateId: state._id }), 1);
+  assert.equal(stored?.importStatus, "imported");
+  assert.equal(stored?.importedHistoryEntryId?.toString(), reservedId.toString());
+  assert.equal(stored?.importReservationCredentialVersion, undefined);
+});
+
+test("conflicting reserved history is not adopted or duplicated", async () => {
+  const integration = await createIntegration();
+  const movie = await createMovie();
+  const reservedId = new mongoose.Types.ObjectId();
+  const state = await createState(integration._id, movie._id, {
+    importedHistoryEntryId: reservedId,
+    importReservationCredentialVersion: 2,
+  });
+  await WatchHistoryEntry.create({
+    _id: reservedId,
+    movieId: movie._id,
+    scope: "personal",
+    createdBy: integration.userId,
+    participants: [integration.userId],
+    watchedAt,
+    integrationMediaStateId: new mongoose.Types.ObjectId(),
+  });
+
+  const summary = await createStremioHistoryImportService()
+    .importCurrentStremioMovies(integration.userId.toString());
+  const stored = await IntegrationMediaState.findById(state._id);
+  assert.equal(summary.invalidMatch, 1);
+  assert.equal(await WatchHistoryEntry.countDocuments(), 1);
+  assert.equal(stored?.importStatus, "pending");
+  assert.equal(stored?.importedHistoryEntryId?.toString(), reservedId.toString());
+  assert.equal(stored?.lastErrorCode, "history_provenance_conflict");
+});
+
+test("concurrent reservation recovery converges to one imported history", async () => {
+  const integration = await createIntegration();
+  const movie = await createMovie();
+  const state = await createState(integration._id, movie._id, {
+    importedHistoryEntryId: new mongoose.Types.ObjectId(),
+    importReservationCredentialVersion: 2,
+  });
+  const service = createStremioHistoryImportService();
+  await Promise.all([
+    service.importCurrentStremioMovies(integration.userId.toString()),
+    service.importCurrentStremioMovies(integration.userId.toString()),
+  ]);
+
+  const stored = await IntegrationMediaState.findById(state._id);
+  assert.equal(stored?.importStatus, "imported");
+  assert.equal(await WatchHistoryEntry.countDocuments({ integrationMediaStateId: state._id }), 1);
+});
+
+test("live claimed reservation can be safely preempted before history creation", async () => {
+  const integration = await createIntegration();
+  const movie = await createMovie();
+  const state = await createState(integration._id, movie._id);
+  const firstClaimed = deferred<void>();
+  const releaseFirst = deferred<void>();
+  const firstService = createStremioHistoryImportService({
+    createHistoryEntry: async (payload) => {
+      firstClaimed.resolve();
+      await releaseFirst.promise;
+      return WatchHistoryEntry.create(payload);
+    },
+  });
+  const firstRun = firstService.importCurrentStremioMovies(integration.userId.toString());
+  await firstClaimed.promise;
+
+  const recoveryClaimed = deferred<void>();
+  const releaseRecovery = deferred<void>();
+  const recoveryService = createStremioHistoryImportService({
+    createHistoryEntry: async (payload) => {
+      recoveryClaimed.resolve();
+      await releaseRecovery.promise;
+      return WatchHistoryEntry.create(payload);
+    },
+  });
+  const recoveryRun = recoveryService.importCurrentStremioMovies(
+    integration.userId.toString()
+  );
+  await recoveryClaimed.promise;
+
+  releaseFirst.resolve();
+  await firstRun;
+  releaseRecovery.resolve();
+  await recoveryRun;
+
+  const stored = await IntegrationMediaState.findById(state._id);
+  assert.equal(stored?.importStatus, "imported");
+  assert.equal(await WatchHistoryEntry.countDocuments({ integrationMediaStateId: state._id }), 1);
+});
+
+test("reconnect while finalizing a recovered reservation cannot preserve stale history", async () => {
+  const integration = await createIntegration();
+  const movie = await createMovie();
+  const reservedId = new mongoose.Types.ObjectId();
+  const state = await createState(integration._id, movie._id, {
+    importedHistoryEntryId: reservedId,
+    importReservationCredentialVersion: 2,
+  });
+  await WatchHistoryEntry.create({
+    _id: reservedId,
+    movieId: movie._id,
+    scope: "personal",
+    createdBy: integration.userId,
+    participants: [integration.userId],
+    watchedAt,
+    integrationMediaStateId: state._id,
+  });
+  const finalizing = deferred<void>();
+  const release = deferred<void>();
+  const recovering = createStremioHistoryImportService({
+    beforeFinalize: async () => {
+      finalizing.resolve();
+      await release.promise;
+    },
+  });
+  const running = recovering.importCurrentStremioMovies(integration.userId.toString());
+  await finalizing.promise;
+  await UserIntegration.updateOne({ _id: integration._id }, { $inc: { credentialVersion: 1 } });
+  await IntegrationMediaState.updateOne(
+    { _id: state._id },
+    { $set: { observedCredentialVersion: 3 } }
+  );
+  release.resolve();
+  assert.equal((await running).skippedStale, 1);
+  assert.equal(await WatchHistoryEntry.countDocuments({ integrationMediaStateId: state._id }), 0);
+
+  const resumed = await createStremioHistoryImportService()
+    .importCurrentStremioMovies(integration.userId.toString());
+  const stored = await IntegrationMediaState.findById(state._id);
+  assert.equal(resumed.imported, 1);
+  assert.equal(stored?.importStatus, "imported");
+  assert.notEqual(stored?.importedHistoryEntryId?.toString(), reservedId.toString());
+  assert.equal(await WatchHistoryEntry.countDocuments({ integrationMediaStateId: state._id }), 1);
+});
+
+test("old-generation reservation is removed before current generation imports", async () => {
+  const integration = await createIntegration();
+  const movie = await createMovie();
+  const staleMovie = await createMovie({ imdbID: "tmdb-111", title: "Stale movie" });
+  const oldHistoryId = new mongoose.Types.ObjectId();
+  const state = await createState(integration._id, movie._id, {
+    importedHistoryEntryId: oldHistoryId,
+    importReservationCredentialVersion: 1,
+  });
+  await WatchHistoryEntry.create({
+    _id: oldHistoryId,
+    movieId: staleMovie._id,
+    scope: "personal",
+    createdBy: integration.userId,
+    participants: [integration.userId],
+    watchedAt,
+    integrationMediaStateId: state._id,
+  });
+
+  const summary = await createStremioHistoryImportService()
+    .importCurrentStremioMovies(integration.userId.toString());
+  const stored = await IntegrationMediaState.findById(state._id);
+  assert.equal(summary.imported, 1);
+  assert.equal(await WatchHistoryEntry.exists({ _id: oldHistoryId }), null);
+  assert.equal(await WatchHistoryEntry.countDocuments({ integrationMediaStateId: state._id }), 1);
+  assert.equal(stored?.importStatus, "imported");
+  assert.notEqual(stored?.importedHistoryEntryId?.toString(), oldHistoryId.toString());
+});
+
 test("later provider timestamp changes neither duplicate nor move imported history", async () => {
   const integration = await createIntegration();
   const movie = await createMovie();
