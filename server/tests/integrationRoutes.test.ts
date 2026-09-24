@@ -238,7 +238,10 @@ test("manual sync uses only the authenticated user and returns a bounded summary
   assert.equal(synchronizedUserId, userId);
   assert.equal(res.state.statusCode, 200);
   assert.deepEqual(Object.keys(res.state.body), ["provider", "status", "snapshot", "matching", "import"]);
-  assert.equal(/credential|authKey|password|raw/i.test(JSON.stringify(res.state.body)), false);
+  assert.equal(
+    /integrationId|credential|authKey|password|raw/i.test(JSON.stringify(res.state.body)),
+    false
+  );
 });
 
 test("manual sync maps stable pipeline failures without exposing lower-level details", async () => {

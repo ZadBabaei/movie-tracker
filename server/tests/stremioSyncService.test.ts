@@ -91,6 +91,8 @@ test("first, repeated, and changed snapshots upsert one normalized provider stat
   const first = await service.sync(userId.toString());
   await service.sync(userId.toString());
   assert.equal(first.status, "success");
+  assert.equal(first.integrationId, integration._id.toString());
+  assert.equal(first.credentialVersion, 1);
   assert.equal(await IntegrationMediaState.countDocuments({ integrationId: integration._id }), 1);
 
   snapshot = [

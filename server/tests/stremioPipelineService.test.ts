@@ -10,6 +10,8 @@ import { StremioSyncError } from "../services/integrations/stremioSyncService";
 const userId = "64b64b64b64b64b64b64b64b";
 const snapshot = {
   status: "success" as const,
+  integrationId: "74b64b64b64b64b64b64b64b",
+  credentialVersion: 7,
   snapshotItems: 6,
   movieStates: 5,
   ignoredItems: 1,
@@ -18,6 +20,7 @@ const snapshot = {
   matched: 1,
   modified: 1,
 };
+const alwaysCurrent = { isCurrent: async () => true };
 const matching = {
   examined: 5,
   matched: 2,
@@ -59,10 +62,25 @@ test("pipeline calls snapshot, matching, and import in exact order", async () =>
         return importSummary;
       },
     },
+    generationService: {
+      isCurrent: async (integrationId, credentialVersion) => {
+        assert.equal(integrationId, snapshot.integrationId);
+        assert.equal(credentialVersion, snapshot.credentialVersion);
+        calls.push("verify");
+        return true;
+      },
+    },
   });
 
   const result = await service.syncCurrentStremioIntegration(userId);
-  assert.deepEqual(calls, ["snapshot", "match", "import"]);
+  assert.deepEqual(calls, [
+    "snapshot",
+    "verify",
+    "match",
+    "verify",
+    "import",
+    "verify",
+  ]);
   assert.deepEqual(result, {
     provider: "stremio",
     status: "success",
@@ -78,7 +96,12 @@ test("pipeline calls snapshot, matching, and import in exact order", async () =>
     matching,
     import: importSummary,
   });
-  assert.equal(/credential|authKey|password|raw/i.test(JSON.stringify(result)), false);
+  assert.equal(
+    /credentialVersion|integrationId|credential|authKey|password|raw/i.test(
+      JSON.stringify(result)
+    ),
+    false
+  );
 });
 
 test("item-level matching and timestamp outcomes still complete successfully", async () => {
@@ -92,6 +115,7 @@ test("item-level matching and timestamp outcomes still complete successfully", a
         return importSummary;
       },
     },
+    generationService: alwaysCurrent,
   });
 
   const result = await service.syncCurrentStremioIntegration(userId);
@@ -132,6 +156,7 @@ test("snapshot failures stop matching and import and expose only stable codes", 
           return importSummary;
         },
       },
+      generationService: alwaysCurrent,
     });
 
     await assert.rejects(
@@ -155,6 +180,7 @@ test("fatal matching failure prevents import and fatal import failure is sanitiz
         return importSummary;
       },
     },
+    generationService: alwaysCurrent,
   });
   await assert.rejects(
     matchingFailure.syncCurrentStremioIntegration(userId),
@@ -167,10 +193,39 @@ test("fatal matching failure prevents import and fatal import failure is sanitiz
     snapshotService: { sync: async () => snapshot },
     matchingService: { matchCurrentStremioMovies: async () => matching },
     importService: { importCurrentStremioMovies: async () => { throw new Error("db"); } },
+    generationService: alwaysCurrent,
   });
   await assert.rejects(
     importFailure.syncCurrentStremioIntegration(userId),
     (error: unknown) =>
       error instanceof StremioPipelineError && error.code === "stremio_sync_failed"
   );
+});
+
+test("generation change between stages stops before the next stage", async () => {
+  let checks = 0;
+  let importCalled = false;
+  const service = createStremioPipelineService({
+    snapshotService: { sync: async () => snapshot },
+    matchingService: { matchCurrentStremioMovies: async () => matching },
+    importService: {
+      importCurrentStremioMovies: async () => {
+        importCalled = true;
+        return importSummary;
+      },
+    },
+    generationService: {
+      isCurrent: async () => {
+        checks += 1;
+        return checks === 1;
+      },
+    },
+  });
+
+  await assert.rejects(
+    service.syncCurrentStremioIntegration(userId),
+    (error: unknown) =>
+      error instanceof StremioPipelineError && error.code === "integration_changed"
+  );
+  assert.equal(importCalled, false);
 });

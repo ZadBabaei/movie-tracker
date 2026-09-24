@@ -152,6 +152,10 @@ test("real pipeline normalizes, matches, imports, and remains idempotent", async
   assert.equal(first.matching.retryableErrors, 1);
   assert.equal(first.import.imported, 1);
   assert.equal(second.status, "success");
+  assert.equal(
+    /credentialVersion|integrationId|credential|authKey/i.test(JSON.stringify(first)),
+    false
+  );
   assert.equal(state?.matchStatus, "matched");
   assert.equal(state?.importStatus, "imported");
   assert.equal(state?.matchedTmdbId, 329865);
@@ -177,11 +181,12 @@ test("real pipeline normalizes, matches, imports, and remains idempotent", async
 test("two concurrent real pipeline runs converge without duplicates", async () => {
   const integration = await createIntegration();
   const service = createStremioPipelineService(createRealStages());
-  await Promise.all([
+  const results = await Promise.all([
     service.syncCurrentStremioIntegration(integration.userId.toString()),
     service.syncCurrentStremioIntegration(integration.userId.toString()),
   ]);
 
+  assert.deepEqual(results.map((result) => result.status), ["success", "success"]);
   assert.equal(await IntegrationMediaState.countDocuments(), 3);
   assert.equal(await Movie.countDocuments({ imdbID: "tmdb-329865" }), 1);
   assert.equal(await WatchHistoryEntry.countDocuments(), 1);
@@ -198,8 +203,9 @@ test("reconnect after snapshot prevents old-generation matching and import", asy
   const stages = createRealStages();
   const snapshotCompleted = deferred<void>();
   const continuePipeline = deferred<void>();
+  let matchingCalled = false;
+  let importCalled = false;
   const service = createStremioPipelineService({
-    ...stages,
     snapshotService: {
       sync: async (userId) => {
         const result = await stages.snapshotService.sync(userId);
@@ -208,9 +214,26 @@ test("reconnect after snapshot prevents old-generation matching and import", asy
         return result;
       },
     },
+    matchingService: {
+      matchCurrentStremioMovies: async () => {
+        matchingCalled = true;
+        throw new Error("must not run");
+      },
+    },
+    importService: {
+      importCurrentStremioMovies: async () => {
+        importCalled = true;
+        throw new Error("must not run");
+      },
+    },
   });
 
   const running = service.syncCurrentStremioIntegration(integration.userId.toString());
+  const expectedFailure = assert.rejects(
+    running,
+    (error: unknown) =>
+      error instanceof StremioPipelineError && error.code === "integration_changed"
+  );
   await snapshotCompleted.promise;
   await UserIntegration.updateOne(
     { _id: integration._id },
@@ -223,7 +246,7 @@ test("reconnect after snapshot prevents old-generation matching and import", asy
     }
   );
   continuePipeline.resolve();
-  const result = await running;
+  await expectedFailure;
 
   const storedIntegration = await UserIntegration.findById(integration._id)
     .select("+credentialEnvelope");
@@ -231,8 +254,8 @@ test("reconnect after snapshot prevents old-generation matching and import", asy
     integrationId: integration._id,
     providerItemId: "tt2543164",
   });
-  assert.equal(result.matching.examined, 0);
-  assert.equal(result.import.examined, 0);
+  assert.equal(matchingCalled, false);
+  assert.equal(importCalled, false);
   assert.equal(storedIntegration?.status, "connected");
   assert.equal(storedIntegration?.credentialVersion, 2);
   assert.ok(storedIntegration?.credentialEnvelope);
@@ -242,13 +265,14 @@ test("reconnect after snapshot prevents old-generation matching and import", asy
   assert.equal(await WatchHistoryEntry.countDocuments(), 0);
 });
 
-test("disconnect after snapshot remains authoritative and later stages safely no-op", async () => {
+test("disconnect after snapshot fails the pipeline before later stages", async () => {
   const integration = await createIntegration();
   const stages = createRealStages();
   const snapshotCompleted = deferred<void>();
   const continuePipeline = deferred<void>();
+  let matchingCalled = false;
+  let importCalled = false;
   const service = createStremioPipelineService({
-    ...stages,
     snapshotService: {
       sync: async (userId) => {
         const result = await stages.snapshotService.sync(userId);
@@ -257,24 +281,142 @@ test("disconnect after snapshot remains authoritative and later stages safely no
         return result;
       },
     },
+    matchingService: {
+      matchCurrentStremioMovies: async () => {
+        matchingCalled = true;
+        throw new Error("must not run");
+      },
+    },
+    importService: {
+      importCurrentStremioMovies: async () => {
+        importCalled = true;
+        throw new Error("must not run");
+      },
+    },
   });
 
   const running = service.syncCurrentStremioIntegration(integration.userId.toString());
+  const expectedFailure = assert.rejects(
+    running,
+    (error: unknown) =>
+      error instanceof StremioPipelineError && error.code === "integration_changed"
+  );
   await snapshotCompleted.promise;
   await UserIntegration.updateOne(
     { _id: integration._id },
     { $set: { status: "disconnected" }, $unset: { credentialEnvelope: 1 } }
   );
   continuePipeline.resolve();
-  const result = await running;
+  await expectedFailure;
 
   const storedIntegration = await UserIntegration.findById(integration._id)
     .select("+credentialEnvelope");
-  assert.equal(result.matching.examined, 0);
-  assert.equal(result.import.examined, 0);
+  assert.equal(matchingCalled, false);
+  assert.equal(importCalled, false);
   assert.equal(storedIntegration?.status, "disconnected");
   assert.equal(storedIntegration?.credentialEnvelope, undefined);
   assert.equal(await Movie.countDocuments(), 0);
+  assert.equal(await WatchHistoryEntry.countDocuments(), 0);
+});
+
+test("reconnect during matching stops import and cannot match the old generation", async () => {
+  const integration = await createIntegration();
+  const stages = createRealStages({ snapshotResult: [snapshot[0]] });
+  const lookupStarted = deferred<void>();
+  const releaseLookup = deferred<void>();
+  let importCalled = false;
+  const matchingService = createStremioMovieMatchService({
+    resolver: {
+      resolveByImdbId: async () => {
+        lookupStarted.resolve();
+        await releaseLookup.promise;
+        return {
+          tmdbId: 329865,
+          title: "Arrival",
+          posterPath: "/arrival.jpg",
+          voteAverage: 7.6,
+        };
+      },
+    },
+  });
+  const service = createStremioPipelineService({
+    snapshotService: stages.snapshotService,
+    matchingService,
+    importService: {
+      importCurrentStremioMovies: async () => {
+        importCalled = true;
+        throw new Error("must not run");
+      },
+    },
+  });
+
+  const running = service.syncCurrentStremioIntegration(integration.userId.toString());
+  const expectedFailure = assert.rejects(
+    running,
+    (error: unknown) =>
+      error instanceof StremioPipelineError && error.code === "integration_changed"
+  );
+  await lookupStarted.promise;
+  await UserIntegration.updateOne(
+    { _id: integration._id },
+    {
+      $set: {
+        credentialEnvelope: credentialCrypto.encryptCredential("new-test-auth-key"),
+      },
+      $inc: { credentialVersion: 1 },
+    }
+  );
+  releaseLookup.resolve();
+  await expectedFailure;
+
+  const state = await IntegrationMediaState.findOne({ integrationId: integration._id });
+  assert.equal(importCalled, false);
+  assert.equal(state?.observedCredentialVersion, 1);
+  assert.equal(state?.matchStatus, "unresolved");
+  assert.equal(await Movie.countDocuments(), 0);
+  assert.equal(await WatchHistoryEntry.countDocuments(), 0);
+});
+
+test("reconnect during import removes stale history and fails the old pipeline", async () => {
+  const integration = await createIntegration();
+  const stages = createRealStages({ snapshotResult: [snapshot[0]] });
+  const finalizationStarted = deferred<void>();
+  const releaseFinalization = deferred<void>();
+  const importService = createStremioHistoryImportService({
+    beforeFinalize: async () => {
+      finalizationStarted.resolve();
+      await releaseFinalization.promise;
+    },
+  });
+  const service = createStremioPipelineService({ ...stages, importService });
+
+  const running = service.syncCurrentStremioIntegration(integration.userId.toString());
+  const expectedFailure = assert.rejects(
+    running,
+    (error: unknown) =>
+      error instanceof StremioPipelineError && error.code === "integration_changed"
+  );
+  await finalizationStarted.promise;
+  await UserIntegration.updateOne(
+    { _id: integration._id },
+    {
+      $set: {
+        credentialEnvelope: credentialCrypto.encryptCredential("new-test-auth-key"),
+      },
+      $inc: { credentialVersion: 1 },
+    }
+  );
+  releaseFinalization.resolve();
+  await expectedFailure;
+
+  const state = await IntegrationMediaState.findOne({ integrationId: integration._id });
+  const storedIntegration = await UserIntegration.findById(integration._id)
+    .select("+credentialEnvelope");
+  assert.equal(storedIntegration?.status, "connected");
+  assert.equal(storedIntegration?.credentialVersion, 2);
+  assert.ok(storedIntegration?.credentialEnvelope);
+  assert.equal(state?.importStatus, "pending");
+  assert.equal(state?.importedHistoryEntryId, undefined);
   assert.equal(await WatchHistoryEntry.countDocuments(), 0);
 });
 

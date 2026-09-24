@@ -279,6 +279,8 @@ export const createStremioSyncService = ({
       }
       return {
         status: "success" as const,
+        integrationId: integration._id.toString(),
+        credentialVersion,
         snapshotItems: snapshot.length,
         movieStates: normalized.length,
         ignoredItems: snapshot.length - normalized.length,

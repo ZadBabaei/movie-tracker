@@ -1,3 +1,5 @@
+import { Types } from "mongoose";
+import UserIntegration from "../../models/UserIntegration";
 import stremioHistoryImportService, {
   StremioHistoryImportSummary,
 } from "./stremioHistoryImportService";
@@ -40,7 +42,11 @@ export class StremioPipelineError extends Error {
 }
 
 interface SnapshotService {
-  sync(userId: string): Promise<StremioSnapshotSummary & { status: "success" }>;
+  sync(userId: string): Promise<StremioSnapshotSummary & {
+    status: "success";
+    integrationId: string;
+    credentialVersion: number;
+  }>;
 }
 
 interface MatchingService {
@@ -49,6 +55,10 @@ interface MatchingService {
 
 interface ImportService {
   importCurrentStremioMovies(userId: string): Promise<StremioHistoryImportSummary>;
+}
+
+interface GenerationService {
+  isCurrent(integrationId: string, credentialVersion: number): Promise<boolean>;
 }
 
 export interface StremioPipelineService {
@@ -80,14 +90,32 @@ const normalizeSnapshotError = (error: unknown): StremioPipelineError => {
   return new StremioPipelineError("stremio_sync_failed");
 };
 
+const versionCondition = (credentialVersion: number) =>
+  credentialVersion === 0
+    ? { $or: [{ credentialVersion: 0 }, { credentialVersion: { $exists: false } }] }
+    : { credentialVersion };
+
+const defaultGenerationService: GenerationService = {
+  async isCurrent(integrationId, credentialVersion) {
+    if (!Types.ObjectId.isValid(integrationId)) return false;
+    return Boolean(await UserIntegration.exists({
+      _id: new Types.ObjectId(integrationId),
+      status: "connected",
+      ...versionCondition(credentialVersion),
+    }));
+  },
+};
+
 export const createStremioPipelineService = ({
   snapshotService = stremioSyncService,
   matchingService = stremioMovieMatchService,
   importService = stremioHistoryImportService,
+  generationService = defaultGenerationService,
 }: {
   snapshotService?: SnapshotService;
   matchingService?: MatchingService;
   importService?: ImportService;
+  generationService?: GenerationService;
 } = {}): StremioPipelineService => ({
   async syncCurrentStremioIntegration(userId) {
     let snapshotResult: Awaited<ReturnType<SnapshotService["sync"]>>;
@@ -97,12 +125,29 @@ export const createStremioPipelineService = ({
       throw normalizeSnapshotError(error);
     }
 
+    const requireCurrentSnapshotGeneration = async () => {
+      try {
+        const current = await generationService.isCurrent(
+          snapshotResult.integrationId,
+          snapshotResult.credentialVersion
+        );
+        if (!current) throw new StremioPipelineError("integration_changed");
+      } catch (error) {
+        if (error instanceof StremioPipelineError) throw error;
+        throw new StremioPipelineError("stremio_sync_failed");
+      }
+    };
+
+    await requireCurrentSnapshotGeneration();
+
     let matching: StremioMovieMatchSummary;
     try {
       matching = await matchingService.matchCurrentStremioMovies(userId);
     } catch {
       throw new StremioPipelineError("stremio_sync_failed");
     }
+
+    await requireCurrentSnapshotGeneration();
 
     let importSummary: StremioHistoryImportSummary;
     try {
@@ -111,7 +156,14 @@ export const createStremioPipelineService = ({
       throw new StremioPipelineError("stremio_sync_failed");
     }
 
-    const { status: _snapshotStatus, ...snapshot } = snapshotResult;
+    await requireCurrentSnapshotGeneration();
+
+    const {
+      status: _snapshotStatus,
+      integrationId: _integrationId,
+      credentialVersion: _credentialVersion,
+      ...snapshot
+    } = snapshotResult;
     return {
       provider: "stremio",
       status: "success",
