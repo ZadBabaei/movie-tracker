@@ -29,6 +29,7 @@ type ImportResult =
 
 interface HistoryCreatePayload {
   _id: Types.ObjectId;
+  mediaType: "movie";
   movieId: Types.ObjectId;
   scope: "personal";
   createdBy: Types.ObjectId;
@@ -67,8 +68,10 @@ const safeExistingHistory = (
   ownerId: Types.ObjectId
 ) =>
   entry.integrationMediaStateId?.toString() === state._id.toString() &&
+  entry.mediaType !== "tv_episode" &&
+  Boolean(entry.movieId) &&
   entry.scope === "personal" &&
-  entry.movieId.toString() === state.matchedMovieId?.toString() &&
+  entry.movieId?.toString() === state.matchedMovieId?.toString() &&
   entry.createdBy.toString() === ownerId.toString() &&
   !entry.groupId &&
   entry.participants.length === 1 &&
@@ -330,6 +333,7 @@ export const createStremioHistoryImportService = ({
         try {
           historyEntry = await createHistoryEntry({
             _id: historyEntryId,
+            mediaType: "movie",
             movieId,
             scope: "personal",
             createdBy: ownerId,

@@ -160,7 +160,7 @@ test("real pipeline normalizes, matches, imports, and remains idempotent", async
   assert.equal(state?.importStatus, "imported");
   assert.equal(state?.matchedTmdbId, 329865);
   assert.equal(movie?.imdbID, "tmdb-329865");
-  assert.equal(history?.movieId.toString(), movie?._id.toString());
+  assert.equal(history?.movieId?.toString(), movie?._id.toString());
   assert.equal(await IntegrationMediaState.countDocuments(), 3);
   assert.equal(await Movie.countDocuments(), 1);
   assert.equal(await WatchHistoryEntry.countDocuments(), 1);

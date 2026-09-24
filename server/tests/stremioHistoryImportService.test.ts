@@ -11,8 +11,11 @@ import { createStremioHistoryImportService } from "../services/integrations/stre
 import { IsolatedTestMongo, startIsolatedTestMongo } from "./helpers/testMongo";
 
 let testMongo: IsolatedTestMongo;
+const socketModule = require("../socket") as typeof import("../socket");
+const originalGetIO = socketModule.getIO;
 
 before(async () => {
+  (socketModule as any).getIO = () => ({ to: () => ({ emit: () => undefined }) });
   testMongo = await startIsolatedTestMongo("movie_tracker_stremio_history_import_test");
   await Promise.all([
     UserIntegration.syncIndexes(),
@@ -33,6 +36,7 @@ afterEach(async () => {
 });
 
 after(async () => {
+  (socketModule as any).getIO = originalGetIO;
   await testMongo.stop();
 });
 
@@ -95,7 +99,7 @@ const deferred = <T>() => {
   return { promise, resolve };
 };
 
-const routeHandler = (method: "patch" | "delete" | "put", path: string) => {
+const routeHandler = (method: "get" | "patch" | "delete" | "put", path: string) => {
   const layer = (historyRouter as any).stack.find(
     (candidate: any) => candidate.route?.path === path && candidate.route?.methods?.[method]
   );
@@ -105,6 +109,7 @@ const routeHandler = (method: "patch" | "delete" | "put", path: string) => {
 const patchHistory = routeHandler("patch", "/:historyEntryId");
 const deleteHistory = routeHandler("delete", "/:historyEntryId");
 const rateHistory = routeHandler("put", "/:historyEntryId/rating");
+const listPersonalHistory = routeHandler("get", "/personal");
 
 const invokeRoute = async (
   handler: any,
@@ -161,8 +166,9 @@ test("current matched completed state imports one provenance-linked personal occ
   });
   assert.ok(history);
   assert.equal(history?.integrationMediaStateId?.toString(), state._id.toString());
-  assert.equal(history?.movieId.toString(), movie._id.toString());
+  assert.equal(history?.movieId?.toString(), movie._id.toString());
   assert.equal(history?.scope, "personal");
+  assert.equal(history?.mediaType, "movie");
   assert.equal(history?.createdBy.toString(), integration.userId.toString());
   assert.deepEqual(history?.participants.map(String), [integration.userId.toString()]);
   assert.equal(history?.groupId, undefined);
@@ -172,6 +178,15 @@ test("current matched completed state imports one provenance-linked personal occ
   assert.equal(history?.watchedLocation, "");
   assert.equal(history?.watchedNotes, "");
   assert.deepEqual(history?.ratings, []);
+  const listed = await invokeRoute(
+    listPersonalHistory,
+    integration.userId,
+    new mongoose.Types.ObjectId()
+  );
+  assert.equal(listed.statusCode, 200);
+  assert.equal(listed.body.items.length, 1);
+  assert.equal(listed.body.items[0]._id, history?._id.toString());
+  assert.equal(listed.body.items[0].mediaType, "movie");
   assert.equal(await Group.countDocuments(), 0);
   assert.equal(stored?.importStatus, "imported");
   assert.equal(stored?.importedHistoryEntryId?.toString(), history?._id.toString());
@@ -618,6 +633,47 @@ test("deleting imported history suppresses reimport while deleting manual histor
   const unrelatedStored = await IntegrationMediaState.findById(unrelatedState._id);
   assert.equal(unrelatedStored?.importStatus, "pending");
   assert.equal(unrelatedStored?.suppressionReason, undefined);
+
+  const tv = {
+    seriesTmdbId: 199925,
+    seasonNumber: 1,
+    episodeNumber: 1,
+    episodeTmdbId: 4321001,
+    seriesTitle: "Special Ops: Lioness",
+    episodeTitle: "Sacrificial Soldiers",
+  };
+  const manualTv = await WatchHistoryEntry.create({
+    mediaType: "tv_episode",
+    tv,
+    scope: "personal",
+    createdBy: integration.userId,
+    participants: [integration.userId],
+    watchedAt,
+  });
+  assert.equal(manualTv.integrationMediaStateId, undefined);
+  assert.equal((await invokeRoute(deleteHistory, integration.userId, manualTv._id)).statusCode, 200);
+
+  const group = await Group.create({
+    name: "TV Group",
+    slug: `tv-group-${new mongoose.Types.ObjectId().toString()}`,
+    creator: integration.userId,
+    members: [integration.userId],
+  });
+  const groupTv = await WatchHistoryEntry.create({
+    mediaType: "tv_episode",
+    tv: { ...tv, episodeNumber: 2 },
+    scope: "group",
+    groupId: group._id,
+    createdBy: integration.userId,
+    participants: [integration.userId],
+    watchedAt,
+  });
+  assert.equal(groupTv.integrationMediaStateId, undefined);
+  assert.equal((await invokeRoute(deleteHistory, integration.userId, groupTv._id)).statusCode, 200);
+
+  const afterTvDeletes = await IntegrationMediaState.findById(unrelatedState._id);
+  assert.equal(afterTvDeletes?.importStatus, "pending");
+  assert.equal(afterTvDeletes?.suppressionReason, undefined);
 });
 
 test("imported history remains editable and rateable without creating another occurrence", async () => {
