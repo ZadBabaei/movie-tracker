@@ -61,6 +61,20 @@ interface GenerationService {
   isCurrent(integrationId: string, credentialVersion: number): Promise<boolean>;
 }
 
+interface PipelineLifecycleService {
+  completeSuccess(
+    integrationId: string,
+    credentialVersion: number,
+    completedAt: Date
+  ): Promise<boolean>;
+  completeFailure(
+    integrationId: string,
+    credentialVersion: number,
+    completedAt: Date,
+    errorCode: string
+  ): Promise<boolean>;
+}
+
 export interface StremioPipelineService {
   syncCurrentStremioIntegration(userId: string): Promise<StremioPipelineResult>;
 }
@@ -106,16 +120,59 @@ const defaultGenerationService: GenerationService = {
   },
 };
 
+const currentIntegrationFilter = (integrationId: string, credentialVersion: number) => ({
+  _id: new Types.ObjectId(integrationId),
+  status: "connected" as const,
+  ...versionCondition(credentialVersion),
+});
+
+const defaultLifecycleService: PipelineLifecycleService = {
+  async completeSuccess(integrationId, credentialVersion, completedAt) {
+    if (!Types.ObjectId.isValid(integrationId)) return false;
+    const result = await UserIntegration.updateOne(
+      currentIntegrationFilter(integrationId, credentialVersion),
+      {
+        $set: {
+          lastSyncCompletedAt: completedAt,
+          lastSuccessfulSyncAt: completedAt,
+          lastSyncStatus: "success",
+        },
+        $unset: { lastErrorCode: 1 },
+      }
+    );
+    return result.matchedCount === 1;
+  },
+
+  async completeFailure(integrationId, credentialVersion, completedAt, errorCode) {
+    if (!Types.ObjectId.isValid(integrationId)) return false;
+    const result = await UserIntegration.updateOne(
+      currentIntegrationFilter(integrationId, credentialVersion),
+      {
+        $set: {
+          lastSyncCompletedAt: completedAt,
+          lastSyncStatus: "failed",
+          lastErrorCode: errorCode.slice(0, 128),
+        },
+      }
+    );
+    return result.matchedCount === 1;
+  },
+};
+
 export const createStremioPipelineService = ({
   snapshotService = stremioSyncService,
   matchingService = stremioMovieMatchService,
   importService = stremioHistoryImportService,
   generationService = defaultGenerationService,
+  lifecycleService = defaultLifecycleService,
+  now = () => new Date(),
 }: {
   snapshotService?: SnapshotService;
   matchingService?: MatchingService;
   importService?: ImportService;
   generationService?: GenerationService;
+  lifecycleService?: PipelineLifecycleService;
+  now?: () => Date;
 } = {}): StremioPipelineService => ({
   async syncCurrentStremioIntegration(userId) {
     let snapshotResult: Awaited<ReturnType<SnapshotService["sync"]>>;
@@ -138,13 +195,29 @@ export const createStremioPipelineService = ({
       }
     };
 
+    const failCurrentPipeline = async (): Promise<never> => {
+      try {
+        const completed = await lifecycleService.completeFailure(
+          snapshotResult.integrationId,
+          snapshotResult.credentialVersion,
+          now(),
+          "stremio_sync_failed"
+        );
+        if (!completed) throw new StremioPipelineError("integration_changed");
+      } catch (error) {
+        if (error instanceof StremioPipelineError) throw error;
+        throw new StremioPipelineError("stremio_sync_failed");
+      }
+      throw new StremioPipelineError("stremio_sync_failed");
+    };
+
     await requireCurrentSnapshotGeneration();
 
     let matching: StremioMovieMatchSummary;
     try {
       matching = await matchingService.matchCurrentStremioMovies(userId);
     } catch {
-      throw new StremioPipelineError("stremio_sync_failed");
+      return failCurrentPipeline();
     }
 
     await requireCurrentSnapshotGeneration();
@@ -153,10 +226,22 @@ export const createStremioPipelineService = ({
     try {
       importSummary = await importService.importCurrentStremioMovies(userId);
     } catch {
-      throw new StremioPipelineError("stremio_sync_failed");
+      return failCurrentPipeline();
     }
 
     await requireCurrentSnapshotGeneration();
+
+    let finalized: boolean;
+    try {
+      finalized = await lifecycleService.completeSuccess(
+        snapshotResult.integrationId,
+        snapshotResult.credentialVersion,
+        now()
+      );
+    } catch {
+      throw new StremioPipelineError("stremio_sync_failed");
+    }
+    if (!finalized) throw new StremioPipelineError("integration_changed");
 
     const {
       status: _snapshotStatus,

@@ -115,6 +115,9 @@ test("integration routes reject unauthenticated requests", async () => {
 
 test("GET lists only the authenticated user's sanitized integrations", async () => {
   let requestedUserId = "";
+  const startedAt = new Date("2026-09-01T01:02:03.000Z");
+  const completedAt = new Date("2026-09-01T01:02:09.000Z");
+  const successfulAt = new Date("2026-08-31T01:02:09.000Z");
   const router = createIntegrationRouter({
     lifecycleService: serviceWith({
       listForUser: async (value) => {
@@ -124,11 +127,11 @@ test("GET lists only the authenticated user's sanitized integrations", async () 
             provider: "stremio",
             status: "connected",
             connected: true,
-            lastSyncStartedAt: null,
-            lastSyncCompletedAt: null,
-            lastSuccessfulSyncAt: null,
-            lastSyncStatus: null,
-            lastErrorCode: null,
+            lastSyncStartedAt: startedAt,
+            lastSyncCompletedAt: completedAt,
+            lastSuccessfulSyncAt: successfulAt,
+            lastSyncStatus: "failed",
+            lastErrorCode: "stremio_sync_failed",
           },
         ];
       },
@@ -138,7 +141,18 @@ test("GET lists only the authenticated user's sanitized integrations", async () 
   await handler(router, "/", "get")({ user: { id: userId }, body: {} }, res);
 
   assert.equal(requestedUserId, userId);
+  assert.deepEqual(res.state.body.integrations[0], {
+    provider: "stremio",
+    status: "connected",
+    connected: true,
+    lastSyncStartedAt: startedAt,
+    lastSyncCompletedAt: completedAt,
+    lastSuccessfulSyncAt: successfulAt,
+    lastSyncStatus: "failed",
+    lastErrorCode: "stremio_sync_failed",
+  });
   assert.equal(JSON.stringify(res.state.body).includes("credentialEnvelope"), false);
+  assert.equal(JSON.stringify(res.state.body).includes("credentialVersion"), false);
 });
 
 test("connect validates input and ignores any body userId", async () => {

@@ -82,6 +82,19 @@ const deferred = <T>() => {
 test("first, repeated, and changed snapshots upsert one normalized provider state", async () => {
   const userId = new mongoose.Types.ObjectId();
   const integration = await createConnectedIntegration(userId);
+  const previousCompletedAt = new Date("2025-12-30T00:00:00.000Z");
+  const previousSuccessfulAt = new Date("2025-12-29T00:00:00.000Z");
+  await UserIntegration.updateOne(
+    { _id: integration._id },
+    {
+      $set: {
+        lastSyncCompletedAt: previousCompletedAt,
+        lastSuccessfulSyncAt: previousSuccessfulAt,
+        lastSyncStatus: "failed",
+        lastErrorCode: "previous_pipeline_failure",
+      },
+    }
+  );
   let snapshot = [movieItem()];
   const service = createStremioSyncService({
     client: snapshotClient(async () => snapshot),
@@ -113,11 +126,17 @@ test("first, repeated, and changed snapshots upsert one normalized provider stat
   assert.equal("name" in state!.toObject(), false);
 
   const updatedIntegration = await UserIntegration.findById(integration._id);
-  assert.equal(updatedIntegration?.lastSyncStatus, "success");
+  assert.equal(updatedIntegration?.lastSyncStatus, "failed");
   assert.ok(updatedIntegration?.lastSyncStartedAt);
-  assert.ok(updatedIntegration?.lastSyncCompletedAt);
-  assert.ok(updatedIntegration?.lastSuccessfulSyncAt);
-  assert.equal(updatedIntegration?.lastErrorCode, undefined);
+  assert.equal(
+    updatedIntegration?.lastSyncCompletedAt?.toISOString(),
+    previousCompletedAt.toISOString()
+  );
+  assert.equal(
+    updatedIntegration?.lastSuccessfulSyncAt?.toISOString(),
+    previousSuccessfulAt.toISOString()
+  );
+  assert.equal(updatedIntegration?.lastErrorCode, "previous_pipeline_failure");
 });
 
 test("provider refresh preserves every matching/import pipeline field", async () => {

@@ -134,9 +134,22 @@ const createRealStages = ({
 
 test("real pipeline normalizes, matches, imports, and remains idempotent", async () => {
   const integration = await createIntegration();
+  await UserIntegration.updateOne(
+    { _id: integration._id },
+    { $set: { lastSyncStatus: "failed", lastErrorCode: "previous_failure" } }
+  );
   const service = createStremioPipelineService(createRealStages());
 
   const first = await service.syncCurrentStremioIntegration(integration.userId.toString());
+  const afterFirst = await UserIntegration.findById(integration._id);
+  assert.equal(afterFirst?.lastSyncStatus, "success");
+  assert.ok(afterFirst?.lastSyncStartedAt);
+  assert.ok(afterFirst?.lastSyncCompletedAt);
+  assert.equal(
+    afterFirst?.lastSuccessfulSyncAt?.toISOString(),
+    afterFirst?.lastSyncCompletedAt?.toISOString()
+  );
+  assert.equal(afterFirst?.lastErrorCode, undefined);
   const second = await service.syncCurrentStremioIntegration(integration.userId.toString());
   const state = await IntegrationMediaState.findOne({
     integrationId: integration._id,
@@ -196,6 +209,59 @@ test("two concurrent real pipeline runs converge without duplicates", async () =
   });
   assert.equal(state?.matchStatus, "matched");
   assert.equal(state?.importStatus, "imported");
+  const storedIntegration = await UserIntegration.findById(integration._id);
+  assert.equal(storedIntegration?.lastSyncStatus, "success");
+  assert.ok(storedIntegration?.lastSyncCompletedAt);
+  assert.equal(
+    storedIntegration?.lastSuccessfulSyncAt?.toISOString(),
+    storedIntegration?.lastSyncCompletedAt?.toISOString()
+  );
+});
+
+test("fatal matching and import failures finalize the full pipeline as failed", async () => {
+  for (const failingStage of ["matching", "import"] as const) {
+    const integration = await createIntegration();
+    const previousSuccess = new Date("2026-01-02T03:04:05.000Z");
+    await UserIntegration.updateOne(
+      { _id: integration._id },
+      {
+        $set: {
+          lastSyncStatus: "success",
+          lastSyncCompletedAt: previousSuccess,
+          lastSuccessfulSyncAt: previousSuccess,
+        },
+      }
+    );
+    const stages = createRealStages({ snapshotResult: [snapshot[0]] });
+    const service = createStremioPipelineService({
+      ...stages,
+      matchingService: failingStage === "matching"
+        ? { matchCurrentStremioMovies: async () => { throw new Error("matching database detail"); } }
+        : stages.matchingService,
+      importService: failingStage === "import"
+        ? { importCurrentStremioMovies: async () => { throw new Error("import database detail"); } }
+        : stages.importService,
+    });
+
+    await assert.rejects(
+      service.syncCurrentStremioIntegration(integration.userId.toString()),
+      (error: unknown) =>
+        error instanceof StremioPipelineError && error.code === "stremio_sync_failed"
+    );
+    const stored = await UserIntegration.findById(integration._id);
+    assert.equal(stored?.lastSyncStatus, "failed");
+    assert.ok(stored?.lastSyncStartedAt);
+    assert.ok(stored?.lastSyncCompletedAt);
+    assert.equal(stored?.lastSuccessfulSyncAt?.toISOString(), previousSuccess.toISOString());
+    assert.equal(stored?.lastErrorCode, "stremio_sync_failed");
+
+    await Promise.all([
+      UserIntegration.deleteMany({}),
+      IntegrationMediaState.deleteMany({}),
+      Movie.deleteMany({}),
+      WatchHistoryEntry.deleteMany({}),
+    ]);
+  }
 });
 
 test("reconnect after snapshot prevents old-generation matching and import", async () => {
@@ -241,6 +307,9 @@ test("reconnect after snapshot prevents old-generation matching and import", asy
       $set: {
         status: "connected",
         credentialEnvelope: credentialCrypto.encryptCredential("new-test-auth-key"),
+        lastSyncCompletedAt: new Date("2026-08-01T00:00:00.000Z"),
+        lastSyncStatus: "failed",
+        lastErrorCode: "new_generation_state",
       },
       $inc: { credentialVersion: 1 },
     }
@@ -259,6 +328,12 @@ test("reconnect after snapshot prevents old-generation matching and import", asy
   assert.equal(storedIntegration?.status, "connected");
   assert.equal(storedIntegration?.credentialVersion, 2);
   assert.ok(storedIntegration?.credentialEnvelope);
+  assert.equal(storedIntegration?.lastSyncStatus, "failed");
+  assert.equal(storedIntegration?.lastErrorCode, "new_generation_state");
+  assert.equal(
+    storedIntegration?.lastSyncCompletedAt?.toISOString(),
+    "2026-08-01T00:00:00.000Z"
+  );
   assert.equal(state?.observedCredentialVersion, 1);
   assert.equal(state?.matchStatus, "unresolved");
   assert.equal(await Movie.countDocuments(), 0);
@@ -362,6 +437,9 @@ test("reconnect during matching stops import and cannot match the old generation
     {
       $set: {
         credentialEnvelope: credentialCrypto.encryptCredential("new-test-auth-key"),
+        lastSyncCompletedAt: new Date("2026-08-02T00:00:00.000Z"),
+        lastSyncStatus: "failed",
+        lastErrorCode: "new_generation_state",
       },
       $inc: { credentialVersion: 1 },
     }
@@ -370,7 +448,14 @@ test("reconnect during matching stops import and cannot match the old generation
   await expectedFailure;
 
   const state = await IntegrationMediaState.findOne({ integrationId: integration._id });
+  const storedIntegration = await UserIntegration.findById(integration._id);
   assert.equal(importCalled, false);
+  assert.equal(storedIntegration?.lastSyncStatus, "failed");
+  assert.equal(storedIntegration?.lastErrorCode, "new_generation_state");
+  assert.equal(
+    storedIntegration?.lastSyncCompletedAt?.toISOString(),
+    "2026-08-02T00:00:00.000Z"
+  );
   assert.equal(state?.observedCredentialVersion, 1);
   assert.equal(state?.matchStatus, "unresolved");
   assert.equal(await Movie.countDocuments(), 0);
@@ -402,6 +487,9 @@ test("reconnect during import removes stale history and fails the old pipeline",
     {
       $set: {
         credentialEnvelope: credentialCrypto.encryptCredential("new-test-auth-key"),
+        lastSyncCompletedAt: new Date("2026-08-03T00:00:00.000Z"),
+        lastSyncStatus: "failed",
+        lastErrorCode: "new_generation_state",
       },
       $inc: { credentialVersion: 1 },
     }
@@ -415,6 +503,12 @@ test("reconnect during import removes stale history and fails the old pipeline",
   assert.equal(storedIntegration?.status, "connected");
   assert.equal(storedIntegration?.credentialVersion, 2);
   assert.ok(storedIntegration?.credentialEnvelope);
+  assert.equal(storedIntegration?.lastSyncStatus, "failed");
+  assert.equal(storedIntegration?.lastErrorCode, "new_generation_state");
+  assert.equal(
+    storedIntegration?.lastSyncCompletedAt?.toISOString(),
+    "2026-08-03T00:00:00.000Z"
+  );
   assert.equal(state?.importStatus, "pending");
   assert.equal(state?.importedHistoryEntryId, undefined);
   assert.equal(await WatchHistoryEntry.countDocuments(), 0);
@@ -451,5 +545,7 @@ test("invalid snapshot session requires reauth and never invokes later stages", 
   assert.equal(importCalled, false);
   assert.equal(stored?.status, "reauth_required");
   assert.equal(stored?.credentialEnvelope, undefined);
+  assert.equal(stored?.lastSyncStatus, "failed");
+  assert.ok(stored?.lastSyncCompletedAt);
   assert.equal(stored?.lastErrorCode, "provider_session_invalid");
 });

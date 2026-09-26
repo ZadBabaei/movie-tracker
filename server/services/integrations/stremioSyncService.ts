@@ -235,7 +235,6 @@ export const createStremioSyncService = ({
     const startedAt = now();
     const start = await UserIntegration.updateOne(currentFilter, {
       $set: { lastSyncStartedAt: startedAt },
-      $unset: { lastErrorCode: 1 },
     });
     if (start.matchedCount !== 1) throw new StremioSyncError("integration_changed");
 
@@ -265,16 +264,8 @@ export const createStremioSyncService = ({
         observedAt,
         credentialVersion
       );
-      const completedAt = now();
-      const completion = await UserIntegration.updateOne(currentFilter, {
-        $set: {
-          lastSyncCompletedAt: completedAt,
-          lastSuccessfulSyncAt: completedAt,
-          lastSyncStatus: "success",
-        },
-        $unset: { lastErrorCode: 1 },
-      });
-      if (completion.matchedCount !== 1) {
+      const currentAfterIngestion = await UserIntegration.exists(currentFilter);
+      if (!currentAfterIngestion) {
         throw new StremioSyncError("integration_changed");
       }
       return {
