@@ -1,7 +1,13 @@
 import axios from "axios";
 import apiClient from "./apiClient";
 
-export type StremioIntegrationStatus = "connected" | "disconnected" | "reauth_required";
+export type StremioIntegrationStatus =
+  | "connected"
+  | "disconnected"
+  | "reauth_required"
+  | "error";
+
+export type StremioSyncStatus = "success" | "partial" | "failed";
 
 export interface StremioIntegration {
   provider: "stremio";
@@ -10,7 +16,7 @@ export interface StremioIntegration {
   lastSyncStartedAt: string | null;
   lastSyncCompletedAt: string | null;
   lastSuccessfulSyncAt: string | null;
-  lastSyncStatus: "success" | "failed" | null;
+  lastSyncStatus: StremioSyncStatus | null;
   lastErrorCode: string | null;
 }
 

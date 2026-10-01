@@ -64,7 +64,8 @@ const ConnectModal = ({
     >
       <p className="stremio-modal-intro">
         Use your Stremio account to import completed movies into your private watch history.
-        Credentials are exchanged for a session and are never saved by Movie Tracker.
+        Your Stremio password is never stored. Movie Tracker securely stores an encrypted
+        Stremio session so you can sync again without reconnecting.
       </p>
       <form className="stremio-connect-form" onSubmit={submit} autoComplete="off">
         <label>
@@ -164,8 +165,15 @@ const StremioHomeControl = ({
   } = useStremioIntegration({ onSyncComplete });
 
   const reauth = integration?.status === "reauth_required";
+  const integrationError = integration?.status === "error";
+  const reconnecting = reauth || integrationError;
   const connected = integration?.status === "connected" && integration.connected;
   const lastSync = integration?.lastSuccessfulSyncAt;
+  const syncStatusMessage = integration?.lastSyncStatus === "partial"
+    ? "The latest sync completed with some items needing attention."
+    : integration?.lastSyncStatus === "failed"
+      ? "The latest sync did not complete. Try again."
+      : "";
   const attentionCount = syncResult
     ? syncResult.matching.movieMissing
       + syncResult.matching.unsupported
@@ -183,7 +191,13 @@ const StremioHomeControl = ({
     <>
       <div className="stremio-core" aria-live="polite">
         <span className="core-eyebrow">
-          {loading ? "Reading signal" : reauth ? "Signal interrupted" : connected ? "Stremio linked" : "Stremio signal"}
+          {loading
+            ? "Reading signal"
+            : reconnecting
+              ? "Signal interrupted"
+              : connected
+                ? "Stremio linked"
+                : "Stremio signal"}
         </span>
 
         {loading ? (
@@ -213,6 +227,9 @@ const StremioHomeControl = ({
                 {attentionCount ? ` · ${attentionCount} need attention` : " · signal clear"}
               </p>
             ) : null}
+            {syncStatusMessage && !syncResult && !error ? (
+              <p className="stremio-core-error" role="status">{syncStatusMessage}</p>
+            ) : null}
             {error && !disconnectOpen ? <p className="stremio-core-error" role="alert">{error}</p> : null}
             <button
               type="button"
@@ -228,14 +245,16 @@ const StremioHomeControl = ({
           </>
         ) : (
           <>
-            <h1>{reauth ? "Reconnect the signal." : "Bring your history into orbit."}</h1>
+            <h1>{reconnecting ? "Reconnect the signal." : "Bring your history into orbit."}</h1>
             <p className="stremio-core-copy">
               {reauth
                 ? "Your Stremio session expired. Reconnect to resume movie imports."
+                : integrationError
+                  ? "Your Stremio connection needs attention. Reconnect to resume movie imports."
                 : "Connect Stremio, then sync completed movies into your private history."}
             </p>
             <button type="button" className="stremio-connect-button" onClick={openConnect} disabled={operation !== null}>
-              {reauth ? "Reconnect Stremio" : "Connect Stremio"}
+              {reconnecting ? "Reconnect Stremio" : "Connect Stremio"}
             </button>
             {error && !connectOpen ? <p className="stremio-core-error" role="alert">{error}</p> : null}
           </>
@@ -244,7 +263,7 @@ const StremioHomeControl = ({
 
       <ConnectModal
         open={connectOpen}
-        reconnecting={reauth}
+        reconnecting={reconnecting}
         submitting={operation === "connect"}
         error={connectOpen ? error : ""}
         onClose={() => {

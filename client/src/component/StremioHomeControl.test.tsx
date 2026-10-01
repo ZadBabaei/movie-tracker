@@ -90,6 +90,9 @@ describe("Stremio Home control", () => {
     const email = screen.getByLabelText("Stremio email");
     const password = screen.getByLabelText("Stremio password");
     expect(password).toHaveAttribute("type", "password");
+    expect(screen.getByText(/Your Stremio password is never stored/)).toHaveTextContent(
+      "Movie Tracker securely stores an encrypted Stremio session"
+    );
 
     fireEvent.change(email, { target: { value: "viewer@example.com" } });
     fireEvent.change(password, { target: { value: "never-store-this" } });
@@ -147,6 +150,32 @@ describe("Stremio Home control", () => {
     fireEvent.click(screen.getByRole("button", { name: "Reconnect Stremio" }));
     expect(screen.getByRole("heading", { name: "Reconnect Stremio" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Reconnect account" })).toBeInTheDocument();
+  });
+
+  test("turns an integration error into a reconnect path", async () => {
+    integrationApi.fetchIntegrations.mockResolvedValue([
+      connected({ status: "error", connected: false, lastErrorCode: "integration_error" }),
+    ]);
+    render(<StremioHomeControl />);
+
+    expect(await screen.findByText("Reconnect the signal.")).toBeInTheDocument();
+    expect(screen.getByText(/connection needs attention/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reconnect Stremio" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "SYNC" })).not.toBeInTheDocument();
+  });
+
+  test.each([
+    ["partial", "The latest sync completed with some items needing attention."],
+    ["failed", "The latest sync did not complete. Try again."],
+  ] as const)("does not present a %s last sync as successful", async (lastSyncStatus, message) => {
+    integrationApi.fetchIntegrations.mockResolvedValue([
+      connected({ lastSyncStatus, lastSuccessfulSyncAt: null }),
+    ]);
+    render(<StremioHomeControl />);
+
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(screen.getByText("No completed sync yet")).toBeInTheDocument();
+    expect(screen.queryByText(/signal clear/i)).not.toBeInTheDocument();
   });
 
   test("refreshes into reauthentication when a sync reports an expired session", async () => {
