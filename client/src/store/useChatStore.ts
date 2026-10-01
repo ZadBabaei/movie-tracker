@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { registerUserScopedReset } from "../auth/sessionScope";
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -47,4 +48,10 @@ export const useChatStore = create<ChatState>((set) => ({
 
   setLoading: (loading) => set({ isLoading: loading }),
   clearMessages: () => set({ messages: [] }),
+}));
+
+registerUserScopedReset(() => useChatStore.setState({
+  isOpen: false,
+  messages: [],
+  isLoading: false,
 }));

@@ -21,6 +21,7 @@ import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
 import "./VerticalNavbar.css";
 import logoMark from "../assets/movie-tracker-logo-mark.svg";
 import { resetAnalytics } from "../utils/analytics";
+import { endAuthenticatedSession } from "../auth/sessionScope";
 
 const VerticalNavbar: React.FC = () => {
   const location = useLocation();
@@ -70,8 +71,7 @@ const VerticalNavbar: React.FC = () => {
 
   const logout = () => {
     void resetAnalytics();
-    localStorage.removeItem("token");
-    useUserStore.getState().clear();
+    endAuthenticatedSession();
     navigate("/");
   };
 

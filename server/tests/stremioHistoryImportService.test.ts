@@ -212,6 +212,47 @@ test("current matched completed state imports one provenance-linked personal occ
   }
 });
 
+test("two users importing the same provider movie remain isolated and cannot mutate each other's history", async () => {
+  const userA = new mongoose.Types.ObjectId();
+  const userB = new mongoose.Types.ObjectId();
+  const integrationA = await createIntegration(userA);
+  const integrationB = await createIntegration(userB);
+  const movie = await createMovie();
+  const stateA = await createState(integrationA._id, movie._id);
+
+  const service = createStremioHistoryImportService();
+  const beforeBState = await service.importCurrentStremioMovies(userB.toString());
+  assert.equal(beforeBState.examined, 0);
+  assert.equal((await IntegrationMediaState.findById(stateA._id))?.importStatus, "pending");
+
+  const stateB = await createState(integrationB._id, movie._id);
+  assert.notEqual(stateA._id.toString(), stateB._id.toString());
+  assert.equal((await service.importCurrentStremioMovies(userA.toString())).imported, 1);
+  assert.equal((await service.importCurrentStremioMovies(userB.toString())).imported, 1);
+
+  const historyA = await WatchHistoryEntry.findOne({ integrationMediaStateId: stateA._id });
+  const historyB = await WatchHistoryEntry.findOne({ integrationMediaStateId: stateB._id });
+  assert.ok(historyA);
+  assert.ok(historyB);
+  assert.equal(historyA.createdBy.toString(), userA.toString());
+  assert.deepEqual(historyA.participants.map(String), [userA.toString()]);
+  assert.equal(historyB.createdBy.toString(), userB.toString());
+  assert.deepEqual(historyB.participants.map(String), [userB.toString()]);
+
+  const listA = await invokeRoute(listPersonalHistory, userA, historyA._id);
+  const listB = await invokeRoute(listPersonalHistory, userB, historyB._id);
+  assert.deepEqual(listA.body.items.map((item: any) => item._id), [historyA._id.toString()]);
+  assert.deepEqual(listB.body.items.map((item: any) => item._id), [historyB._id.toString()]);
+
+  const edit = await invokeRoute(patchHistory, userB, historyA._id, { watchedAt: watchedAt.toISOString() });
+  const rate = await invokeRoute(rateHistory, userB, historyA._id, { rating: 10 });
+  const remove = await invokeRoute(deleteHistory, userB, historyA._id);
+  assert.equal(edit.statusCode, 403);
+  assert.equal(rate.statusCode, 403);
+  assert.equal(remove.statusCode, 403);
+  assert.ok(await WatchHistoryEntry.exists({ _id: historyA._id }));
+});
+
 test("eligibility excludes incomplete, old-generation, unmatched, and suppressed states", async () => {
   const integration = await createIntegration();
   const movie = await createMovie();

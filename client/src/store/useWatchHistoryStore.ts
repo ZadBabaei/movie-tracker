@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import * as api from "../api/historyApi";
 import { completeTrailingDay } from "../utils/historyPagination";
+import {
+  getSessionGeneration,
+  isSessionGenerationCurrent,
+  registerUserScopedReset,
+} from "../auth/sessionScope";
 
 export interface HistoryMember {
   _id: string;
@@ -81,6 +86,7 @@ export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
   errors: {},
 
   fetchPersonal: async () => {
+    const sessionGeneration = getSessionGeneration();
     set((state) => ({ loading: { ...state.loading, personal: true }, errors: { ...state.errors, personal: null } }));
     try {
       const data = await api.fetchPersonalHistory({ limit: 100 });
@@ -93,11 +99,13 @@ export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
           return { items: more.items || [], nextCursor: more.nextCursor || null };
         }
       );
+      if (!isSessionGenerationCurrent(sessionGeneration)) return;
       set((state) => ({
         personal: { items: page.items, total: data.stats?.total || 0, nextCursor: page.nextCursor },
         loading: { ...state.loading, personal: false },
       }));
     } catch (error: any) {
+      if (!isSessionGenerationCurrent(sessionGeneration)) return;
       set((state) => ({
         loading: { ...state.loading, personal: false },
         errors: { ...state.errors, personal: error?.response?.data?.msg || "Unable to load your watch history." },
@@ -106,6 +114,7 @@ export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
   },
 
   fetchGroup: async (groupId) => {
+    const sessionGeneration = getSessionGeneration();
     set((state) => ({ loading: { ...state.loading, [groupId]: true }, errors: { ...state.errors, [groupId]: null } }));
     try {
       const data = await api.fetchGroupHistory(groupId, { limit: 100 });
@@ -116,6 +125,7 @@ export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
           return { items: more.items || [], nextCursor: more.nextCursor || null };
         }
       );
+      if (!isSessionGenerationCurrent(sessionGeneration)) return;
       set((state) => ({
         byGroup: {
           ...state.byGroup,
@@ -124,6 +134,7 @@ export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
         loading: { ...state.loading, [groupId]: false },
       }));
     } catch (error: any) {
+      if (!isSessionGenerationCurrent(sessionGeneration)) return;
       set((state) => ({
         loading: { ...state.loading, [groupId]: false },
         errors: { ...state.errors, [groupId]: error?.response?.data?.msg || "Unable to load this group's history." },
@@ -168,4 +179,11 @@ export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
     get().replaceEntry(entry);
     return entry;
   },
+}));
+
+registerUserScopedReset(() => useWatchHistoryStore.setState({
+  personal: emptyBucket(),
+  byGroup: {},
+  loading: {},
+  errors: {},
 }));

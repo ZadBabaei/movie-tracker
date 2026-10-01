@@ -12,6 +12,7 @@ import {
 } from "react-icons/fa6";
 import { FaEyeSlash } from "react-icons/fa";
 import apiClient from "../api/apiClient";
+import { acceptAuthenticatedSession } from "../auth/sessionScope";
 import brandLogo from "../assets/movie-tracker-logo-full.svg";
 import "./AuthPage.css";
 
@@ -103,7 +104,7 @@ function AuthPage({ initialMode = "signin" }) {
       { headers: { "Content-Type": "application/json" } }
     );
 
-    localStorage.setItem("token", res.data.token);
+    acceptAuthenticatedSession(res.data.token);
     redirectAfterAuth(res.data.user);
   };
 
@@ -124,7 +125,7 @@ function AuthPage({ initialMode = "signin" }) {
     });
 
     const loginRes = await apiClient.post("/api/auth/login", { email, password });
-    localStorage.setItem("token", loginRes.data.token);
+    acceptAuthenticatedSession(loginRes.data.token);
     redirectAfterAuth(loginRes.data.user);
   };
 
@@ -187,7 +188,7 @@ function AuthPage({ initialMode = "signin" }) {
         { headers: { "Content-Type": "application/json" } }
       );
 
-      localStorage.setItem("token", res.data.token);
+      acceptAuthenticatedSession(res.data.token);
       redirectAfterAuth(res.data.user);
     } catch (err) {
       setError(err.response?.data?.msg || "Google authentication failed. Please try again.");

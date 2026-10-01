@@ -1,10 +1,27 @@
 import axios from "axios";
+import {
+  acceptAuthenticatedSession,
+  endAuthenticatedSession,
+  getSessionGeneration,
+  isSessionGenerationCurrent,
+} from "../auth/sessionScope";
 
 declare module "axios" {
   interface AxiosRequestConfig {
     skipAuthRedirect?: boolean;
+    sessionGeneration?: number;
   }
 }
+
+export class StaleSessionResponseError extends Error {
+  constructor() {
+    super("Response belongs to an expired authenticated session");
+    this.name = "StaleSessionResponseError";
+  }
+}
+
+export const isStaleSessionResponseError = (error: unknown) =>
+  error instanceof StaleSessionResponseError;
 
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
 const hasProtocol = (value: string) => /^https?:\/\//i.test(value);
@@ -44,6 +61,11 @@ const apiClient = axios.create({
   baseURL: API_BASE_URL || undefined,
 });
 
+apiClient.interceptors.request.use((config) => {
+  config.sessionGeneration = getSessionGeneration();
+  return config;
+});
+
 const AUTH_PAGES = ["/", "/signup"];
 
 export const shouldClearAppSession = (
@@ -63,25 +85,29 @@ export const shouldClearAppSession = (
 const storeRefreshedToken = (headers: unknown) => {
   const refreshed = (headers as Record<string, string> | undefined)?.["x-refreshed-token"];
   if (refreshed && localStorage.getItem("token")) {
-    localStorage.setItem("token", refreshed);
+    acceptAuthenticatedSession(refreshed);
   }
 };
 
 apiClient.interceptors.response.use(
   (response) => {
+    if (!isSessionGenerationCurrent(response.config.sessionGeneration ?? -1)) {
+      return Promise.reject(new StaleSessionResponseError());
+    }
     storeRefreshedToken(response.headers);
     return response;
   },
   (error) => {
+    if (!isSessionGenerationCurrent(error?.config?.sessionGeneration ?? -1)) {
+      return Promise.reject(new StaleSessionResponseError());
+    }
     const status = error?.response?.status;
     const responseCode = error?.response?.data?.code;
     if (
       shouldClearAppSession(status, responseCode, error?.config?.skipAuthRedirect)
       && localStorage.getItem("token")
     ) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      localStorage.removeItem("userId");
+      endAuthenticatedSession();
       if (!AUTH_PAGES.includes(window.location.pathname)) {
         window.location.assign("/");
       }

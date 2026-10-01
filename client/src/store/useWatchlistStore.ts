@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import * as api from "../api/watchlistApi";
+import { registerUserScopedReset } from "../auth/sessionScope";
+import { isStaleSessionResponseError } from "../api/apiClient";
 
 const ACTIVE_TAB_STORAGE_KEY = "watchlist:activeTab";
 
@@ -83,6 +85,7 @@ export const useWatchlistStore = create<WatchlistState>((set) => ({
       const data = await api.fetchWatchlist();
       set({ movies: data, loading: false });
     } catch (err) {
+      if (isStaleSessionResponseError(err)) return;
       console.error("Failed to fetch watchlist:", err);
       set({ error: "Failed to fetch watchlist", loading: false });
     }
@@ -147,6 +150,7 @@ export const useWatchlistStore = create<WatchlistState>((set) => ({
         groupLoading: { ...state.groupLoading, [groupId]: false },
       }));
     } catch (err) {
+      if (isStaleSessionResponseError(err)) return;
       console.error("Failed to fetch group watchlist:", err);
       set((state) => ({ groupLoading: { ...state.groupLoading, [groupId]: false } }));
     }
@@ -185,6 +189,22 @@ export const useWatchlistStore = create<WatchlistState>((set) => ({
     }
   },
 }));
+
+registerUserScopedReset(() => {
+  try {
+    localStorage.removeItem(ACTIVE_TAB_STORAGE_KEY);
+  } catch {
+    // ignore storage errors
+  }
+  useWatchlistStore.setState({
+    movies: [],
+    byGroup: {},
+    activeTab: "personal",
+    loading: false,
+    groupLoading: {},
+    error: null,
+  });
+});
 
 // Stable reference for the empty case — returning a fresh [] here would make the
 // zustand snapshot differ on every render and trigger an infinite update loop.

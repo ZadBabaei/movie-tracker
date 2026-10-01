@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import apiClient from "../api/apiClient";
+import { registerUserScopedReset } from "../auth/sessionScope";
 
 export interface Group {
   _id: string;
@@ -105,4 +106,12 @@ export const useGroupStore = create<GroupState>((set, get) => ({
       return null;
     }
   },
+}));
+
+registerUserScopedReset(() => useGroupStore.setState({
+  groupList: [],
+  createdGroupId: null,
+  pendingGroupName: "",
+  isInviteFriendsModalOpen: false,
+  favoriteGroups: [],
 }));

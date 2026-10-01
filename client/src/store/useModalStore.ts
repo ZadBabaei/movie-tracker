@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { registerUserScopedReset } from "../auth/sessionScope";
 
 export type VoteModalMode = "create" | "view";
 
@@ -28,4 +29,11 @@ export const useModalStore = create<ModalState>((set) => ({
   closeGroupNameModal: () => set({ isGroupNameModalOpen: false }),
   openVoteModal: (mode = "create") => set({ isVoteModalOpen: true, voteModalMode: mode }),
   closeVoteModal: () => set({ isVoteModalOpen: false }),
+}));
+
+registerUserScopedReset(() => useModalStore.setState({
+  isGroupsModalOpen: false,
+  isGroupNameModalOpen: false,
+  isVoteModalOpen: false,
+  voteModalMode: "create",
 }));

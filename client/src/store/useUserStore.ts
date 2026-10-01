@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import apiClient from "../api/apiClient";
+import apiClient, { isStaleSessionResponseError } from "../api/apiClient";
+import { registerUserScopedReset } from "../auth/sessionScope";
 
 export interface UserProfile {
   _id: string;
@@ -68,7 +69,8 @@ export const useUserStore = create<UserState>((set) => ({
       const res = await apiClient.get("/api/profile", authHeader());
       set({ profile: res.data, loading: false });
       return res.data;
-    } catch {
+    } catch (error) {
+      if (isStaleSessionResponseError(error)) return null;
       set({ profile: null, loading: false });
       return null;
     }
@@ -85,7 +87,8 @@ export const useUserStore = create<UserState>((set) => ({
         loading: false,
       });
       return res.data;
-    } catch {
+    } catch (error) {
+      if (isStaleSessionResponseError(error)) return null;
       set({ profile: null, stats: null, recentActivity: [], loading: false });
       return null;
     }
@@ -117,7 +120,8 @@ export const useUserStore = create<UserState>((set) => ({
     try {
       const res = await apiClient.get("/api/profile/stats", authHeader());
       set({ stats: res.data });
-    } catch {
+    } catch (error) {
+      if (isStaleSessionResponseError(error)) return;
       set({ stats: null });
     }
   },
@@ -127,9 +131,17 @@ export const useUserStore = create<UserState>((set) => ({
       const res = await apiClient.post("/api/profile/complete-onboarding", {}, authHeader());
       set({ profile: res.data.user });
     } catch (err) {
+      if (isStaleSessionResponseError(err)) return;
       console.error("Failed to complete onboarding:", err);
     }
   },
 
   clear: () => set({ profile: null, stats: null, recentActivity: [] }),
+}));
+
+registerUserScopedReset(() => useUserStore.setState({
+  profile: null,
+  stats: null,
+  recentActivity: [],
+  loading: false,
 }));

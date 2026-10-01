@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import apiClient from "../api/apiClient";
+import apiClient, { isStaleSessionResponseError } from "../api/apiClient";
+import { registerUserScopedReset } from "../auth/sessionScope";
 
 export interface PollMovie {
   id?: string | number;
@@ -170,7 +171,8 @@ export const usePollStore = create<PollState>((set, get) => ({
       });
       set({ currentPoll: res.data });
       return res.data;
-    } catch {
+    } catch (error) {
+      if (isStaleSessionResponseError(error)) return null;
       set({ currentPoll: null });
       return null;
     }
@@ -265,6 +267,7 @@ export const usePollStore = create<PollState>((set, get) => ({
       });
       set({ pollHistory: res.data });
     } catch (err) {
+      if (isStaleSessionResponseError(err)) return;
       console.error("Error fetching poll history:", err);
       set({ pollHistory: [] });
     }
@@ -294,4 +297,14 @@ export const usePollStore = create<PollState>((set, get) => ({
       console.error("Error deleting poll:", err);
     }
   },
+}));
+
+registerUserScopedReset(() => usePollStore.setState({
+  currentPoll: null,
+  selectedMoviesForVote: [],
+  pollHistory: [],
+  pollName: "",
+  pollDeadline: "",
+  voteRankings: {},
+  runoffSelectionId: "",
 }));

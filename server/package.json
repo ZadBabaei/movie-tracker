@@ -10,6 +10,7 @@
     "dev": "nodemon --exec ts-node index.ts",
     "migrate:watch-history": "ts-node scripts/migrateWatchHistory.ts",
     "migrate:watch-history:dry": "ts-node scripts/migrateWatchHistory.ts --dry-run",
+    "audit:watch-history-ownership": "ts-node scripts/auditWatchHistoryOwnership.ts",
     "seed:watch-history-demo": "ts-node scripts/seedWatchHistoryDemo.ts"
   },
   "keywords": [],

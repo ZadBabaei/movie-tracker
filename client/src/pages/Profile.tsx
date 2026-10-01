@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import VerticalNavbar from "../component/VerticalNavbar";
 import { useUserStore } from "../store/useUserStore";
+import { endAuthenticatedSession } from "../auth/sessionScope";
 import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
 import "./Profile.css";
 
@@ -121,8 +122,7 @@ const Profile: React.FC = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    useUserStore.getState().clear();
+    endAuthenticatedSession();
     navigate("/");
     window.location.reload();
   };
