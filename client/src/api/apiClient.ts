@@ -1,5 +1,11 @@
 import axios from "axios";
 
+declare module "axios" {
+  interface AxiosRequestConfig {
+    skipAuthRedirect?: boolean;
+  }
+}
+
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
 const hasProtocol = (value: string) => /^https?:\/\//i.test(value);
 const isRootRelative = (value: string) => value.startsWith("/");
@@ -40,6 +46,15 @@ const apiClient = axios.create({
 
 const AUTH_PAGES = ["/", "/signup"];
 
+export const shouldClearAppSession = (
+  status: number | undefined,
+  responseCode: unknown,
+  skipProviderAuthRedirect: boolean | undefined
+) => status === 401 && !(
+  skipProviderAuthRedirect
+  && (responseCode === "invalid_credentials" || responseCode === "stremio_reauth_required")
+);
+
 // The server now rejects sessions it has invalidated (password reset, deleted
 // account, rotated token format). Clear the stale credentials and send the
 // person back to sign in rather than leaving the UI in a broken state.
@@ -59,7 +74,11 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     const status = error?.response?.status;
-    if (status === 401 && localStorage.getItem("token")) {
+    const responseCode = error?.response?.data?.code;
+    if (
+      shouldClearAppSession(status, responseCode, error?.config?.skipAuthRedirect)
+      && localStorage.getItem("token")
+    ) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       localStorage.removeItem("userId");

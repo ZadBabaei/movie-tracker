@@ -144,15 +144,6 @@
   animation-play-state: paused;
 }
 
-.orbital-system.is-picking .orbit-spin--inner,
-.orbital-system.is-picking .orbit-spin--mobile {
-  animation: home-orbit-spin 1.15s cubic-bezier(0.35, 0, 0.25, 1);
-}
-
-.orbital-system.is-picking .orbit-spin--outer {
-  animation: home-orbit-spin 1.15s cubic-bezier(0.35, 0, 0.25, 1) reverse;
-}
-
 @keyframes home-orbit-spin {
   to { transform: rotate(360deg); }
 }
@@ -303,27 +294,6 @@
   font: 400 1.45rem/1.05 var(--font-serif);
 }
 
-.core-quote {
-  display: -webkit-box;
-  max-width: 224px;
-  margin: 8px 0 0;
-  overflow: hidden;
-  color: var(--brand-muted);
-  font: italic 0.67rem/1.32 var(--font-serif);
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.core-stats {
-  max-width: 224px;
-  margin: 9px 0 0;
-  color: var(--brand-dim);
-  font: 0.5rem/1.35 var(--font-mono);
-  letter-spacing: 0.045em;
-  text-transform: uppercase;
-}
-
-.tonight-button,
 .poll-submit {
   margin-top: 11px;
   padding: 8px 12px;
@@ -338,55 +308,12 @@
   transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-.tonight-button:hover,
-.tonight-button:focus-visible,
 .poll-submit:hover,
 .poll-submit:focus-visible {
   outline: none;
   background: var(--brand-gold-bright);
   box-shadow: 0 0 18px rgba(211, 172, 108, 0.34);
   transform: translateY(-1px);
-}
-
-.docked-pick {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.docked-poster {
-  width: 58px;
-  aspect-ratio: 2 / 3;
-  margin: 0 0 7px;
-  padding: 0;
-  overflow: hidden;
-  border: 1px solid var(--brand-gold);
-  border-radius: 3px;
-  background: var(--brand-charcoal);
-  color: var(--brand-muted);
-  box-shadow: 0 7px 20px rgba(0, 0, 0, 0.6), 0 0 18px rgba(211, 172, 108, 0.2);
-  cursor: pointer;
-}
-
-.docked-poster img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.docked-poster span { font: 0.55rem/1.2 var(--font-serif); }
-
-.docked-pick strong {
-  max-width: 205px;
-  color: var(--brand-ivory);
-  font: 500 0.9rem/1.15 var(--font-serif);
-}
-
-.docked-actions { display: flex; gap: 12px; margin-top: 8px; }
-
-.docked-actions button {
-  padding: 2px 0;
-  border: 0;
-  border-bottom: 1px solid var(--brand-hairline);
-  background: transparent;
-  color: var(--brand-gold);
-  font: 0.53rem/1.2 var(--font-mono);
-  cursor: pointer;
 }
 
 .poll-satellite {
@@ -707,9 +634,6 @@
   .orbit-ghost--outer { width: 80px; }
   .chart-core { width: 228px; height: 228px; padding: 19px; }
   .chart-core h1 { font-size: 1.2rem; }
-  .core-quote { font-size: 0.59rem; }
-  .core-stats { font-size: 0.46rem; }
-  .tonight-button { max-width: 170px; padding: 7px 10px; }
   .poll-satellite--1 { transform: translate(125px, -54px); }
   .poll-satellite--2 { transform: translate(92px, 94px); }
   .poll-satellite--3 { transform: translate(-137px, 46px); }
@@ -742,11 +666,6 @@
   .chart-core { width: 205px; height: 205px; padding: 17px; }
   .chart-core h1 { font-size: 1.02rem; }
   .core-eyebrow { font-size: 0.46rem; }
-  .core-quote { max-width: 166px; margin-top: 6px; font-size: 0.53rem; }
-  .core-stats { max-width: 170px; margin-top: 7px; font-size: 0.41rem; }
-  .tonight-button { margin-top: 8px; padding: 6px 8px; font-size: 0.47rem; }
-  .docked-poster { width: 48px; }
-  .docked-pick strong { max-width: 160px; font-size: 0.78rem; }
   .poll-satellite--1 { transform: translate(105px, -42px); }
   .poll-satellite--2 { transform: translate(76px, 78px); }
   .poll-satellite--3 { transform: translate(-112px, 40px); }
@@ -784,7 +703,6 @@
   .chart-core { width: 184px; height: 184px; }
   .home-page .mobile-orbit .planet,
   .mobile-orbit .orbit-ghost { width: 46px; }
-  .core-quote { display: none; }
   .orbit-legend { font-size: 0.49rem; }
 }
 
@@ -798,7 +716,6 @@
   }
 
   .home-page .planet,
-  .tonight-button,
   .poll-submit {
     transition: none;
   }

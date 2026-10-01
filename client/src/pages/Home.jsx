@@ -1,11 +1,12 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import quotes from "../data/Quotes";
 import "./Home.css";
 import VerticalNavbar from "../component/VerticalNavbar";
 import MovieDetailModal from "../component/MovieDetailModal";
+import StremioHomeControl from "../component/StremioHomeControl";
 import apiClient from "../api/apiClient";
 import { useWatchlistStore } from "../store/useWatchlistStore";
+import { useWatchHistoryStore } from "../store/useWatchHistoryStore";
 import { useGroupStore } from "../store/useGroupStore";
 import fullLogo from "../assets/movie-tracker-logo-full.svg";
 
@@ -46,13 +47,6 @@ const relativeTime = (value) => {
 
 const notability = (movie) =>
   (movie.revenue || 0) * 1000 + (movie.popularity || 0);
-
-const greetingForHour = (hour) => {
-  if (hour < 5) return "Late night pick";
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
-};
 
 const movieKey = (movie) =>
   (movie?._id || movie?.tmdbId || movie?.id || movie?.imdbID || movie?.title || "movie").toString();
@@ -201,16 +195,12 @@ function Home() {
   const [pollRankings, setPollRankings] = useState({});
   const [pollErrors, setPollErrors] = useState({});
   const [savingPollId, setSavingPollId] = useState(null);
-  const [tonightPickId, setTonightPickId] = useState(null);
-  const [isPicking, setIsPicking] = useState(false);
-  const pickTimer = useRef(null);
-  const [quote] = useState(() => quotes[Math.floor(Math.random() * quotes.length)]);
-
   const {
     movies: watchlistMovies,
     loading: watchlistLoading,
     fetchWatchlist,
   } = useWatchlistStore();
+  const fetchPersonalHistory = useWatchHistoryStore((state) => state.fetchPersonal);
   const { groupList, fetchGroups } = useGroupStore();
 
   useEffect(() => {
@@ -263,18 +253,6 @@ function Home() {
     };
   }, []);
 
-  useEffect(() => {
-    if (watchlistLoading) return;
-    const storedId = localStorage.getItem(`star-chart-tonight-${toDateKey()}`);
-    setTonightPickId(
-      storedId && watchlistMovies.some((movie) => movieKey(movie) === storedId)
-        ? storedId
-        : null
-    );
-  }, [watchlistLoading, watchlistMovies]);
-
-  useEffect(() => () => window.clearTimeout(pickTimer.current), []);
-
   const upcomingPicks = useMemo(
     () =>
       upcoming
@@ -308,31 +286,26 @@ function Home() {
       .slice(0, 5);
   }, [upcomingPicks, watchlistHighlights]);
 
-  const tonightPick = watchlistMovies.find((movie) => movieKey(movie) === tonightPickId);
   const recentActivity = (dashboard?.recentActivity || []).slice(0, 5);
   const watchedMovies = dashboard?.watchedMovies || [];
-  const stats = dashboard?.stats;
   const firstName = (dashboard?.user?.name || "").split(" ")[0];
-  const greeting = greetingForHour(new Date().getHours());
-  const statsLine = stats
-    ? `${stats.moviesWatched} films watched · ${stats.groupsJoined} groups · ${stats.pollsVoted} polls voted`
-    : "Charting your cinema universe…";
 
-  const chooseTonight = (reroll = false) => {
-    if (!watchlistMovies.length || isPicking) return;
-    const choices = reroll && watchlistMovies.length > 1
-      ? watchlistMovies.filter((movie) => movieKey(movie) !== tonightPickId)
-      : watchlistMovies;
-    const nextMovie = choices[Math.floor(Math.random() * choices.length)];
-    setIsPicking(true);
-    window.clearTimeout(pickTimer.current);
-    pickTimer.current = window.setTimeout(() => {
-      const nextId = movieKey(nextMovie);
-      setTonightPickId(nextId);
-      localStorage.setItem(`star-chart-tonight-${toDateKey()}`, nextId);
-      setIsPicking(false);
-    }, 1150);
-  };
+  const refreshAfterStremioSync = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    const dashboardRequest = token
+      ? apiClient.get("/api/profile/dashboard", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      : Promise.resolve(null);
+    const [dashboardResult] = await Promise.allSettled([
+      dashboardRequest,
+      fetchPersonalHistory(),
+      fetchWatchlist(),
+    ]);
+    if (dashboardResult.status === "fulfilled" && dashboardResult.value) {
+      setDashboard(dashboardResult.value.data);
+    }
+  }, [fetchPersonalHistory, fetchWatchlist]);
 
   const handlePollRank = (pollId, movieId, value, isRunoff = false) => {
     setPollRankings((current) => ({
@@ -425,10 +398,7 @@ function Home() {
           </div>
         </header>
 
-        <section
-          className={`orbital-system${isPicking ? " is-picking" : ""}`}
-          aria-label="Your movie star chart"
-        >
+        <section className="orbital-system" aria-label="Your movie star chart">
           <div className="orbit-ring orbit-ring--outer" />
           <div className="orbit-ring orbit-ring--inner" />
 
@@ -484,37 +454,7 @@ function Home() {
           ))}
 
           <div className="chart-core">
-            {tonightPick ? (
-              <div className="docked-pick">
-                <span className="core-eyebrow">Tonight’s coordinates</span>
-                <button type="button" className="docked-poster" onClick={() => setSelectedMovie(tonightPick)}>
-                  {moviePoster(tonightPick) ? (
-                    <img src={moviePoster(tonightPick, "w185")} alt="" />
-                  ) : (
-                    <span>{tonightPick.title}</span>
-                  )}
-                </button>
-                <strong>{tonightPick.title}</strong>
-                <div className="docked-actions">
-                  <button type="button" onClick={() => chooseTonight(true)}>Re-roll ↻</button>
-                  <button type="button" onClick={() => setSelectedMovie(tonightPick)}>Details</button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <span className="core-eyebrow">Currently orbiting</span>
-                <h1>{greeting}{firstName ? `, ${firstName}` : ""}.</h1>
-                <p className="core-quote">“{quote}”</p>
-                <p className="core-stats">{statsLine}</p>
-                {watchlistMovies.length ? (
-                  <button type="button" className="tonight-button" onClick={() => chooseTonight()}>
-                    What should we watch tonight?
-                  </button>
-                ) : (
-                  <Link className="tonight-button" to="/watchlist">Build a watchlist</Link>
-                )}
-              </>
-            )}
+            <StremioHomeControl onSyncComplete={refreshAfterStremioSync} />
           </div>
         </section>
 

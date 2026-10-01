@@ -1,0 +1,266 @@
+.stremio-core {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stremio-core h1 {
+  margin: 0;
+  max-width: 218px;
+  color: var(--brand-ivory);
+  font: 500 1.2rem/1.05 var(--font-serif);
+}
+
+.stremio-core-copy {
+  max-width: 205px;
+  margin: 9px 0 0;
+  color: var(--brand-muted);
+  font: 0.61rem/1.45 var(--font-mono);
+}
+
+.stremio-sync-button {
+  position: relative;
+  display: grid;
+  width: 92px;
+  height: 58px;
+  margin-top: 11px;
+  place-items: center;
+  border: 1px solid var(--brand-gold);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--brand-gold-bright);
+  cursor: pointer;
+  font: 700 0.68rem/1 var(--font-mono);
+  letter-spacing: 0.18em;
+  transition: background 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.stremio-sync-button::before,
+.stremio-sync-button::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(211, 172, 108, 0.2);
+  border-radius: 50%;
+}
+
+.stremio-sync-button::after {
+  inset: -5px;
+  border-style: dashed;
+}
+
+.stremio-sync-button i {
+  position: absolute;
+  right: 11px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.stremio-sync-button:hover:not(:disabled),
+.stremio-sync-button:focus-visible {
+  outline: none;
+  background: var(--brand-gold);
+  color: var(--brand-gold-ink);
+  transform: scale(1.04);
+}
+
+.stremio-sync-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.stremio-sync-button:disabled::after {
+  animation: stremio-dial 1.2s linear infinite;
+}
+
+@keyframes stremio-dial {
+  to { transform: rotate(360deg); }
+}
+
+.stremio-connect-button,
+.stremio-form-submit {
+  margin-top: 13px;
+  padding: 8px 13px;
+  border: 1px solid var(--brand-gold);
+  border-radius: 999px;
+  background: var(--brand-gold);
+  color: var(--brand-gold-ink);
+  cursor: pointer;
+  font: 700 0.55rem/1.15 var(--font-mono);
+  letter-spacing: 0.045em;
+}
+
+.stremio-connect-button:hover:not(:disabled),
+.stremio-connect-button:focus-visible,
+.stremio-form-submit:hover:not(:disabled),
+.stremio-form-submit:focus-visible {
+  outline: none;
+  background: var(--brand-gold-bright);
+  box-shadow: 0 0 18px rgba(211, 172, 108, 0.34);
+}
+
+.stremio-last-sync {
+  margin: 9px 0 0;
+  color: var(--brand-dim);
+  font: 0.45rem/1.35 var(--font-mono);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.stremio-last-sync time,
+.stremio-last-sync span { color: var(--brand-muted); }
+
+.stremio-result,
+.stremio-core-error {
+  max-width: 220px;
+  margin: 7px 0 0;
+  color: var(--brand-gold-bright);
+  font: 0.49rem/1.35 var(--font-mono);
+}
+
+.stremio-core-error { color: #efa6a6; }
+
+.stremio-disconnect-link {
+  margin-top: 6px;
+  padding: 2px;
+  border: 0;
+  border-bottom: 1px solid rgba(211, 172, 108, 0.25);
+  background: transparent;
+  color: var(--brand-dim);
+  cursor: pointer;
+  font: 0.46rem/1.2 var(--font-mono);
+}
+
+.stremio-disconnect-link:hover,
+.stremio-disconnect-link:focus-visible { color: var(--brand-muted); }
+
+.stremio-scan {
+  width: 52px;
+  height: 1px;
+  margin: 14px 0 2px;
+  overflow: hidden;
+  background: var(--brand-hairline);
+}
+
+.stremio-scan::after {
+  content: "";
+  display: block;
+  width: 16px;
+  height: 1px;
+  background: var(--brand-gold);
+  animation: stremio-scan 1.1s ease-in-out infinite alternate;
+}
+
+@keyframes stremio-scan {
+  to { transform: translateX(36px); }
+}
+
+.stremio-connect-modal {
+  border-radius: var(--brand-radius-lg);
+  background:
+    linear-gradient(rgba(211, 172, 108, 0.035), rgba(211, 172, 108, 0)),
+    var(--brand-charcoal);
+}
+
+.stremio-modal-intro {
+  margin: 0 0 20px;
+  color: var(--brand-muted);
+  font: 0.86rem/1.55 var(--font-sans);
+}
+
+.stremio-connect-form {
+  display: grid;
+  gap: 16px;
+}
+
+.stremio-connect-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.stremio-connect-form label > span {
+  color: var(--brand-gold);
+  font: 0.66rem/1.2 var(--font-mono);
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.stremio-connect-form input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 12px;
+  border: 1px solid var(--brand-hairline);
+  border-radius: var(--brand-radius);
+  outline: none;
+  background: rgba(0, 0, 0, 0.24);
+  color: var(--brand-ivory);
+  font: 0.92rem/1.3 var(--font-sans);
+}
+
+.stremio-connect-form input:focus {
+  border-color: var(--brand-gold);
+  box-shadow: 0 0 0 2px rgba(211, 172, 108, 0.12);
+}
+
+.stremio-form-submit { justify-self: start; margin-top: 1px; font-size: 0.67rem; }
+
+.stremio-form-error {
+  margin: -2px 0 0;
+  color: #f0abab;
+  font: 0.78rem/1.4 var(--font-sans);
+}
+
+.stremio-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.stremio-cancel-button,
+.stremio-disconnect-confirm {
+  padding: 9px 12px;
+  border-radius: var(--brand-radius);
+  cursor: pointer;
+  font: 700 0.72rem/1.2 var(--font-sans);
+}
+
+.stremio-cancel-button {
+  border: 1px solid var(--brand-hairline);
+  background: transparent;
+  color: var(--brand-muted);
+}
+
+.stremio-disconnect-confirm {
+  border: 1px solid #a94747;
+  background: #762828;
+  color: #fff2ee;
+}
+
+@media (max-width: 768px) {
+  .stremio-core h1 { max-width: 170px; font-size: 0.92rem; }
+  .stremio-core-copy { max-width: 164px; margin-top: 6px; font-size: 0.5rem; }
+  .stremio-sync-button { width: 78px; height: 49px; margin-top: 8px; font-size: 0.57rem; }
+  .stremio-last-sync { margin-top: 7px; font-size: 0.39rem; }
+  .stremio-result,
+  .stremio-core-error { max-width: 170px; margin-top: 5px; font-size: 0.42rem; }
+  .stremio-disconnect-link { margin-top: 4px; font-size: 0.4rem; }
+  .stremio-connect-button { margin-top: 9px; padding: 6px 9px; font-size: 0.48rem; }
+}
+
+@media (max-width: 390px) {
+  .stremio-core h1 { max-width: 148px; font-size: 0.8rem; }
+  .stremio-core-copy { max-width: 148px; font-size: 0.44rem; }
+  .stremio-sync-button { width: 70px; height: 44px; }
+  .stremio-result { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stremio-sync-button:disabled::after,
+  .stremio-scan::after { animation: none; }
+  .stremio-sync-button,
+  .stremio-connect-button { transition: none; }
+}
