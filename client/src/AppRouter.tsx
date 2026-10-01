@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useSyncExternalStore } from "react";
 import { useLocation } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import App from "./App";
+import { getSessionGeneration, subscribeSession } from "./auth/sessionScope";
 
 const isTokenValid = (token: string | null): boolean => {
   if (!token) return false;
@@ -14,12 +15,23 @@ const isTokenValid = (token: string | null): boolean => {
 };
 
 const AppRouter: React.FC = () => {
+  const sessionGeneration = useSyncExternalStore(
+    subscribeSession,
+    getSessionGeneration,
+    getSessionGeneration
+  );
   const location = useLocation();
   const isAuthPage =
     location.pathname === "/" || location.pathname === "/signup";
   const isAuthenticated = isTokenValid(localStorage.getItem("token"));
 
-  return <App isAuthenticated={isAuthenticated} isAuthPage={isAuthPage} />;
+  return (
+    <App
+      key={sessionGeneration}
+      isAuthenticated={isAuthenticated}
+      isAuthPage={isAuthPage}
+    />
+  );
 };
 
 export default AppRouter;

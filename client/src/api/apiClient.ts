@@ -2,7 +2,9 @@ import axios from "axios";
 import {
   acceptAuthenticatedSession,
   endAuthenticatedSession,
+  getSessionIdentity,
   getSessionGeneration,
+  isSessionIdentityCurrent,
   isSessionGenerationCurrent,
 } from "../auth/sessionScope";
 
@@ -10,6 +12,7 @@ declare module "axios" {
   interface AxiosRequestConfig {
     skipAuthRedirect?: boolean;
     sessionGeneration?: number;
+    sessionIdentity?: string | null;
   }
 }
 
@@ -63,6 +66,7 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use((config) => {
   config.sessionGeneration = getSessionGeneration();
+  config.sessionIdentity = getSessionIdentity(localStorage.getItem("token"));
   return config;
 });
 
@@ -91,14 +95,20 @@ const storeRefreshedToken = (headers: unknown) => {
 
 apiClient.interceptors.response.use(
   (response) => {
-    if (!isSessionGenerationCurrent(response.config.sessionGeneration ?? -1)) {
+    if (
+      !isSessionIdentityCurrent(response.config.sessionIdentity ?? null)
+      || !isSessionGenerationCurrent(response.config.sessionGeneration ?? -1)
+    ) {
       return Promise.reject(new StaleSessionResponseError());
     }
     storeRefreshedToken(response.headers);
     return response;
   },
   (error) => {
-    if (!isSessionGenerationCurrent(error?.config?.sessionGeneration ?? -1)) {
+    if (
+      !isSessionIdentityCurrent(error?.config?.sessionIdentity ?? null)
+      || !isSessionGenerationCurrent(error?.config?.sessionGeneration ?? -1)
+    ) {
       return Promise.reject(new StaleSessionResponseError());
     }
     const status = error?.response?.status;

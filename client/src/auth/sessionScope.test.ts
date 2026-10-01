@@ -6,7 +6,12 @@ import { usePollStore } from "../store/usePollStore";
 import { useUserStore } from "../store/useUserStore";
 import { useWatchHistoryStore, type HistoryEntry } from "../store/useWatchHistoryStore";
 import { useWatchlistStore } from "../store/useWatchlistStore";
-import { acceptAuthenticatedSession, endAuthenticatedSession } from "./sessionScope";
+import {
+  acceptAuthenticatedSession,
+  endAuthenticatedSession,
+  getSessionIdentity,
+  isSessionIdentityCurrent,
+} from "./sessionScope";
 
 const testStorage = vi.hoisted(() => {
   const values = new Map<string, string>();
@@ -108,6 +113,58 @@ describe("authenticated session isolation", () => {
     const loading = useWatchHistoryStore.getState().fetchPersonal();
 
     acceptAuthenticatedSession(tokenFor("account-b"));
+    request.resolve({ items: [entry("a-history")], nextCursor: null, stats: { total: 1 } });
+    await loading;
+
+    expect(useWatchHistoryStore.getState().personal.items).toEqual([]);
+    expect(useWatchHistoryStore.getState().errors).toEqual({});
+  });
+
+  it("clears Account A state when Account B signs in from another tab", () => {
+    const accountAToken = tokenFor("account-a");
+    const accountBToken = tokenFor("account-b");
+    acceptAuthenticatedSession(accountAToken);
+    useWatchHistoryStore.setState({ personal: { items: [entry("a-history")], total: 1, nextCursor: null } });
+    localStorage.setItem("history:activeTab", "a-group");
+
+    localStorage.setItem("token", accountBToken);
+    window.dispatchEvent(new StorageEvent("storage", {
+      key: "token",
+      oldValue: accountAToken,
+      newValue: accountBToken,
+    }));
+
+    expect(useWatchHistoryStore.getState().personal.items).toEqual([]);
+    expect(localStorage.getItem("history:activeTab")).toBeNull();
+  });
+
+  it("rejects an Account A response as soon as shared storage changes to Account B", () => {
+    const accountAToken = tokenFor("account-a");
+    const accountBToken = tokenFor("account-b");
+    acceptAuthenticatedSession(accountAToken);
+    const requestIdentity = getSessionIdentity(accountAToken);
+
+    // Storage changes synchronously across tabs; its event may be delivered a
+    // moment later. The response guard must be safe during that gap as well.
+    localStorage.setItem("token", accountBToken);
+
+    expect(isSessionIdentityCurrent(requestIdentity)).toBe(false);
+  });
+
+  it("discards a late Account A response after a cross-tab Account B login", async () => {
+    const request = deferred<any>();
+    const accountAToken = tokenFor("account-a");
+    const accountBToken = tokenFor("account-b");
+    vi.mocked(historyApi.fetchPersonalHistory).mockReturnValueOnce(request.promise);
+    acceptAuthenticatedSession(accountAToken);
+    const loading = useWatchHistoryStore.getState().fetchPersonal();
+
+    localStorage.setItem("token", accountBToken);
+    window.dispatchEvent(new StorageEvent("storage", {
+      key: "token",
+      oldValue: accountAToken,
+      newValue: accountBToken,
+    }));
     request.resolve({ items: [entry("a-history")], nextCursor: null, stats: { total: 1 } });
     await loading;
 
