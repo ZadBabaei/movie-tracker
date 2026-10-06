@@ -76,10 +76,11 @@ export const acceptAuthenticatedSession = (token: string) => {
 
   if (accountChanged) {
     clearUserScopedStorage();
-    resetUserScopedState();
   }
   authenticatedIdentity = nextIdentity;
   storage()?.setItem("token", token);
+  // Routing subscribers must see the accepted session when they re-render.
+  if (accountChanged) resetUserScopedState();
 };
 
 export const endAuthenticatedSession = () => {

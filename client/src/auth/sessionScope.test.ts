@@ -11,6 +11,7 @@ import {
   endAuthenticatedSession,
   getSessionIdentity,
   isSessionIdentityCurrent,
+  subscribeSession,
 } from "./sessionScope";
 
 const testStorage = vi.hoisted(() => {
@@ -76,6 +77,18 @@ beforeEach(() => {
 });
 
 describe("authenticated session isolation", () => {
+  it("publishes the new token before notifying routing subscribers", () => {
+    const token = tokenFor("account-a");
+    const observedTokens: (string | null)[] = [];
+    const unsubscribe = subscribeSession(() => observedTokens.push(localStorage.getItem("token")));
+    try {
+      acceptAuthenticatedSession(token);
+      expect(observedTokens).toEqual([token]);
+    } finally {
+      unsubscribe();
+    }
+  });
+
   it("clears every user-scoped store on logout", () => {
     acceptAuthenticatedSession(tokenFor("account-a"));
     useWatchHistoryStore.setState({ personal: { items: [entry("a-history")], total: 1, nextCursor: null } });
