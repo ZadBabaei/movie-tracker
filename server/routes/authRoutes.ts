@@ -3,7 +3,8 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
 import User from "../models/user";
-import { sendPasswordResetEmail } from "../utils/emailService";
+import { describeEmailError, sendPasswordResetEmail } from "../utils/emailService";
+import { buildPasswordResetLink } from "../utils/deploymentConfig";
 import { getDefaultAvatarUrl } from "../utils/avatar";
 import { hasAdminAccess } from "../middleware/adminMiddleware";
 import { recordAnalyticsEvent } from "../utils/analytics";
@@ -164,12 +165,20 @@ router.post("/forgot-password", passwordResetLimiter, async (req: Request, res: 
 
     if (user) {
       const rawToken = crypto.randomBytes(32).toString("hex");
+      let resetLink: string;
+      try {
+        // Validated before a token is stored so a misconfigured deployment
+        // never emails a localhost or otherwise unusable link.
+        resetLink = buildPasswordResetLink(rawToken);
+      } catch (error) {
+        console.error("Password reset email not sent, configuration problem:", describeEmailError(error));
+        res.json({ msg: genericPasswordResetMessage });
+        return;
+      }
+
       user.passwordResetToken = hashResetToken(rawToken);
       user.passwordResetExpires = new Date(Date.now() + 30 * 60 * 1000);
       await user.save();
-
-      const appUrl = process.env.APP_URL || "http://localhost:3000";
-      const resetLink = `${appUrl.replace(/\/$/, "")}/reset-password/${rawToken}`;
 
       try {
         await sendPasswordResetEmail(user.email, resetLink);
@@ -177,13 +186,13 @@ router.post("/forgot-password", passwordResetLimiter, async (req: Request, res: 
         user.passwordResetToken = undefined;
         user.passwordResetExpires = undefined;
         await user.save();
-        console.error("Failed to send password reset email:", error);
+        console.error("Failed to send password reset email:", describeEmailError(error));
       }
     }
 
     res.json({ msg: genericPasswordResetMessage });
   } catch (error) {
-    console.error("Error in forgot-password route:", error);
+    console.error("Error in forgot-password route:", describeEmailError(error));
     res.json({ msg: genericPasswordResetMessage });
   }
 });

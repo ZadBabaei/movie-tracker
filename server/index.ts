@@ -27,6 +27,7 @@ import { corsOptions } from "./utils/corsConfig";
 import { analyticsLimiter, apiLimiter, publicDataLimiter } from "./middleware/rateLimits";
 import { securityEventLogger } from "./middleware/securityLog";
 import { analyticsResponseMiddleware } from "./utils/analytics";
+import { reportEmailConfiguration } from "./utils/emailService";
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -149,4 +150,5 @@ mongoose
 
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  reportEmailConfiguration();
 });

@@ -1,24 +1,87 @@
 import nodemailer from "nodemailer";
+import type SMTPTransport from "nodemailer/lib/smtp-transport";
 import { Resend } from "resend";
 import { IBugReport } from "../models/BugReport";
+import { ConfigurationError, getAppUrl, isDeployedEnvironment } from "./deploymentConfig";
 
-const getEmailConfig = () => {
-  const host = process.env.EMAIL_HOST || process.env.SMTP_HOST || "smtp.gmail.com";
-  const port = Number(process.env.EMAIL_PORT || process.env.SMTP_PORT) || 587;
-  const user = process.env.EMAIL_USER || process.env.SMTP_USER;
-  const pass = process.env.EMAIL_PASS || process.env.SMTP_PASS;
-  const resendApiKey = process.env.RESEND_API_KEY;
-  const emailProvider = String(process.env.EMAIL_PROVIDER || "").trim().toLowerCase();
+export type EmailProvider = "resend" | "smtp";
+
+const RESEND_TEST_SENDER = "Movie Tracker <onboarding@resend.dev>";
+const SMTP_CONNECTION_TIMEOUT_MS = 10_000;
+const SMTP_GREETING_TIMEOUT_MS = 10_000;
+const SMTP_SOCKET_TIMEOUT_MS = 20_000;
+const RESEND_REQUEST_TIMEOUT_MS = 15_000;
+
+const readEnv = (...names: string[]) => {
+  for (const name of names) {
+    const value = String(process.env[name] || "").trim();
+    if (value) return value;
+  }
+  return undefined;
+};
+
+const senderAddress = (from: string) =>
+  (/<([^>]+)>/.exec(from)?.[1] ?? from).trim().toLowerCase();
+
+/**
+ * Provider selection:
+ * - EMAIL_PROVIDER=resend|smtp is always honoured; nothing else is tried.
+ * - Unset in a deployed environment: Resend's HTTPS API whenever
+ *   RESEND_API_KEY exists, because hosts such as Railway Hobby block SMTP.
+ * - Unset locally: SMTP when its credentials exist, otherwise Resend.
+ */
+export const getEmailConfig = () => {
+  const host = readEnv("EMAIL_HOST", "SMTP_HOST") || "smtp.gmail.com";
+  const port = Number(readEnv("EMAIL_PORT", "SMTP_PORT")) || 587;
+  const user = readEnv("EMAIL_USER", "SMTP_USER");
+  const pass = readEnv("EMAIL_PASS", "SMTP_PASS");
+  const resendApiKey = readEnv("RESEND_API_KEY");
+  const requested = String(process.env.EMAIL_PROVIDER || "").trim().toLowerCase();
+  const deployed = isDeployedEnvironment();
+
+  if (requested && requested !== "resend" && requested !== "smtp") {
+    throw new ConfigurationError("EMAIL_PROVIDER must be either \"resend\" or \"smtp\".");
+  }
+
   const hasSmtpConfig = Boolean(user && pass);
-  const useResend = emailProvider === "resend" || (!hasSmtpConfig && Boolean(resendApiKey));
-  const defaultFrom = useResend
-    ? "Movie Tracker <onboarding@resend.dev>"
-    : user
-      ? `Movie Tracker <${user}>`
-      : undefined;
-  const from = process.env.EMAIL_FROM || defaultFrom;
+  const provider: EmailProvider = requested
+    ? (requested as EmailProvider)
+    : deployed
+      ? resendApiKey ? "resend" : "smtp"
+      : hasSmtpConfig || !resendApiKey ? "smtp" : "resend";
 
-  return { host, port, user, pass, from, resendApiKey, useResend };
+  const configuredFrom = readEnv("EMAIL_FROM");
+  const from = configuredFrom
+    || (provider === "resend"
+      ? deployed ? undefined : RESEND_TEST_SENDER
+      : user ? `Movie Tracker <${user}>` : undefined);
+
+  return { provider, host, port, user, pass, from, resendApiKey, deployed };
+};
+
+/** Throws a ConfigurationError describing what is missing; never includes secret values. */
+export const assertEmailConfig = () => {
+  const config = getEmailConfig();
+
+  if (config.provider === "resend") {
+    if (!config.resendApiKey) {
+      throw new ConfigurationError("RESEND_API_KEY must be set when sending through Resend.");
+    }
+    if (!config.from) {
+      throw new ConfigurationError("EMAIL_FROM must be set to a sender on a Resend-verified domain.");
+    }
+    // Resend's shared test sender only delivers to the Resend account owner.
+    if (config.deployed && senderAddress(config.from).endsWith("@resend.dev")) {
+      throw new ConfigurationError("EMAIL_FROM must use a Resend-verified domain, not resend.dev.");
+    }
+  } else {
+    if (!config.user || !config.pass) {
+      throw new ConfigurationError("SMTP_USER/SMTP_PASS (or EMAIL_USER/EMAIL_PASS) must be set when sending through SMTP.");
+    }
+    if (!config.from) throw new ConfigurationError("EMAIL_FROM is not configured.");
+  }
+
+  return config as typeof config & { from: string };
 };
 
 const getEmailDomain = (email: string) => {
@@ -26,30 +89,37 @@ const getEmailDomain = (email: string) => {
   return domain || "missing";
 };
 
-let resendClient: Resend | null = null;
-const getResendClient = (apiKey: string) => {
-  if (!resendClient) {
-    resendClient = new Resend(apiKey);
-  }
-  return resendClient;
+/** Replaceable in tests so no real email provider is contacted. */
+export const emailTransports = {
+  createResendClient: (apiKey: string) => new Resend(apiKey),
+  createSmtpTransport: (options: SMTPTransport.Options) =>
+    nodemailer.createTransport(options),
 };
 
-const getSmtpTransporter = () => {
-  const { host, port, user, pass } = getEmailConfig();
-
-  if (!user || !pass) {
-    throw new Error("EMAIL_USER/EMAIL_PASS or SMTP_USER/SMTP_PASS must be configured to send email");
+let resendClient: { apiKey: string; client: ReturnType<typeof emailTransports.createResendClient> } | null = null;
+const getResendClient = (apiKey: string) => {
+  if (!resendClient || resendClient.apiKey !== apiKey) {
+    resendClient = { apiKey, client: emailTransports.createResendClient(apiKey) };
   }
+  return resendClient.client;
+};
 
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: {
-      user,
-      pass,
-    },
-  });
+export const resetEmailClientCache = () => {
+  resendClient = null;
+};
+
+const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> => {
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 };
 
 interface SendMailParams {
@@ -60,24 +130,20 @@ interface SendMailParams {
 }
 
 const sendEmail = async ({ to, subject, text, html }: SendMailParams): Promise<void> => {
-  const { from, resendApiKey, useResend } = getEmailConfig();
+  const config = assertEmailConfig();
 
-  if (!from) {
-    throw new Error("EMAIL_FROM is not configured");
-  }
-
-  if (useResend) {
-    if (!resendApiKey) {
-      throw new Error("RESEND_API_KEY must be configured when EMAIL_PROVIDER=resend");
-    }
-
-    const { error } = await getResendClient(resendApiKey).emails.send({
-      from,
-      to,
-      subject,
-      ...(html ? { html } : {}),
-      ...(text ? { text } : {}),
-    } as Parameters<Resend["emails"]["send"]>[0]);
+  if (config.provider === "resend") {
+    const { error } = await withTimeout(
+      getResendClient(config.resendApiKey!).emails.send({
+        from: config.from,
+        to,
+        subject,
+        ...(html ? { html } : {}),
+        ...(text ? { text } : {}),
+      } as Parameters<Resend["emails"]["send"]>[0]),
+      RESEND_REQUEST_TIMEOUT_MS,
+      "Resend request timed out"
+    );
 
     if (error) {
       throw new Error(`Resend send failed: ${error.name} - ${error.message}`);
@@ -85,7 +151,34 @@ const sendEmail = async ({ to, subject, text, html }: SendMailParams): Promise<v
     return;
   }
 
-  await getSmtpTransporter().sendMail({ from, to, subject, text, html });
+  const transport = emailTransports.createSmtpTransport({
+    host: config.host,
+    port: config.port,
+    secure: config.port === 465,
+    auth: { user: config.user, pass: config.pass },
+    connectionTimeout: SMTP_CONNECTION_TIMEOUT_MS,
+    greetingTimeout: SMTP_GREETING_TIMEOUT_MS,
+    socketTimeout: SMTP_SOCKET_TIMEOUT_MS,
+  });
+  await transport.sendMail({ from: config.from, to, subject, text, html });
+};
+
+/** Log-safe description of an email failure: no addresses, links, or secrets. */
+export const describeEmailError = (error: unknown) => {
+  const err = error as { name?: string; message?: string; code?: string; responseCode?: number };
+  let provider: EmailProvider | "unknown" = "unknown";
+  try {
+    provider = getEmailConfig().provider;
+  } catch {
+    // Already reported by the error itself.
+  }
+  return {
+    provider,
+    name: err?.name || "Error",
+    message: String(err?.message || "").replace(/https?:\/\/\S+/g, "[url]").slice(0, 300),
+    ...(err?.code ? { code: err.code } : {}),
+    ...(err?.responseCode ? { responseCode: err.responseCode } : {}),
+  };
 };
 
 export async function sendGroupInviteEmail(
@@ -230,3 +323,21 @@ export async function sendBugReportEmail(to: string, bugReport: IBugReport): Pro
     html,
   });
 }
+
+/**
+ * Startup check for deployed environments. Problems are reported loudly
+ * instead of crashing so one email misconfiguration cannot take the whole
+ * API offline; affected email flows refuse to send until it is fixed.
+ */
+export const reportEmailConfiguration = (): boolean => {
+  if (!isDeployedEnvironment()) return true;
+  try {
+    getAppUrl();
+    const { provider } = assertEmailConfig();
+    console.log("Email configuration OK:", { provider });
+    return true;
+  } catch (error) {
+    console.error("EMAIL CONFIGURATION ERROR: outgoing email (including password reset) is not deliverable until fixed:", describeEmailError(error));
+    return false;
+  }
+};

@@ -121,7 +121,7 @@ Values must stay in Railway. Only names are documented.
 | Runtime | `NODE_ENV`, `PORT`, `RAILWAY_ENVIRONMENT`, `RAILWAY_ENVIRONMENT_NAME`, `RAILWAY_PROJECT_NAME`, `RAILWAY_PUBLIC_DOMAIN`, `RAILWAY_SERVICE_NAME`, `RAILWAY_STATIC_URL` |
 | Database | `MONGODB_URI` |
 | Auth | `JWT_SECRET`, `GOOGLE_CLIENT_ID` |
-| Email | `EMAIL_FROM`, `RESEND_API_KEY`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` |
+| Email | `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `EMAIL_FROM` (sender on a Resend-verified domain), `APP_URL` (public https frontend, used in reset links). `SMTP_*` is for local development only: Railway Hobby blocks outbound SMTP. |
 | Media | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` |
 | AI | `OPENAI_API_KEY` |
 | Movie data | `TMDB_API_KEY`, `WATCHMODE_API_KEY`, `WATCHMODE_REGION` |
@@ -200,7 +200,7 @@ Minimum recovery order:
 | Frontend loads but API fails | Wrong `REACT_APP_API_BASE_URL` or backend down | Vercel env vars, Railway service status |
 | Socket.IO does not connect | Wrong `REACT_APP_SOCKET_URL`, CORS, or backend Socket.IO issue | Railway logs and CORS variables |
 | Login fails | OAuth config mismatch | Google OAuth redirect/origin config and backend auth vars |
-| Emails fail | Missing email credentials or DNS auth | `RESEND_API_KEY`, `SMTP_*`, SPF/DKIM/DMARC |
+| Emails fail | Wrong provider, unverified sender, or bad `APP_URL` | Railway logs for `EMAIL CONFIGURATION ERROR` / `Failed to send password reset email`; `EMAIL_PROVIDER`, `RESEND_API_KEY`, `EMAIL_FROM`, `APP_URL`; Resend domain status; SPF/DKIM/DMARC |
 | Database errors | MongoDB URI or network/access issue | `MONGODB_URI`, Atlas network access |
 | DNS points to Hetzner unexpectedly | Bad recovery/migration record | Cloudflare DNS records |
 
