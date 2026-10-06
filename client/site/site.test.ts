@@ -36,8 +36,13 @@ describe("routing between public pages and the app", () => {
     expect(pattern.test("/historyx")).toBe(false);
   });
 
-  test("vercel.json lists app routes as rewrites to app.html", () => {
+  test("vercel.json lists app routes as rewrites to the clean app URL", () => {
     expect(readAppRouteSources()).toContain("/login");
+    const config = JSON.parse(readFileSync(clientPath("vercel.json"), "utf8"));
+    expect(config.cleanUrls).toBe(true);
+    for (const rewrite of config.rewrites) {
+      expect(rewrite.destination).toBe("/app");
+    }
   });
 });
 

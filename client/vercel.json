@@ -13,59 +13,59 @@
   "rewrites": [
     {
       "source": "/login",
-      "destination": "/app.html"
+      "destination": "/app"
     },
     {
       "source": "/signup",
-      "destination": "/app.html"
+      "destination": "/app"
     },
     {
       "source": "/home",
-      "destination": "/app.html"
+      "destination": "/app"
     },
     {
       "source": "/dashboard",
-      "destination": "/app.html"
+      "destination": "/app"
     },
     {
       "source": "/inbox",
-      "destination": "/app.html"
+      "destination": "/app"
     },
     {
       "source": "/my-groups",
-      "destination": "/app.html"
+      "destination": "/app"
     },
     {
       "source": "/watchlist",
-      "destination": "/app.html"
+      "destination": "/app"
     },
     {
       "source": "/coming-soon",
-      "destination": "/app.html"
+      "destination": "/app"
     },
     {
       "source": "/profile",
-      "destination": "/app.html"
+      "destination": "/app"
     },
     {
       "source": "/app-about",
-      "destination": "/app.html"
+      "destination": "/app"
     },
     {
       "source": "/history/:path*",
-      "destination": "/app.html"
+      "destination": "/app"
     },
     {
       "source": "/group/:path*",
-      "destination": "/app.html"
+      "destination": "/app"
     },
     {
       "source": "/invite/:path*",
-      "destination": "/app.html"
+      "destination": "/app"
     },
     {
       "source": "/reset-password/:path*",
-      "destination": "/app.html"
+      "destination": "/app"
     }
   ],
   "headers": [

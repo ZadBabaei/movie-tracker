@@ -2,10 +2,11 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 // The single list of URLs served by the React app lives in vercel.json as
-// rewrites to /app.html. The dev and preview servers read the same list, and a
-// test checks it against the routes declared in src/App.tsx.
+// rewrites to /app (Vercel's clean URL for app.html). The dev and preview
+// servers read the same list, and a test checks it against src/App.tsx.
 
 export const APP_SHELL = "/app.html";
+export const APP_SHELL_ROUTE = "/app";
 
 interface VercelConfig {
   rewrites?: { source: string; destination: string }[];
@@ -20,7 +21,7 @@ const vercelConfigPath = clientPath("vercel.json");
 export const readAppRouteSources = (configPath = vercelConfigPath): string[] => {
   const config = JSON.parse(readFileSync(configPath, "utf8")) as VercelConfig;
   return (config.rewrites ?? [])
-    .filter((rewrite) => rewrite.destination === APP_SHELL)
+    .filter((rewrite) => rewrite.destination === APP_SHELL_ROUTE)
     .map((rewrite) => rewrite.source);
 };
 

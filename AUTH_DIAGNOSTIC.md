@@ -1,5 +1,13 @@
 # Sign-in diagnostic — 2026-10-06
 
+## Follow-up: production sign-in page returned 404
+
+After the first fix was pushed, the production browser showed the public 404 page at `/login`. The deployment for `f3ff7bc1` was READY and assigned to the production domains. The newly deployed public-site configuration enabled `cleanUrls` but rewrote every React route to `/app.html`. Vercel requires extensionless rewrite destinations when `cleanUrls` is enabled.
+
+All 14 app rewrites now target `/app`. Local dev/preview route discovery recognizes that production destination while still serving the physical `app.html` file. A routing regression assertion covers the extensionless destinations. All 9 site tests and the client type check/production build passed. This issue prevents the sign-in form from appearing before authentication can begin.
+
+Reference: https://vercel.com/docs/frameworks/frontend/vite
+
 ## Confirmed defect and local correction
 
 `acceptAuthenticatedSession` notified session subscribers before storing the accepted token. `AppRouter` uses `useSyncExternalStore` and reads the token from localStorage. A subscriber could therefore render the new session generation while still observing a signed-out session, redirecting a successful login back to `/login`.
