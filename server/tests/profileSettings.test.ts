@@ -117,7 +117,9 @@ test("unrelated lookups do not select settings and user search does not expose e
   assert.equal(result.status, 200);
   assert.ok(result.body.length > 0);
   for (const user of result.body) {
-    for (const key of ["email", "username", "discoverable", "shareWatchHistory"]) assert.equal(user[key], undefined);
+    for (const key of ["email", "_id", "discoverable", "shareWatchHistory"]) assert.equal(user[key], undefined);
+    assert.equal(user.username, "owner");
+    assert.equal(user.displayName, "Updated Owner");
   }
 });
 

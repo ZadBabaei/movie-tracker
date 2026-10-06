@@ -11,6 +11,7 @@ dotenv.config();
 import groupRoutes from "./routes/groupRoutes";
 import authRoutes from "./routes/authRoutes";
 import userRoutes from "./routes/userRoutes";
+import userDiscoveryRoutes from "./routes/userDiscoveryRoutes";
 import pollRoutes from "./routes/pollRoutes";
 import chatRoutes from "./routes/chatRoutes";
 import inboxRoutes from "./routes/inboxRoutes";
@@ -88,6 +89,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/groups", groupRoutes);
 app.use("/api/inbox", inboxRoutes);
 app.use("/api/user", userRoutes);
+app.use("/api/users", userDiscoveryRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/polls", pollRoutes);

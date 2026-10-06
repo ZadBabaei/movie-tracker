@@ -1,4 +1,5 @@
 import rateLimit from "express-rate-limit";
+import type { Request } from "express";
 
 const MINUTE = 60 * 1000;
 const isTest = process.env.NODE_ENV === "test";
@@ -84,4 +85,13 @@ export const uploadLimiter = build(
   60 * MINUTE,
   ceiling(20),
   "Too many uploads. Please try again later."
+);
+
+// Runs after authentication: per-account limits avoid penalizing shared IPs.
+// Keep the real limit under tests so its boundary is verified end to end.
+export const userSearchLimiter = build(
+  MINUTE,
+  60,
+  "Too many user searches. Please try again in a minute.",
+  { keyGenerator: (req: Request) => req.user!.id }
 );

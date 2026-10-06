@@ -26,17 +26,23 @@ test.describe("injection and directory disclosure", () => {
     expect(authSearch.status()).toBe(404);
   });
 
-  test("user search escapes the term and never returns emails", async ({ request }) => {
+  test("legacy user search respects discovery privacy and never returns emails", async ({ request }) => {
     const factory = createUserFactory();
-    const [session] = await createTestUsers(request, factory.users(3));
+    const [session, visible, hidden] = await createTestUsers(request, factory.users(3));
+    for (const [account, username, discoverable] of [
+      [visible, "privacy_visible", true], [hidden, "privacy_hidden", false],
+    ] as const) {
+      const updated = await request.put(`${apiBaseURL()}/api/profile`, {
+        headers: auth(account.token), data: { username, discoverable },
+      });
+      expect(updated.ok()).toBeTruthy();
+    }
 
-    // A regex metacharacter query used to match every user. Escaped, it is a
-    // literal that matches nobody.
+    // Regex metacharacters are rejected before querying the database.
     const wildcard = await request.get(`${apiBaseURL()}/api/user/search?q=${encodeURIComponent(".*")}`, {
       headers: auth(session.token),
     });
-    expect(wildcard.ok()).toBeTruthy();
-    expect(await wildcard.json()).toEqual([]);
+    expect(wildcard.status()).toBe(400);
 
     // A catastrophic-backtracking payload must not hang the database.
     const started = Date.now();
@@ -44,23 +50,27 @@ test.describe("injection and directory disclosure", () => {
       `${apiBaseURL()}/api/user/search?q=${encodeURIComponent("(a+)+$")}`,
       { headers: auth(session.token) }
     );
-    expect(redos.ok()).toBeTruthy();
+    expect(redos.status()).toBe(400);
     expect(Date.now() - started).toBeLessThan(5000);
 
-    // A real name still resolves, but without leaking the address.
-    const byName = await request.get(`${apiBaseURL()}/api/user/search?q=${encodeURIComponent("E2E User")}`, {
+    // Only opted-in username prefixes resolve, without leaking IDs or email.
+    const byName = await request.get(`${apiBaseURL()}/api/user/search?q=privacy_`, {
       headers: auth(session.token),
     });
     expect(byName.ok()).toBeTruthy();
     const results = await byName.json();
-    expect(results.length).toBeGreaterThan(0);
-    expect(results.every((user: any) => user.email === undefined)).toBeTruthy();
+    expect(results.map((user: any) => user.username)).toEqual(["privacy_visible"]);
+    expect(results.every((user: any) => user.email === undefined && user._id === undefined)).toBeTruthy();
+    const byEmail = await request.get(`${apiBaseURL()}/api/user/search?q=${encodeURIComponent(hidden.user.email)}`, {
+      headers: auth(session.token),
+    });
+    expect(byEmail.status()).toBe(400);
 
     // Single characters are too coarse to be a browsing primitive.
     const tooShort = await request.get(`${apiBaseURL()}/api/user/search?q=a`, {
       headers: auth(session.token),
     });
-    expect(await tooShort.json()).toEqual([]);
+    expect(tooShort.status()).toBe(400);
   });
 
   test("comment lookup rejects Mongo operator injection", async ({ request }) => {
