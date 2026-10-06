@@ -28,6 +28,8 @@ export interface StremioLibraryItemDto {
   state: {
     timesWatched?: number;
     lastWatched?: string;
+    watched?: string;
+    videoId?: string;
   };
 }
 
@@ -72,6 +74,10 @@ const toLibraryItemDto = (value: unknown): StremioLibraryItemDto | null => {
           ? timesWatched
           : undefined,
       lastWatched: boundedString(providerState.lastWatched, 128),
+      ...(boundedString(providerState.watched, 32_768)
+        ? { watched: boundedString(providerState.watched, 32_768) } : {}),
+      ...(boundedString(providerState.video_id, 1024)
+        ? { videoId: boundedString(providerState.video_id, 1024) } : {}),
     },
   };
 };

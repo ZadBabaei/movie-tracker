@@ -1,4 +1,5 @@
 import mongoose, { Document, Model, Schema, Types } from "mongoose";
+import { IWatchHistoryTvEpisode, tvEpisodeSchema } from "./WatchHistoryEntry";
 
 export const PROVIDER_MEDIA_TYPES = ["movie", "tv_episode"] as const;
 export const IDENTIFIER_NAMESPACES = ["imdb", "tmdb", "provider", "unknown"] as const;
@@ -6,6 +7,7 @@ export const INTEGRATION_MATCH_STATUSES = [
   "unresolved",
   "matched",
   "movie_missing",
+  "tv_episode_missing",
   "unsupported_identifier",
   "retryable_error",
 ] as const;
@@ -18,6 +20,7 @@ export const TIMESTAMP_CONFIDENCE_VALUES = [
 export const INTEGRATION_SUPPRESSION_REASONS = [
   "local_history_deleted",
   "user_suppressed",
+  "equivalent_local_history",
 ] as const;
 
 export type ProviderMediaType = (typeof PROVIDER_MEDIA_TYPES)[number];
@@ -41,6 +44,10 @@ export interface IIntegrationMediaState extends Document {
   matchStatus: IntegrationMatchStatus;
   matchedMovieId?: Types.ObjectId;
   matchedTmdbId?: number;
+  providerSeriesImdbId?: string;
+  seasonNumber?: number;
+  episodeNumber?: number;
+  matchedTv?: IWatchHistoryTvEpisode;
   importStatus: IntegrationImportStatus;
   importedHistoryEntryId?: Types.ObjectId;
   importReservationCredentialVersion?: number;
@@ -96,6 +103,10 @@ const integrationMediaStateSchema = new Schema<IIntegrationMediaState>(
       default: "unresolved",
     },
     matchedMovieId: { type: Schema.Types.ObjectId, ref: "Movie" },
+    providerSeriesImdbId: { type: String, match: /^tt\d{7,12}$/ },
+    seasonNumber: { type: Number, min: 0, validate: Number.isSafeInteger },
+    episodeNumber: { type: Number, min: 1, validate: Number.isSafeInteger },
+    matchedTv: { type: tvEpisodeSchema },
     matchedTmdbId: {
       type: Number,
       min: 1,

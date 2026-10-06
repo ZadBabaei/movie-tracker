@@ -195,6 +195,39 @@ const renderPage = () =>
   );
 
 describe("Watch History timeline", () => {
+  test("stops at the first recorded month instead of filling all twelve months", async () => {
+    historyApi.fetchPersonalHistory.mockResolvedValue({ items: [{ ...movieEntry, watchedAt: "2026-05-10T00:00:00Z" }], nextCursor: null, stats: { total: 1 }, monthPagination: { page: 1, totalPages: 1, start: "2025-11-01T00:00:00Z", end: "2026-11-01T00:00:00Z", oldestWatchedAt: "2026-05-10T00:00:00Z" } });
+    renderPage();
+    await screen.findByText("Heat");
+    expect(screen.getByRole("heading", { name: /^May$/ })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "April" })).not.toBeInTheDocument();
+    expect(screen.getAllByText("No watches this month.")).toHaveLength(5);
+  });
+  test("shows only the two remaining months on page two of a fourteen-month history", async () => {
+    historyApi.fetchPersonalHistory.mockResolvedValue({ items: [{ ...movieEntry, watchedAt: "2025-09-10T00:00:00Z" }], nextCursor: null, stats: { total: 1 }, monthPagination: { page: 2, totalPages: 2, start: "2024-11-01T00:00:00Z", end: "2025-11-01T00:00:00Z", oldestWatchedAt: "2025-09-10T00:00:00Z" } });
+    renderPage();
+    await screen.findByText("Heat");
+    expect(screen.getByRole("heading", { name: "October" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "September" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "August" })).not.toBeInTheDocument();
+  });
+  test("previews four entries, expands a month and requests older twelve-month pages", async () => {
+    const rows = Array.from({ length: 6 }, (_, index) => ({ ...movieEntry, _id: `preview-${index}`, watchedAt: "2026-10-01T00:00:00Z" }));
+    historyApi.fetchPersonalHistory.mockResolvedValue({ items: rows, nextCursor: null, stats: { total: 6 }, monthPagination: { page: 1, totalPages: 3, start: "2025-11-01T00:00:00Z", end: "2026-11-01T00:00:00Z" } });
+    vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    renderPage();
+    expect(await screen.findAllByTestId("history-row")).toHaveLength(4);
+    expect(screen.getAllByText("No watches this month.")).toHaveLength(11);
+    const expand = screen.getByRole("button", { name: "Expand October 2026" });
+    expect(expand).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(expand);
+    expect(screen.getAllByTestId("history-row")).toHaveLength(6);
+    fireEvent.click(screen.getByRole("button", { name: "Collapse October 2026" }));
+    expect(screen.getAllByTestId("history-row")).toHaveLength(4);
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: /^Next$/ }));
+    await waitFor(() => expect(historyApi.fetchPersonalHistory).toHaveBeenCalledWith({ limit: 100, monthPage: 2 }));
+  });
   test("renders the movie card unchanged and folds same-day episodes into one session card", async () => {
     renderPage();
     const movieRows = await screen.findAllByTestId("history-row");

@@ -62,6 +62,7 @@ interface HistoryBucket {
   items: HistoryEntry[];
   total: number;
   nextCursor: string | null;
+  monthPagination?: { page: number; totalPages: number; start: string; end: string; oldestWatchedAt?: string | null };
 }
 
 interface WatchHistoryState {
@@ -69,8 +70,8 @@ interface WatchHistoryState {
   byGroup: Record<string, HistoryBucket>;
   loading: Record<string, boolean>;
   errors: Record<string, string | null>;
-  fetchPersonal: () => Promise<void>;
-  fetchGroup: (groupId: string) => Promise<void>;
+  fetchPersonal: (append?: boolean, monthPage?: number) => Promise<void>;
+  fetchGroup: (groupId: string, append?: boolean, monthPage?: number) => Promise<void>;
   replaceEntry: (entry: HistoryEntry) => void;
   updateEntry: (entryId: string, payload: { watchedAt: string; watchedLocation: string; watchedNotes: string }) => Promise<HistoryEntry>;
   deleteEntry: (entryId: string) => Promise<void>;
@@ -85,11 +86,13 @@ export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
   loading: {},
   errors: {},
 
-  fetchPersonal: async () => {
+  fetchPersonal: async (append = false, monthPage) => {
+    const previous = get().personal;
+    if (append && (!previous.nextCursor || get().loading.personal)) return;
     const sessionGeneration = getSessionGeneration();
     set((state) => ({ loading: { ...state.loading, personal: true }, errors: { ...state.errors, personal: null } }));
     try {
-      const data = await api.fetchPersonalHistory({ limit: 100 });
+      const data = await api.fetchPersonalHistory({ limit: 100, ...(monthPage ? { monthPage } : {}), ...(append ? { cursor: previous.nextCursor! } : {}) });
       // Pull in the rest of the trailing day so a TV session is never split
       // at the page boundary (see utils/historyPagination.ts).
       const page = await completeTrailingDay(
@@ -101,7 +104,7 @@ export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
       );
       if (!isSessionGenerationCurrent(sessionGeneration)) return;
       set((state) => ({
-        personal: { items: page.items, total: data.stats?.total || 0, nextCursor: page.nextCursor },
+        personal: { items: append ? [...state.personal.items, ...page.items.filter((item) => !state.personal.items.some((existing) => existing._id === item._id))] : page.items, total: append ? previous.total : data.stats?.total || 0, nextCursor: page.nextCursor, ...(data.monthPagination ? { monthPagination: data.monthPagination } : {}) },
         loading: { ...state.loading, personal: false },
       }));
     } catch (error: any) {
@@ -113,11 +116,13 @@ export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
     }
   },
 
-  fetchGroup: async (groupId) => {
+  fetchGroup: async (groupId, append = false, monthPage) => {
+    const previous = get().byGroup[groupId] || emptyBucket();
+    if (append && (!previous.nextCursor || get().loading[groupId])) return;
     const sessionGeneration = getSessionGeneration();
     set((state) => ({ loading: { ...state.loading, [groupId]: true }, errors: { ...state.errors, [groupId]: null } }));
     try {
-      const data = await api.fetchGroupHistory(groupId, { limit: 100 });
+      const data = await api.fetchGroupHistory(groupId, { limit: 100, ...(monthPage ? { monthPage } : {}), ...(append ? { cursor: previous.nextCursor! } : {}) });
       const page = await completeTrailingDay(
         { items: data.items || [], nextCursor: data.nextCursor || null },
         async (cursor, limit) => {
@@ -129,7 +134,7 @@ export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
       set((state) => ({
         byGroup: {
           ...state.byGroup,
-          [groupId]: { items: page.items, total: data.stats?.total || 0, nextCursor: page.nextCursor },
+          [groupId]: { items: append ? [...(state.byGroup[groupId]?.items || []), ...page.items.filter((item) => !(state.byGroup[groupId]?.items || []).some((existing) => existing._id === item._id))] : page.items, total: append ? previous.total : data.stats?.total || 0, nextCursor: page.nextCursor, ...(data.monthPagination ? { monthPagination: data.monthPagination } : {}) },
         },
         loading: { ...state.loading, [groupId]: false },
       }));

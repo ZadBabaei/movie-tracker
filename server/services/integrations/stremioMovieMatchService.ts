@@ -7,6 +7,9 @@ import Movie, { IMovie } from "../../models/movie";
 import UserIntegration from "../../models/UserIntegration";
 import { isValidImdbTitleId } from "./imdbTitleId";
 import { currentStremioProviderStateFilter } from "./stremioSyncService";
+import tmdbTvEpisodeResolver, { TmdbTvEpisodeResolver } from "./tmdbTvEpisodeResolver";
+import { IWatchHistoryTvEpisode } from "../../models/WatchHistoryEntry";
+import { parseStremioEpisodeId } from "./stremioWatchedBitfield";
 import tmdbMovieResolver, {
   ResolvedTmdbMovie,
   TmdbMovieResolver,
@@ -26,11 +29,15 @@ export interface StremioMovieMatchSummary {
   unsupported: number;
   retryableErrors: number;
   skippedStale: number;
+  tvEpisodesExamined?: number;
+  tvEpisodesMatched?: number;
+  tvEpisodesMissing?: number;
 }
 
 export type StremioMovieMatchResult =
   | "matched"
   | "movie_missing"
+  | "tv_episode_missing"
   | "unsupported_identifier"
   | "retryable_error"
   | "integration_changed";
@@ -92,9 +99,11 @@ const matchingFilter = (
 
 export const createStremioMovieMatchService = ({
   resolver = tmdbMovieResolver,
+  tvResolver = tmdbTvEpisodeResolver,
   concurrency = DEFAULT_CONCURRENCY,
 }: {
   resolver?: TmdbMovieResolver;
+  tvResolver?: TmdbTvEpisodeResolver;
   concurrency?: number;
 } = {}) => {
   if (!Number.isSafeInteger(concurrency) || concurrency < 1 || concurrency > 32) {
@@ -128,7 +137,7 @@ export const createStremioMovieMatchService = ({
       };
       const candidates = await IntegrationMediaState.find({
         ...currentStremioProviderStateFilter(integration._id, credentialVersion),
-        providerMediaType: "movie",
+        providerMediaType: { $in: ["movie", "tv_episode"] },
         completed: true,
         matchStatus: { $in: CANDIDATE_MATCH_STATUSES },
       });
@@ -140,15 +149,18 @@ export const createStremioMovieMatchService = ({
         retryableErrors: 0,
         skippedStale: 0,
       };
+      const tvCount = candidates.filter(state => state.providerMediaType === "tv_episode").length;
+      if (tvCount) { summary.tvEpisodesExamined = tvCount; summary.tvEpisodesMatched = 0; summary.tvEpisodesMissing = 0; }
 
       const transition = async (
         state: IIntegrationMediaState,
         status: Exclude<IntegrationMatchStatus, "unresolved">,
-        options: { movie?: IMovie; tmdbId?: number; errorCode?: string } = {}
+        options: { movie?: IMovie; tmdbId?: number; tv?: IWatchHistoryTvEpisode; errorCode?: string } = {}
       ): Promise<boolean> => {
         if (!(await UserIntegration.exists(integrationFilter))) return false;
         const unset = {
           ...(!options.movie ? { matchedMovieId: 1, matchedTmdbId: 1 } : {}),
+          ...(!options.tv ? { matchedTv: 1 } : {}),
           ...(!options.errorCode ? { lastErrorCode: 1 } : {}),
         };
         const update = await IntegrationMediaState.updateOne(
@@ -160,6 +172,7 @@ export const createStremioMovieMatchService = ({
                 ? { matchedMovieId: options.movie._id, matchedTmdbId: options.tmdbId }
                 : {}),
               ...(options.errorCode ? { lastErrorCode: options.errorCode.slice(0, 128) } : {}),
+              ...(options.tv ? { matchedTv: options.tv } : {}),
             },
             ...(Object.keys(unset).length > 0 ? { $unset: unset } : {}),
           }
@@ -168,6 +181,25 @@ export const createStremioMovieMatchService = ({
       };
 
       const processState = async (state: IIntegrationMediaState): Promise<StremioMovieMatchResult> => {
+        if (state.providerMediaType === "tv_episode") {
+          const identity = parseStremioEpisodeId(state.providerItemId);
+          if (state.identifierNamespace !== "imdb" || !identity ||
+              identity.seriesImdbId !== state.providerSeriesImdbId ||
+              identity.seasonNumber !== state.seasonNumber || identity.episodeNumber !== state.episodeNumber) {
+            return await transition(state, "unsupported_identifier") ? "unsupported_identifier" : "integration_changed";
+          }
+          try {
+            const tv = await tvResolver.resolveEpisode(state.providerItemId);
+            if (!tv) return await transition(state, "tv_episode_missing") ? "tv_episode_missing" : "integration_changed";
+            if (tv.seasonNumber !== identity.seasonNumber || tv.episodeNumber !== identity.episodeNumber) {
+              throw new TmdbMovieResolverError("tmdb_protocol_error");
+            }
+            return await transition(state, "matched", { tv }) ? "matched" : "integration_changed";
+          } catch (error) {
+            const errorCode = error instanceof TmdbMovieResolverError ? error.code : "tmdb_matching_failed";
+            return await transition(state, "retryable_error", { errorCode }) ? "retryable_error" : "integration_changed";
+          }
+        }
         if (
           state.identifierNamespace !== "imdb" ||
           !isValidImdbTitleId(state.providerItemId)
@@ -217,9 +249,11 @@ export const createStremioMovieMatchService = ({
           const result = await processState(state);
           if (result === "matched") summary.matched += 1;
           else if (result === "movie_missing") summary.movieMissing += 1;
+          else if (result === "tv_episode_missing") summary.tvEpisodesMissing! += 1;
           else if (result === "unsupported_identifier") summary.unsupported += 1;
           else if (result === "retryable_error") summary.retryableErrors += 1;
           else summary.skippedStale += 1;
+          if (result === "matched" && state.providerMediaType === "tv_episode") summary.tvEpisodesMatched! += 1;
         }
       };
       await Promise.all(

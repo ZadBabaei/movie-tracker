@@ -26,6 +26,8 @@ export interface StremioSyncResult {
   snapshot: {
     snapshotItems: number;
     movieStates: number;
+    tvSeriesExamined?: number;
+    tvEpisodeStates?: number;
     ignoredItems: number;
     observed: number;
     upserted: number;
@@ -39,6 +41,9 @@ export interface StremioSyncResult {
     unsupported: number;
     retryableErrors: number;
     skippedStale: number;
+    tvEpisodesExamined?: number;
+    tvEpisodesMatched?: number;
+    tvEpisodesMissing?: number;
   };
   import: {
     examined: number;
@@ -47,6 +52,10 @@ export interface StremioSyncResult {
     timestampUnavailable: number;
     invalidMatch: number;
     skippedStale: number;
+    duplicatesDetected?: number;
+    tvEpisodesExamined?: number;
+    tvEpisodesImported?: number;
+    tvEpisodesSkipped?: number;
   };
 }
 

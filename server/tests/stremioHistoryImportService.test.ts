@@ -99,6 +99,66 @@ const deferred = <T>() => {
   return { promise, resolve };
 };
 
+test("manual canonical movie occurrence suppresses import without editing metadata, including after deletion", async () => {
+  const integration = await createIntegration();
+  const movie = await createMovie();
+  const state = await createState(integration._id, movie._id);
+  const manual = await WatchHistoryEntry.create({
+    movieId: movie._id, scope: "personal", createdBy: integration.userId,
+    participants: [integration.userId], watchedAt,
+    watchedNotes: "Keep this note", watchedLocation: "Home",
+    ratings: [{ userId: integration.userId, rating: 9 }],
+  });
+  const before = manual.toObject();
+  const service = createStremioHistoryImportService();
+  const summaries = await Promise.all([
+    service.importCurrentStremioMovies(integration.userId.toString()),
+    service.importCurrentStremioMovies(integration.userId.toString()),
+  ]);
+  assert.equal(summaries.reduce((total, summary) => total + (summary.duplicatesDetected ?? 0), 0), 1);
+  assert.equal(await WatchHistoryEntry.countDocuments(), 1);
+  assert.deepEqual((await WatchHistoryEntry.findById(manual._id))!.toObject(), before);
+  const stored = await IntegrationMediaState.findById(state._id);
+  assert.equal(stored?.importStatus, "suppressed");
+  assert.equal(stored?.suppressionReason, "equivalent_local_history");
+  assert.equal(stored?.importedHistoryEntryId, undefined);
+  await WatchHistoryEntry.deleteOne({ _id: manual._id });
+  await service.importCurrentStremioMovies(integration.userId.toString());
+  assert.equal(await WatchHistoryEntry.countDocuments(), 0);
+});
+
+test("date-only movie history matches that UTC date, while different dates and timed same-day rewatches import", async () => {
+  const movie = await createMovie();
+  for (const [date, expected] of [
+    ["2026-04-05T00:00:00.000Z", 1],
+    ["2026-01-01T00:00:00.000Z", 2],
+    ["2026-04-05T01:02:03.000Z", 2],
+  ] as const) {
+    const integration = await createIntegration();
+    await createState(integration._id, movie._id);
+    await WatchHistoryEntry.create({
+      movieId: movie._id, scope: "personal", createdBy: integration.userId,
+      participants: [integration.userId], watchedAt: new Date(date),
+    });
+    await createStremioHistoryImportService().importCurrentStremioMovies(integration.userId.toString());
+    assert.equal(await WatchHistoryEntry.countDocuments({ createdBy: integration.userId }), expected, date);
+  }
+});
+
+test("another owner's manual movie occurrence does not suppress this owner's import", async () => {
+  const integration = await createIntegration();
+  const movie = await createMovie();
+  await createState(integration._id, movie._id);
+  const otherOwner = new mongoose.Types.ObjectId();
+  await WatchHistoryEntry.create({
+    movieId: movie._id, scope: "personal", createdBy: otherOwner,
+    participants: [otherOwner], watchedAt,
+  });
+  const result = await createStremioHistoryImportService().importCurrentStremioMovies(integration.userId.toString());
+  assert.equal(result.imported, 1);
+  assert.equal(await WatchHistoryEntry.countDocuments(), 2);
+});
+
 const routeHandler = (method: "get" | "patch" | "delete" | "put", path: string) => {
   const layer = (historyRouter as any).stack.find(
     (candidate: any) => candidate.route?.path === path && candidate.route?.methods?.[method]
@@ -323,7 +383,7 @@ test("missing or inconsistent canonical Movie leaves import pending", async () =
   }
 });
 
-test("manual history is not adopted and repeated runs remain idempotent", async () => {
+test("equivalent manual history is not adopted or duplicated and repeated runs remain idempotent", async () => {
   const integration = await createIntegration();
   const movie = await createMovie();
   const state = await createState(integration._id, movie._id);
@@ -338,16 +398,16 @@ test("manual history is not adopted and repeated runs remain idempotent", async 
     ratings: [],
   });
   const service = createStremioHistoryImportService();
-  assert.equal((await service.importCurrentStremioMovies(integration.userId.toString())).imported, 1);
+  assert.equal((await service.importCurrentStremioMovies(integration.userId.toString())).duplicatesDetected, 1);
   assert.equal((await service.importCurrentStremioMovies(integration.userId.toString())).examined, 0);
 
   const histories = await WatchHistoryEntry.find({ movieId: movie._id })
     .select("+integrationMediaStateId");
-  assert.equal(histories.length, 2);
+  assert.equal(histories.length, 1);
   assert.equal(histories.find((entry) => entry._id.equals(manual._id))?.integrationMediaStateId, undefined);
   assert.equal(
     histories.filter((entry) => entry.integrationMediaStateId?.equals(state._id)).length,
-    1
+    0
   );
 });
 

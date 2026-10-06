@@ -140,6 +140,18 @@ describe("Stremio Home control", () => {
     expect(localStorage.getItem("token")).toBe("movie-tracker-token");
   });
 
+  test("reports TV imports, skipped duplicates, and missing episode matches", async () => {
+    integrationApi.fetchIntegrations.mockResolvedValue([connected()]);
+    integrationApi.syncStremio.mockResolvedValue({
+      ...syncResult,
+      matching: { ...syncResult.matching, tvEpisodesMissing: 1 },
+      import: { ...syncResult.import, tvEpisodesExamined: 3, tvEpisodesImported: 2, duplicatesDetected: 1 },
+    });
+    render(<StremioHomeControl />);
+    fireEvent.click(await screen.findByRole("button", { name: "SYNC" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("2 need attention · 2 TV episodes imported · 1 duplicates skipped");
+  });
+
   test("turns an expired provider session into a clear reconnect path", async () => {
     integrationApi.fetchIntegrations.mockResolvedValue([
       connected({ status: "reauth_required", connected: false, lastErrorCode: "provider_session_invalid" }),

@@ -5,6 +5,7 @@ const auth = () => ({
 });
 
 export interface HistoryQuery {
+  monthPage?: number;
   search?: string;
   year?: number;
   rated?: boolean;

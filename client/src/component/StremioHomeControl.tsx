@@ -63,7 +63,7 @@ const ConnectModal = ({
       className="stremio-connect-modal"
     >
       <p className="stremio-modal-intro">
-        Use your Stremio account to import completed movies into your private watch history.
+        Use your Stremio account to import completed movies and TV episodes into your private watch history. TV episodes use the sync date as their watch date.
         Your Stremio password is never stored. Movie Tracker securely stores an encrypted
         Stremio session so you can sync again without reconnecting.
       </p>
@@ -126,7 +126,7 @@ const DisconnectModal = ({
     className="stremio-connect-modal"
   >
     <p className="stremio-modal-intro">
-      This removes the saved Stremio session. Movies already imported into your history stay in Movie Tracker.
+      This removes the saved Stremio session. Movies and TV episodes already imported into your history stay in Movie Tracker.
     </p>
     {error ? <p className="stremio-form-error" role="alert">{error}</p> : null}
     <div className="stremio-confirm-actions">
@@ -176,6 +176,7 @@ const StremioHomeControl = ({
       : "";
   const attentionCount = syncResult
     ? syncResult.matching.movieMissing
+      + (syncResult.matching.tvEpisodesMissing ?? 0)
       + syncResult.matching.unsupported
       + syncResult.matching.retryableErrors
       + syncResult.import.timestampUnavailable
@@ -225,6 +226,8 @@ const StremioHomeControl = ({
               <p className="stremio-result" role="status">
                 {syncResult.import.imported} imported · {syncResult.matching.matched} matched
                 {attentionCount ? ` · ${attentionCount} need attention` : " · signal clear"}
+                {syncResult.import.tvEpisodesExamined ? ` · ${syncResult.import.tvEpisodesImported ?? 0} TV episodes imported` : ""}
+                {syncResult.import.duplicatesDetected ? ` · ${syncResult.import.duplicatesDetected} duplicates skipped` : ""}
               </p>
             ) : null}
             {syncStatusMessage && !syncResult && !error ? (
@@ -248,10 +251,10 @@ const StremioHomeControl = ({
             <h1>{reconnecting ? "Reconnect the signal." : "Bring your history into orbit."}</h1>
             <p className="stremio-core-copy">
               {reauth
-                ? "Your Stremio session expired. Reconnect to resume movie imports."
+                ? "Your Stremio session expired. Reconnect to resume history imports."
                 : integrationError
-                  ? "Your Stremio connection needs attention. Reconnect to resume movie imports."
-                : "Connect Stremio, then sync completed movies into your private history."}
+                  ? "Your Stremio connection needs attention. Reconnect to resume history imports."
+                : "Connect Stremio, then sync completed movies and TV episodes into your private history."}
             </p>
             <button type="button" className="stremio-connect-button" onClick={openConnect} disabled={operation !== null}>
               {reconnecting ? "Reconnect Stremio" : "Connect Stremio"}

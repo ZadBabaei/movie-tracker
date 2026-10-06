@@ -60,7 +60,7 @@ const ratingSchema = new Schema<IWatchHistoryRating>(
   { _id: false }
 );
 
-const tvEpisodeSchema = new Schema<IWatchHistoryTvEpisode>(
+export const tvEpisodeSchema = new Schema<IWatchHistoryTvEpisode>(
   {
     seriesTmdbId: { type: Number, required: true, min: 1, validate: Number.isInteger },
     // Season 0 is how TMDB numbers specials.

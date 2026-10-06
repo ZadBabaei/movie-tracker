@@ -273,6 +273,29 @@
   gap: 18px 16px;
 }
 
+.history-month-preview { min-height: 290px; align-content: start; }
+.history-empty-month { grid-column: 1 / -1; color: #9b9488; padding: 24px 0; }
+.history-month-content { min-width: 0; }
+.history-month-toolbar { position: absolute; top: 30px; right: 0; display: flex; justify-content: flex-end; }
+.history-period:has(.history-month-toggle)::after {
+  content: "";
+  position: absolute;
+  top: 52px;
+  left: 178px;
+  right: 44px;
+  height: 1px;
+  background: #514b40;
+  pointer-events: none;
+}
+.history-month-content { padding-top: 44px; }
+.history-month-toggle { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 0; border-radius: 0; background: transparent; color: var(--brand-ivory); cursor: pointer; position: relative; z-index: 1; }
+.history-month-toggle:hover { color: var(--brand-gold); }
+.history-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; padding: 32px 0; }
+.history-pagination button { min-width: 40px; min-height: 40px; padding: 8px 12px; border: 1px solid #514b40; border-radius: 6px; background: transparent; color: var(--brand-ivory); cursor: pointer; }
+.history-pagination button[aria-current="page"] { background: var(--brand-gold); color: var(--brand-black); }
+.history-pagination button:disabled { opacity: .4; cursor: default; }
+.history-month-toggle:focus-visible, .history-pagination button:focus-visible { outline: 2px solid var(--brand-gold); outline-offset: 3px; }
+
 .history-card {
   min-width: 0;
   display: flex;
@@ -349,6 +372,7 @@
   .history-main { margin-left: 104px; }
   .history-timeline::before { left: 94px; }
   .history-period { grid-template-columns: 70px minmax(0, 1fr); gap: 49px; }
+  .history-period:has(.history-month-toggle)::after { left: 119px; }
   .history-period-label::after { right: -29px; }
   .history-period-list { grid-template-columns: repeat(auto-fill, minmax(152px, 1fr)); }
 }
@@ -369,6 +393,10 @@
   .history-add-toggle { width: 100%; justify-content: center; }
   .history-timeline::before { left: 7px; }
   .history-period { display: block; padding: 34px 0 18px 28px; }
+  .history-month-toolbar { top: 22px; }
+  .history-period:has(.history-month-toggle)::after { top: 44px; left: 170px; }
+  .history-period-label { padding-right: 44px; }
+  .history-month-content { padding-top: 0; }
   .history-period-label { position: relative; top: 0; margin-bottom: 15px; }
   .history-period-label h2, .history-period-label span { display: inline; }
   .history-period-label span { margin-left: 8px; }

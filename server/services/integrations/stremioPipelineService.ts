@@ -12,6 +12,8 @@ import stremioSyncService, { StremioSyncError } from "./stremioSyncService";
 export interface StremioSnapshotSummary {
   snapshotItems: number;
   movieStates: number;
+  tvSeriesExamined?: number;
+  tvEpisodeStates?: number;
   ignoredItems: number;
   observed: number;
   upserted: number;

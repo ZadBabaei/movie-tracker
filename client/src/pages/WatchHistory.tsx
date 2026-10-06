@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FaPlus, FaSearch, FaStar, FaTimes } from "react-icons/fa";
+import { FaMinus, FaPlus, FaSearch, FaStar, FaTimes } from "react-icons/fa";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import GroupSelectModal, { WatchMetadata } from "../component/GroupSelectModal";
@@ -58,6 +58,8 @@ const WatchHistory: React.FC = () => {
   const [groupsLoaded, setGroupsLoaded] = useState(false);
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("all");
   const [sortMode, setSortMode] = useState<SortMode>("recent");
+  const [monthPage, setMonthPage] = useState(1);
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<HistoryEntry | null>(null);
   const deepLinkApplied = useRef(false);
   const activeGroup = groupList.find((group) => group._id === activeTab);
@@ -69,6 +71,8 @@ const WatchHistory: React.FC = () => {
     setActiveTabState(tab);
     setSearch("");
     setPeriodFilter("all");
+    setMonthPage(1);
+    setExpandedMonths(new Set());
   }, []);
 
   // One flow for movies and TV: search → (episodes) → watch details → save.
@@ -84,8 +88,8 @@ const WatchHistory: React.FC = () => {
         toast.warn(`${outcome.succeeded} saved, ${outcome.failed.length} failed for ${outcome.seriesTitle}.`);
       }
       setActiveTab(outcome.scopeId);
-      const refreshes = [fetchPersonal()];
-      if (outcome.scopeId !== "personal") refreshes.push(fetchGroup(outcome.scopeId));
+      const refreshes = [fetchPersonal(false, 1)];
+      if (outcome.scopeId !== "personal") refreshes.push(fetchGroup(outcome.scopeId, false, 1));
       await Promise.all(refreshes);
     },
     [fetchGroup, fetchPersonal, setActiveTab]
@@ -118,13 +122,13 @@ const WatchHistory: React.FC = () => {
   }, [activeTab, groupList, groupsLoaded, isPersonal, searchParams, setActiveTab]);
 
   useEffect(() => {
-    if (isPersonal) fetchPersonal();
-    else fetchGroup(activeTab);
-  }, [activeTab, fetchGroup, fetchPersonal, isPersonal]);
+    if (isPersonal) fetchPersonal(false, monthPage);
+    else fetchGroup(activeTab, false, monthPage);
+  }, [activeTab, fetchGroup, fetchPersonal, isPersonal, monthPage]);
 
   useEffect(() => {
     if (isPersonal) return;
-    const refresh = () => fetchGroup(activeTab);
+    const refresh = () => fetchGroup(activeTab, false, monthPage);
     socket.on("group:history_updated", refresh);
     socket.on("group:history_deleted", refresh);
     socket.on("group:history_rating_updated", refresh);
@@ -133,7 +137,7 @@ const WatchHistory: React.FC = () => {
       socket.off("group:history_deleted", refresh);
       socket.off("group:history_rating_updated", refresh);
     };
-  }, [activeTab, fetchGroup, isPersonal, socket]);
+  }, [activeTab, fetchGroup, isPersonal, socket, monthPage]);
 
   const bucket = isPersonal ? personal : (byGroup[activeTab] || { items: [], total: 0, nextCursor: null });
   const activeLoading = !!loading[activeTab];
@@ -167,8 +171,25 @@ const WatchHistory: React.FC = () => {
       existing.items.push(item);
       grouped.set(key, existing);
     });
-    return [...grouped.values()];
-  }, [visibleItems]);
+    if (!bucket.monthPagination) return [...grouped.values()];
+    if (bucket.monthPagination.oldestWatchedAt === null) return [];
+    const end = new Date(bucket.monthPagination.end);
+    const oldest = bucket.monthPagination.oldestWatchedAt ? new Date(bucket.monthPagination.oldestWatchedAt) : null;
+    const monthCount = oldest ? Math.max(0, Math.min(12, (end.getUTCFullYear() - oldest.getUTCFullYear()) * 12 + end.getUTCMonth() - oldest.getUTCMonth())) : 12;
+    return Array.from({ length: monthCount }, (_, index) => {
+      const date = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - index - 1, 1));
+      return grouped.get(`${date.getUTCFullYear()}-${date.getUTCMonth()}`) || {
+        month: date.toLocaleDateString("en-US", { month: "long", timeZone: "UTC" }),
+        year: String(date.getUTCFullYear()), items: [],
+      };
+    });
+  }, [visibleItems, bucket.monthPagination]);
+
+  const changeMonthPage = (page: number) => {
+    setMonthPage(page);
+    setExpandedMonths(new Set());
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const latest = bucket.items[0];
   const heroBackdrop = latest ? posterUrl(getEntryBackdropPath(latest)) : "";
@@ -296,26 +317,51 @@ const WatchHistory: React.FC = () => {
         {activeLoading ? (
           <div className="history-skeleton" role="status" aria-label="Loading watch history">{Array.from({ length: 6 }).map((_, index) => <div key={index} />)}</div>
         ) : activeError ? (
-          <section className="history-state"><h2>History unavailable</h2><p>{activeError}</p><button type="button" onClick={() => isPersonal ? fetchPersonal() : fetchGroup(activeTab)}>Try again</button></section>
-        ) : visibleItems.length === 0 ? (
+          <section className="history-state"><h2>History unavailable</h2><p>{activeError}</p><button type="button" onClick={() => isPersonal ? fetchPersonal(false, monthPage) : fetchGroup(activeTab, false, monthPage)}>Try again</button></section>
+        ) : visibleItems.length === 0 && (!bucket.monthPagination || bucket.monthPagination.oldestWatchedAt === null) ? (
           <section className="history-state"><h2>{bucket.items.length ? "No matching screenings" : "Your next movie night starts here"}</h2><p>{bucket.items.length ? "Try another title or clear the active filter." : isPersonal ? "Add something you've watched, or mark a movie watched from your Watchlist." : "Add something this group watched, or mark a movie watched from the group's Watchlist."}</p>{bucket.items.length ? <button type="button" onClick={() => { setSearch(""); setPeriodFilter("all"); }}>Clear filters</button> : null}</section>
         ) : (
           <div className="history-timeline">
             {periods.map((period) => (
               <section className="history-period" key={`${period.month}-${period.year}`}>
                 <header className="history-period-label"><h2>{period.month}</h2><span>{period.year}</span></header>
-                <div className="history-period-list">
-                  {period.items.map((item) =>
+                <div className="history-month-content">
+                  <div className="history-month-toolbar">
+                  {period.items.length > 4 && <button className="history-month-toggle" type="button"
+                    aria-label={`${expandedMonths.has(`${period.month}-${period.year}`) ? "Collapse" : "Expand"} ${period.month} ${period.year}`}
+                    aria-expanded={expandedMonths.has(`${period.month}-${period.year}`)}
+                    aria-controls={`history-month-${period.month}-${period.year}`}
+                    onClick={() => setExpandedMonths((previous) => {
+                      const next = new Set(previous); const key = `${period.month}-${period.year}`;
+                      if (next.has(key)) next.delete(key); else next.add(key); return next;
+                    })}>{expandedMonths.has(`${period.month}-${period.year}`) ? <FaMinus aria-hidden="true" /> : <FaPlus aria-hidden="true" />}</button>}
+                  </div>
+                <div className="history-period-list history-month-preview" id={`history-month-${period.month}-${period.year}`}>
+                  {(expandedMonths.has(`${period.month}-${period.year}`) ? period.items : period.items.slice(0, 4)).map((item) =>
                     item.kind === "movie" ? (
                       renderMovieCard(item.entry)
                     ) : (
                       <TvSessionCard key={item.id} session={item} formattedDay={formatCalendarDay(item.calendarDay)} to={seriesHref(item.seriesTmdbId)} />
                     )
                   )}
+                  {period.items.length === 0 && <p className="history-empty-month">{search || periodFilter !== "all" ? "No matching entries this month." : "No watches this month."}</p>}
+                </div>
                 </div>
               </section>
             ))}
           </div>
+        )}
+        {bucket.monthPagination && (
+          <nav className="history-pagination" aria-label="History pages">
+            <button type="button" disabled={activeLoading || monthPage === 1} onClick={() => changeMonthPage(monthPage - 1)}>Previous</button>
+            {Array.from({ length: bucket.monthPagination.totalPages }, (_, index) => index + 1).filter((page) => page === 1 || page === bucket.monthPagination!.totalPages || Math.abs(page - monthPage) <= 2).map((page, index, pages) => (
+              <React.Fragment key={page}>
+                {index > 0 && page - pages[index - 1] > 1 && <span aria-hidden="true">…</span>}
+                <button type="button" aria-label={`Page ${page}`} aria-current={page === monthPage ? "page" : undefined} disabled={activeLoading} onClick={() => changeMonthPage(page)}>{page}</button>
+              </React.Fragment>
+            ))}
+            <button type="button" disabled={activeLoading || monthPage >= bucket.monthPagination.totalPages} onClick={() => changeMonthPage(monthPage + 1)}>Next</button>
+          </nav>
         )}
       </main>
 

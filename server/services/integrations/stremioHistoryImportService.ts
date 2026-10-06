@@ -5,9 +5,11 @@ import IntegrationMediaState, {
 import Movie from "../../models/movie";
 import WatchHistoryEntry, {
   IWatchHistoryEntry,
+  IWatchHistoryTvEpisode,
 } from "../../models/WatchHistoryEntry";
 import UserIntegration from "../../models/UserIntegration";
 import { currentStremioProviderStateFilter } from "./stremioSyncService";
+import { findEquivalentStremioHistory } from "./stremioHistoryDuplicate";
 
 const DEFAULT_CONCURRENCY = 6;
 
@@ -18,6 +20,10 @@ export interface StremioHistoryImportSummary {
   timestampUnavailable: number;
   invalidMatch: number;
   skippedStale: number;
+  duplicatesDetected?: number;
+  tvEpisodesExamined?: number;
+  tvEpisodesImported?: number;
+  tvEpisodesSkipped?: number;
 }
 
 type ImportResult =
@@ -29,8 +35,9 @@ type ImportResult =
 
 interface HistoryCreatePayload {
   _id: Types.ObjectId;
-  mediaType: "movie";
-  movieId: Types.ObjectId;
+  mediaType: "movie" | "tv_episode";
+  movieId?: Types.ObjectId;
+  tv?: IWatchHistoryTvEpisode;
   scope: "personal";
   createdBy: Types.ObjectId;
   participants: Types.ObjectId[];
@@ -68,10 +75,15 @@ const safeExistingHistory = (
   ownerId: Types.ObjectId
 ) =>
   entry.integrationMediaStateId?.toString() === state._id.toString() &&
-  entry.mediaType !== "tv_episode" &&
-  Boolean(entry.movieId) &&
+  (state.providerMediaType === "tv_episode"
+    ? entry.mediaType === "tv_episode" && !!entry.tv && !!state.matchedTv &&
+      entry.tv.seriesTmdbId === state.matchedTv.seriesTmdbId &&
+      entry.tv.seasonNumber === state.matchedTv.seasonNumber &&
+      entry.tv.episodeNumber === state.matchedTv.episodeNumber &&
+      entry.tv.episodeTmdbId === state.matchedTv.episodeTmdbId
+    : entry.mediaType !== "tv_episode" && Boolean(entry.movieId) &&
+      entry.movieId?.toString() === state.matchedMovieId?.toString()) &&
   entry.scope === "personal" &&
-  entry.movieId?.toString() === state.matchedMovieId?.toString() &&
   entry.createdBy.toString() === ownerId.toString() &&
   !entry.groupId &&
   entry.participants.length === 1 &&
@@ -142,12 +154,14 @@ export const createStremioHistoryImportService = ({
       };
       const candidates = await IntegrationMediaState.find({
         ...currentStremioProviderStateFilter(integration._id, credentialVersion),
-        providerMediaType: "movie",
+        providerMediaType: { $in: ["movie", "tv_episode"] },
         completed: true,
         matchStatus: "matched",
         importStatus: "pending",
-        matchedMovieId: { $exists: true },
-        matchedTmdbId: { $exists: true },
+        $and: [{ $or: [
+          { providerMediaType: "movie", matchedMovieId: { $exists: true }, matchedTmdbId: { $exists: true } },
+          { providerMediaType: "tv_episode", matchedTv: { $exists: true } },
+        ] }],
       });
       const summary: StremioHistoryImportSummary = {
         examined: candidates.length,
@@ -157,17 +171,23 @@ export const createStremioHistoryImportService = ({
         invalidMatch: 0,
         skippedStale: 0,
       };
+      const tvCount = candidates.filter(state => state.providerMediaType === "tv_episode").length;
+      if (tvCount) { summary.tvEpisodesExamined = tvCount; summary.tvEpisodesImported = 0; summary.tvEpisodesSkipped = 0; }
 
       const stateFilter = (state: IIntegrationMediaState) => ({
         _id: state._id,
         integrationId: integration._id,
         ...stateVersionCondition(credentialVersion),
-        providerMediaType: "movie" as const,
+        providerMediaType: state.providerMediaType,
         completed: true,
         matchStatus: "matched" as const,
         importStatus: "pending" as const,
-        matchedMovieId: state.matchedMovieId,
-        matchedTmdbId: state.matchedTmdbId,
+        ...(state.providerMediaType === "tv_episode" ? {
+          "matchedTv.seriesTmdbId": state.matchedTv?.seriesTmdbId,
+          "matchedTv.seasonNumber": state.matchedTv?.seasonNumber,
+          "matchedTv.episodeNumber": state.matchedTv?.episodeNumber,
+          "matchedTv.episodeTmdbId": state.matchedTv?.episodeTmdbId,
+        } : { matchedMovieId: state.matchedMovieId, matchedTmdbId: state.matchedTmdbId }),
       });
 
       const recordPendingError = async (
@@ -175,6 +195,7 @@ export const createStremioHistoryImportService = ({
         lastErrorCode:
           | "provider_watch_time_unknown"
           | "matched_movie_inconsistent"
+          | "matched_episode_inconsistent"
           | "history_provenance_conflict"
       ) => {
         if (!(await UserIntegration.exists(integrationFilter))) return false;
@@ -220,6 +241,7 @@ export const createStremioHistoryImportService = ({
           await WatchHistoryEntry.deleteOne({
             _id: historyEntryId,
             integrationMediaStateId: state._id,
+            createdBy: ownerId,
           });
           return;
         }
@@ -233,6 +255,7 @@ export const createStremioHistoryImportService = ({
           await WatchHistoryEntry.deleteOne({
             _id: historyEntryId,
             integrationMediaStateId: state._id,
+            createdBy: ownerId,
           });
         }
       };
@@ -299,7 +322,7 @@ export const createStremioHistoryImportService = ({
 
       const processFreshState = async (
         state: IIntegrationMediaState,
-        movieId: Types.ObjectId
+        movieId?: Types.ObjectId
       ): Promise<ImportResult> => {
         if (!(await UserIntegration.exists(integrationFilter))) return "integration_changed";
         const historyEntryId = new Types.ObjectId();
@@ -329,12 +352,42 @@ export const createStremioHistoryImportService = ({
           return "integration_changed";
         }
 
+        // Reserve first so a concurrent importer cannot create while this
+        // worker records the equivalent local occurrence. Never attach
+        // provenance to, or edit, the user's existing history.
+        const duplicate = await findEquivalentStremioHistory(state, ownerId);
+        if (duplicate) {
+          if (!(await UserIntegration.exists(integrationFilter))) {
+            await releaseReservation(state, historyEntryId, credentialVersion);
+            return "integration_changed";
+          }
+          const skipped = await IntegrationMediaState.updateOne(
+            {
+              ...stateFilter(state),
+              importedHistoryEntryId: historyEntryId,
+              importReservationCredentialVersion: credentialVersion,
+            },
+            {
+              $set: { importStatus: "suppressed", suppressionReason: "equivalent_local_history" },
+              $unset: { importedHistoryEntryId: 1, importReservationCredentialVersion: 1, lastErrorCode: 1 },
+            }
+          );
+          if (skipped.matchedCount !== 1) return "integration_changed";
+          summary.duplicatesDetected = (summary.duplicatesDetected ?? 0) + 1;
+          return "already_imported";
+        }
+
+        if (!(await UserIntegration.exists(integrationFilter))) {
+          await releaseReservation(state, historyEntryId, credentialVersion);
+          return "integration_changed";
+        }
+
         let historyEntry: IWatchHistoryEntry;
         try {
           historyEntry = await createHistoryEntry({
             _id: historyEntryId,
-            mediaType: "movie",
-            movieId,
+            mediaType: state.providerMediaType,
+            ...(state.providerMediaType === "tv_episode" ? { tv: state.matchedTv } : { movieId }),
             scope: "personal",
             createdBy: ownerId,
             participants: [ownerId],
@@ -372,7 +425,7 @@ export const createStremioHistoryImportService = ({
 
       const processReservedState = async (
         state: IIntegrationMediaState,
-        movieId: Types.ObjectId
+        movieId?: Types.ObjectId
       ): Promise<ImportResult> => {
         const historyEntryId = state.importedHistoryEntryId!;
         const reservationVersion = state.importReservationCredentialVersion;
@@ -388,11 +441,13 @@ export const createStremioHistoryImportService = ({
             await WatchHistoryEntry.deleteOne({
               _id: historyEntryId,
               integrationMediaStateId: state._id,
+              createdBy: ownerId,
             });
           } else if (conflictingProvenanceId) {
             await WatchHistoryEntry.deleteOne({
               _id: conflictingProvenanceId,
               integrationMediaStateId: state._id,
+              createdBy: ownerId,
             });
           }
           state.importedHistoryEntryId = undefined;
@@ -424,6 +479,13 @@ export const createStremioHistoryImportService = ({
             ? "timestamp_unavailable"
             : "integration_changed";
         }
+        if (state.providerMediaType === "tv_episode") {
+          if (!state.matchedTv || state.matchedTv.seasonNumber !== state.seasonNumber ||
+              state.matchedTv.episodeNumber !== state.episodeNumber) {
+            return await recordPendingError(state, "matched_episode_inconsistent") ? "invalid_match" : "integration_changed";
+          }
+          return state.importedHistoryEntryId ? processReservedState(state) : processFreshState(state);
+        }
         const movie = await Movie.findOne({
           _id: state.matchedMovieId,
           imdbID: `tmdb-${state.matchedTmdbId}`,
@@ -441,12 +503,17 @@ export const createStremioHistoryImportService = ({
       let nextIndex = 0;
       const worker = async () => {
         while (nextIndex < candidates.length) {
-          const result = await processState(candidates[nextIndex++]);
+          const state = candidates[nextIndex++];
+          const result = await processState(state);
           if (result === "imported") summary.imported += 1;
           else if (result === "already_imported") summary.alreadyImported += 1;
           else if (result === "timestamp_unavailable") summary.timestampUnavailable += 1;
           else if (result === "invalid_match") summary.invalidMatch += 1;
           else summary.skippedStale += 1;
+          if (state.providerMediaType === "tv_episode") {
+            if (result === "imported") summary.tvEpisodesImported! += 1;
+            else summary.tvEpisodesSkipped! += 1;
+          }
         }
       };
       await Promise.all(

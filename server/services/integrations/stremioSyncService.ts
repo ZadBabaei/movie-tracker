@@ -11,9 +11,12 @@ import stremioClient, {
   StremioSnapshotClient,
 } from "./stremioClient";
 import {
-  NormalizedStremioMovieState,
+  NormalizedStremioState,
+  normalizeStremioTvEpisodes,
   normalizeStremioMovieSnapshot,
 } from "./stremioSnapshot";
+import stremioEpisodeCatalog, { StremioEpisodeCatalog } from "./stremioEpisodeCatalog";
+import { normalizeImdbTitleId } from "./imdbTitleId";
 
 const BULK_WRITE_SIZE = 500;
 
@@ -41,7 +44,7 @@ interface IngestionResult {
   modified: number;
 }
 
-const identityKey = (state: NormalizedStremioMovieState) =>
+const identityKey = (state: NormalizedStremioState) =>
   `${state.providerMediaType}\u0000${state.identifierNamespace}\u0000${state.providerItemId}`;
 
 const duplicateOnly = (error: unknown) => {
@@ -58,7 +61,7 @@ const duplicateOnly = (error: unknown) => {
 
 const operationsFor = (
   integrationId: Types.ObjectId,
-  states: NormalizedStremioMovieState[],
+  states: NormalizedStremioState[],
   observedAt: Date,
   observedCredentialVersion: number,
   upsert: boolean
@@ -107,9 +110,16 @@ const operationsFor = (
                   ? "$$REMOVE"
                   : { $literal: state.providerRevision },
               providerLastWatchedAt:
-                state.providerLastWatchedAt === undefined
+                state.providerMediaType === "tv_episode"
+                  ? { $ifNull: ["$providerLastWatchedAt", state.providerLastWatchedAt] }
+                  : state.providerLastWatchedAt === undefined
                   ? "$$REMOVE"
                   : state.providerLastWatchedAt,
+              ...(state.providerMediaType === "tv_episode" ? {
+                providerSeriesImdbId: state.providerSeriesImdbId,
+                seasonNumber: state.seasonNumber,
+                episodeNumber: state.episodeNumber,
+              } : {}),
               matchStatus: { $ifNull: ["$matchStatus", "unresolved"] },
               importStatus: { $ifNull: ["$importStatus", "pending"] },
               createdAt: { $ifNull: ["$createdAt", "$$NOW"] },
@@ -126,7 +136,7 @@ const operationsFor = (
 
 export const ingestStremioMovieStates = async (
   integrationId: Types.ObjectId,
-  states: NormalizedStremioMovieState[],
+  states: NormalizedStremioState[],
   observedAt: Date,
   observedCredentialVersion: number
 ): Promise<IngestionResult> => {
@@ -208,11 +218,13 @@ export const createStremioSyncService = ({
   cryptoService = { decryptCredential },
   ingest = ingestStremioMovieStates,
   now = () => new Date(),
+  episodeCatalog = stremioEpisodeCatalog,
 }: {
   client?: StremioSnapshotClient;
   cryptoService?: CryptoDependency;
   ingest?: typeof ingestStremioMovieStates;
   now?: () => Date;
+  episodeCatalog?: StremioEpisodeCatalog;
 } = {}) => ({
   async sync(userId: string) {
     const integration = await UserIntegration.findOne({
@@ -256,8 +268,19 @@ export const createStremioSyncService = ({
       const snapshot = await client.getLibrarySnapshot(authKey);
       const stillCurrent = await UserIntegration.exists(currentFilter);
       if (!stillCurrent) throw new StremioSyncError("integration_changed");
-      const normalized = normalizeStremioMovieSnapshot(snapshot);
       const observedAt = now();
+      const normalized: NormalizedStremioState[] = normalizeStremioMovieSnapshot(snapshot);
+      const movieStates = normalized.length;
+      let tvSeriesExamined = 0;
+      for (const item of snapshot) {
+        if (item.type !== "series" || !item.state.watched) continue;
+        const id = normalizeImdbTitleId(item.id ?? "");
+        if (!id) continue;
+        tvSeriesExamined += 1;
+        const videoIds = await episodeCatalog.getOrderedVideoIds(id);
+        normalized.push(...normalizeStremioTvEpisodes(item, videoIds, startedAt));
+      }
+      if (!(await UserIntegration.exists(currentFilter))) throw new StremioSyncError("integration_changed");
       const ingestion = await ingest(
         integration._id,
         normalized,
@@ -273,8 +296,9 @@ export const createStremioSyncService = ({
         integrationId: integration._id.toString(),
         credentialVersion,
         snapshotItems: snapshot.length,
-        movieStates: normalized.length,
-        ignoredItems: snapshot.length - normalized.length,
+        movieStates,
+        ...(tvSeriesExamined ? { tvSeriesExamined, tvEpisodeStates: normalized.length - movieStates } : {}),
+        ignoredItems: snapshot.length - movieStates - tvSeriesExamined,
         ...ingestion,
       };
     } catch (error) {

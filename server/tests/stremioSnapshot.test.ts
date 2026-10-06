@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   normalizeStremioMovie,
   normalizeStremioMovieSnapshot,
+  normalizeStremioTvEpisodes,
 } from "../services/integrations/stremioSnapshot";
 import { StremioLibraryItemDto } from "../services/integrations/stremioClient";
 import {
@@ -20,6 +21,24 @@ const movieItem = (overrides: Partial<StremioLibraryItemDto> = {}): StremioLibra
     lastWatched: "2026-01-01T12:00:00.000Z",
   },
   ...overrides,
+});
+
+test("TV bitfield identifies all watched episodes with the sync date, ignoring series watch date and resume pointer", () => {
+  const observedAt = new Date("2026-08-30T12:00:00.000Z");
+  const ids = Array.from({ length: 9 }, (_, index) => `tt2934286:1:${index + 1}`);
+  const states = normalizeStremioTvEpisodes({
+    id: "tt2934286", type: "series", removed: false, revision: "revision",
+    state: { watched: "tt2934286:1:5:5:eJyTZwAAAEAAIA==", videoId: ids[5], lastWatched: "2020-01-01T00:00:00Z" },
+  }, ids, observedAt);
+  assert.equal(states.length, 5);
+  assert.deepEqual(states.map(state => state.episodeNumber), [1, 2, 3, 4, 5]);
+  for (const state of states) {
+    assert.equal(state.providerMediaType, "tv_episode");
+    assert.equal(state.timestampConfidence, "observed_at");
+    assert.equal(state.providerLastWatchedAt?.toISOString(), observedAt.toISOString());
+  }
+  assert.deepEqual(normalizeStremioTvEpisodes({ id: "tt2934286", type: "series", removed: false, state: { timesWatched: 5, videoId: ids[0] } }, ids, observedAt), []);
+  assert.deepEqual(normalizeStremioTvEpisodes({ id: "tt2934286", type: "other", removed: false, state: { watched: "bad" } }, ids, observedAt), []);
 });
 
 test("movie completion normalization preserves IMDb identity and provider timestamps", () => {
@@ -92,6 +111,21 @@ test("invalid or missing lastWatched is not invented from _mtime", () => {
   assert.equal(invalid?.providerRevision, "2026-02-03T04:05:06.000Z");
   assert.equal(missing?.providerLastWatchedAt, undefined);
   assert.equal(missing?.completed, false);
+});
+
+test("real Stremio nanosecond timestamps normalize to milliseconds without losing the watch occurrence", () => {
+  for (const [input, expected] of [
+    ["2026-10-05T00:01:24.576919942Z", "2026-10-05T00:01:24.576Z"],
+    ["2026-10-05T00:01:24.576919942+02:30", "2026-10-04T21:31:24.576Z"],
+    ["2026-10-05T00:01:24.5Z", "2026-10-05T00:01:24.500Z"],
+  ] as const) {
+    const normalized = normalizeStremioMovie(movieItem({ state: { timesWatched: 1, lastWatched: input } }));
+    assert.equal(normalized?.providerLastWatchedAt?.toISOString(), expected);
+    assert.equal(normalized?.timestampConfidence, "provider_last_watched");
+    assert.equal(normalized?.completed, true);
+  }
+  const invalid = normalizeStremioMovie(movieItem({ state: { timesWatched: 1, lastWatched: "2026-10-05T00:01:24.5769199420Z" } }));
+  assert.equal(invalid?.providerLastWatchedAt, undefined);
 });
 
 test("custom identifiers remain provider-scoped and unsupported media rows are ignored", () => {
