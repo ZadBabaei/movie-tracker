@@ -2,7 +2,8 @@ import express, { Request, Response } from "express";
 import mongoose from "mongoose";
 import multer from "multer";
 import { authenticate } from "../middleware/authMiddleware";
-import User from "../models/user";
+import User, { ensureUsernameIndex } from "../models/user";
+import { normalizeUsername, usernameValidationMessage } from "../utils/username";
 import Group from "../models/Groups";
 import Movie from "../models/movie";
 import Poll from "../models/Poll";
@@ -227,26 +228,54 @@ const uploadAvatar = (req: Request, res: Response, next: express.NextFunction) =
 router.get("/", authenticate, async (req: Request, res: Response) => {
   try {
     const user = await User.findById(req.user!.id).select(
-      "-password -passwordResetToken -passwordResetExpires -__v"
+      "-password -passwordResetToken -passwordResetExpires -__v +username +discoverable +shareWatchHistory"
     );
     if (!user) {
       res.status(404).json({ msg: "User not found" });
       return;
     }
-    res.json({ ...user.toObject(), isAdmin: hasAdminAccess(user) });
+    res.json({
+      ...user.toObject(),
+      username: user.username ?? null,
+      discoverable: user.discoverable ?? false,
+      shareWatchHistory: user.shareWatchHistory ?? false,
+      isAdmin: hasAdminAccess(user),
+    });
   } catch (error) {
     console.error("Error fetching profile:", error);
     res.status(500).json({ msg: "Server error" });
   }
 });
 
-// PUT /api/profile — update profile (name, email)
+// PUT /api/profile — update the authenticated owner's account and privacy settings.
 router.put("/", authenticate, async (req: Request, res: Response) => {
   try {
     const { name, email } = req.body;
     const userId = req.user!.id;
 
     const updateData: any = {};
+    if (Object.prototype.hasOwnProperty.call(req.body, "username")) {
+      if (req.body.username !== null && typeof req.body.username !== "string") {
+        res.status(400).json({ msg: "Username must be a string or null" });
+        return;
+      }
+      const username = req.body.username === null ? null : normalizeUsername(req.body.username) || null;
+      const message = username === null ? undefined : usernameValidationMessage(username);
+      if (message) {
+        res.status(400).json({ msg: message });
+        return;
+      }
+      updateData.username = username;
+    }
+    for (const field of ["discoverable", "shareWatchHistory"] as const) {
+      if (Object.prototype.hasOwnProperty.call(req.body, field)) {
+        if (typeof req.body[field] !== "boolean") {
+          res.status(400).json({ msg: `${field} must be a boolean` });
+          return;
+        }
+        updateData[field] = req.body[field];
+      }
+    }
     if (name?.trim()) updateData.name = name.trim();
     if (email?.trim()) {
       // Every auth lookup treats email case-insensitively, so the uniqueness
@@ -275,11 +304,40 @@ router.put("/", authenticate, async (req: Request, res: Response) => {
       return;
     }
 
-    const user = await User.findByIdAndUpdate(userId, updateData, { new: true }).select(
-      "-password -passwordResetToken -passwordResetExpires -__v"
+    if (Object.prototype.hasOwnProperty.call(updateData, "username")) {
+      try {
+        await ensureUsernameIndex();
+      } catch (error) {
+        console.error("Username index unavailable:", error);
+        res.status(503).json({ msg: "Username settings are temporarily unavailable" });
+        return;
+      }
+    }
+
+    const user = await User.findByIdAndUpdate(userId, { $set: updateData }, { new: true, runValidators: true }).select(
+      "-password -passwordResetToken -passwordResetExpires -__v +username +discoverable +shareWatchHistory"
     );
-    res.json(user ? { ...user.toObject(), isAdmin: hasAdminAccess(user) } : user);
+    if (!user) {
+      res.status(404).json({ msg: "User not found" });
+      return;
+    }
+    res.json({
+      ...user.toObject(),
+      username: user.username ?? null,
+      discoverable: user.discoverable ?? false,
+      shareWatchHistory: user.shareWatchHistory ?? false,
+      isAdmin: hasAdminAccess(user),
+    });
   } catch (error) {
+    const databaseError = error as { code?: number; keyPattern?: Record<string, unknown> };
+    if (databaseError.code === 11000 && databaseError.keyPattern?.username) {
+      res.status(409).json({ msg: "Username is already taken" });
+      return;
+    }
+    if (error instanceof mongoose.Error.ValidationError) {
+      res.status(400).json({ msg: "Invalid profile settings" });
+      return;
+    }
     console.error("Error updating profile:", error);
     res.status(500).json({ msg: "Server error" });
   }

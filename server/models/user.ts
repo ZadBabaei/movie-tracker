@@ -1,7 +1,11 @@
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
+import { normalizeUsername, usernameValidationMessage } from "../utils/username";
 
 export interface IUser extends Document {
   name: string;
+  username?: string | null;
+  discoverable: boolean;
+  shareWatchHistory: boolean;
   email: string;
   password?: string;
   provider?: "local" | "google";
@@ -22,6 +26,19 @@ export interface IUser extends Document {
 const userSchema = new Schema<IUser>(
   {
     name: { type: String, required: true },
+    username: {
+      type: String,
+      select: false,
+      set: (value: string | null | undefined) =>
+        typeof value === "string" ? normalizeUsername(value) || null : value,
+      validate: {
+        validator: (value: string | null | undefined) =>
+          value == null || !usernameValidationMessage(value),
+        message: "Invalid username",
+      },
+    },
+    discoverable: { type: Boolean, default: false, select: false },
+    shareWatchHistory: { type: Boolean, default: false, select: false },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: {
       type: String,
@@ -45,7 +62,30 @@ const userSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
+// Missing and null usernames are excluded, so legacy accounts need no backfill.
+const usernameIndexOptions = {
+  name: "unique_profile_username",
+  unique: true,
+  partialFilterExpression: { username: { $type: "string" } },
+};
+userSchema.index({ username: 1 }, usernameIndexOptions);
+
 const User: Model<IUser> =
   mongoose.models.User || mongoose.model<IUser>("User", userSchema, "users");
+
+let usernameIndexReady: Promise<string> | undefined;
+
+// Do not accept username writes until MongoDB enforces uniqueness, including
+// deployments with autoIndex disabled. Failed builds never drop/repair data.
+export const ensureUsernameIndex = (): Promise<string> => {
+  if (!usernameIndexReady) {
+    usernameIndexReady = User.collection.createIndex({ username: 1 }, usernameIndexOptions)
+      .catch((error: unknown) => {
+        usernameIndexReady = undefined;
+        throw error;
+      });
+  }
+  return usernameIndexReady;
+};
 
 export default User;
