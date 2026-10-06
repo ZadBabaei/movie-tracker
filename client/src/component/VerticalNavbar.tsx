@@ -19,7 +19,7 @@ import { useGroupStore } from "../store/useGroupStore";
 import { useUnreadCounts } from "../hooks/useUnreadCounts";
 import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
 import "./VerticalNavbar.css";
-import logoMark from "../assets/movie-tracker-logo-mark.svg";
+import logoMark from "../assets/movie-tracker-logo-mark.webp";
 import { resetAnalytics } from "../utils/analytics";
 import { endAuthenticatedSession } from "../auth/sessionScope";
 
@@ -72,7 +72,7 @@ const VerticalNavbar: React.FC = () => {
   const logout = () => {
     void resetAnalytics();
     endAuthenticatedSession();
-    navigate("/");
+    navigate("/login");
   };
 
   const isActive = (paths: string[]) =>
@@ -86,7 +86,7 @@ const VerticalNavbar: React.FC = () => {
     <>
     <nav className="vertical-navbar">
       <Link to="/home" className="navbar-brand-link" aria-label="Movie Tracker home">
-        <img className="navbar-brand-mark" src={logoMark} alt="" />
+        <img className="navbar-brand-mark" src={logoMark} alt="" width="220" height="74" />
       </Link>
       <ul className="navbar-list">
         {profile?.isAdmin ? (
@@ -204,7 +204,7 @@ const VerticalNavbar: React.FC = () => {
           </Link>
         </li>
         <li className="navbar-item">
-          <Link to="/about" className="navbar-link">
+          <Link to="/app-about" className="navbar-link">
             <span className="icon"><FaInfoCircle /></span>
             <span className="label">About</span>
           </Link>
@@ -271,7 +271,7 @@ const VerticalNavbar: React.FC = () => {
       <div className="mobile-more-wrap">
         <button
           type="button"
-          className={`mobile-nav-item ${isMoreOpen || isActive(["/profile", "/inbox", "/about", "/coming-soon", "/dashboard"]) ? "active" : ""}`}
+          className={`mobile-nav-item ${isMoreOpen || isActive(["/profile", "/inbox", "/app-about", "/coming-soon", "/dashboard"]) ? "active" : ""}`}
           onClick={() => setIsMoreOpen((open) => !open)}
           aria-expanded={isMoreOpen}
           aria-haspopup="menu"
@@ -295,7 +295,7 @@ const VerticalNavbar: React.FC = () => {
             <button type="button" onClick={() => navigate("/inbox")} role="menuitem">
               Inbox
             </button>
-            <button type="button" onClick={() => navigate("/about")} role="menuitem">
+            <button type="button" onClick={() => navigate("/app-about")} role="menuitem">
               About
             </button>
             <button type="button" onClick={logout} role="menuitem">

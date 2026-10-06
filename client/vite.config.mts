@@ -1,6 +1,7 @@
 import { defineConfig } from "vitest/config";
 import { loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
+import { publicSitePlugin } from "./site/vitePlugin";
 
 const clientEnvAliases = {
   VITE_API_BASE_URL: "REACT_APP_API_BASE_URL",
@@ -42,7 +43,10 @@ export default defineConfig(({ mode, command }) => {
   }
 
   return {
-    plugins: [react()],
+    plugins: [react(), publicSitePlugin()],
+    // Public pages and the app shell are separate documents; routing between
+    // them is handled by publicSitePlugin (mirroring vercel.json).
+    appType: "mpa",
     define,
     server: {
       host: "127.0.0.1",
@@ -67,6 +71,9 @@ export default defineConfig(({ mode, command }) => {
     },
     build: {
       outDir: "dist",
+      rolldownOptions: {
+        input: { app: "app.html" },
+      },
     },
     test: {
       environment: "jsdom",

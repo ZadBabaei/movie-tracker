@@ -4,15 +4,15 @@ import { jwtDecode } from "jwt-decode";
 const ProtectedRoute = () => {
   const token = localStorage.getItem("token");
 
-  if (!token) return <Navigate to="/" />;
+  if (!token) return <Navigate to="/login" replace />;
 
   try {
     const decoded = jwtDecode(token);
     const isExpired = decoded.exp * 1000 < Date.now();
 
-    return isExpired ? <Navigate to="/" /> : <Outlet />;
+    return isExpired ? <Navigate to="/login" replace /> : <Outlet />;
   } catch (err) {
-    return <Navigate to="/" />;
+    return <Navigate to="/login" replace />;
   }
 };
 

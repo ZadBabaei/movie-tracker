@@ -22,7 +22,9 @@ const AppRouter: React.FC = () => {
   );
   const location = useLocation();
   const isAuthPage =
-    location.pathname === "/" || location.pathname === "/signup";
+    location.pathname === "/" ||
+    location.pathname === "/login" ||
+    location.pathname === "/signup";
   const isAuthenticated = isTokenValid(localStorage.getItem("token"));
 
   return (

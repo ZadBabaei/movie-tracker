@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { FaLock, FaRegEye } from "react-icons/fa6";
-import brandLogo from "../assets/Logo 2 PM.png";
+import brandLogo from "../assets/movie-tracker-logo-full.webp";
 import { FaEyeSlash } from "react-icons/fa";
 import apiClient from "../api/apiClient";
 import "./AuthPage.css";
@@ -30,7 +30,7 @@ function ResetPassword() {
     try {
       await apiClient.post(`/api/auth/reset-password/${token}`, { password });
       toast.success("Password reset successful. You can now sign in.");
-      navigate("/");
+      navigate("/login");
     } catch (err) {
       setError(err.response?.data?.msg || "Unable to reset password.");
     } finally {
@@ -43,7 +43,7 @@ function ResetPassword() {
       <section className="AuthPage-shell">
         <div className="AuthPage-hero">
           <div className="AuthPage-brand">
-            <img className="AuthPage-logo" src={brandLogo} alt="Movie Tracker" />
+            <img className="AuthPage-logo" src={brandLogo} alt="Movie Tracker" width="880" height="294" />
           </div>
 
           <div className="AuthPage-copy">
@@ -110,7 +110,7 @@ function ResetPassword() {
 
           <p className="AuthPage-bottomText">
             Remembered your password?{" "}
-            <button type="button" onClick={() => navigate("/")}>
+            <button type="button" onClick={() => navigate("/login")}>
               Sign in
             </button>
           </p>

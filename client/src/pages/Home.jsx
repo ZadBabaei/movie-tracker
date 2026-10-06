@@ -8,7 +8,7 @@ import apiClient from "../api/apiClient";
 import { useWatchlistStore } from "../store/useWatchlistStore";
 import { useWatchHistoryStore } from "../store/useWatchHistoryStore";
 import { useGroupStore } from "../store/useGroupStore";
-import fullLogo from "../assets/movie-tracker-logo-full.svg";
+import fullLogo from "../assets/movie-tracker-logo-full.webp";
 
 const RELEASE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const FEATURED_MOVIE_PATTERN = /the death of robin hood/i;
@@ -391,7 +391,7 @@ function Home() {
 
       <main className="star-chart">
         <header className="chart-masthead">
-          <img src={fullLogo} alt="Movie Tracker" />
+          <img src={fullLogo} alt="Movie Tracker" width="880" height="294" />
           <div className="chart-rule">
             <span><b>PM–01</b> · Personal cinema chart</span>
             <span>Observer: <b>{firstName || "Movie lover"}</b></span>

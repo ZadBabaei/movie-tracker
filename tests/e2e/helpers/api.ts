@@ -74,7 +74,7 @@ export const loginByApi = async (
 };
 
 export const loginByUi = async (page: Page, input: Pick<TestUserInput, "email" | "password">) => {
-  await page.goto("/");
+  await page.goto("/login");
   await page.getByPlaceholder("name@example.com").fill(input.email);
   await page.getByPlaceholder("Password").fill(input.password);
   await page.getByRole("button", { name: /^sign in$/i }).click();

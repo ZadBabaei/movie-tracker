@@ -1,3 +1,6 @@
-# https://www.robotstxt.org/robotstxt.html
+# Public pages are open to crawlers. Signed-in app pages carry a noindex
+# directive instead of being blocked here, so search engines can read it.
 User-agent: *
-Disallow:
+Allow: /
+
+Sitemap: https://movietrk.com/sitemap.xml

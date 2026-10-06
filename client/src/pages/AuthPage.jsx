@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { GoogleOAuthProvider, useGoogleLogin } from "@react-oauth/google";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   FaEnvelope,
   FaFacebookF,
@@ -13,7 +13,7 @@ import {
 import { FaEyeSlash } from "react-icons/fa";
 import apiClient from "../api/apiClient";
 import { acceptAuthenticatedSession } from "../auth/sessionScope";
-import brandLogo from "../assets/movie-tracker-logo-full.svg";
+import brandLogo from "../assets/movie-tracker-logo-full.webp";
 import "./AuthPage.css";
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -222,7 +222,7 @@ function AuthPage({ initialMode = "signin" }) {
       <section className="AuthPage-shell">
         <div className="AuthPage-hero">
           <div className="AuthPage-brand">
-            <img className="AuthPage-logo" src={brandLogo} alt="Movie Tracker" />
+            <img className="AuthPage-logo" src={brandLogo} alt="Movie Tracker" width="880" height="294" />
           </div>
 
           <div className="AuthPage-copy">
@@ -362,7 +362,9 @@ function AuthPage({ initialMode = "signin" }) {
               <label className="AuthPage-check AuthPage-terms">
                 <input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} />
                 <span>
-                  I agree to the <Link to="/terms">Terms of Service</Link> and Privacy Policy
+                  I agree to the{" "}
+                  <a href="/terms" target="_blank" rel="noopener">Terms of Service</a> and{" "}
+                  <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>
                 </span>
               </label>
             ) : null}

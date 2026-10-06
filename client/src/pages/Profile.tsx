@@ -123,7 +123,7 @@ const Profile: React.FC = () => {
 
   const handleLogout = () => {
     endAuthenticatedSession();
-    navigate("/");
+    navigate("/login");
     window.location.reload();
   };
 

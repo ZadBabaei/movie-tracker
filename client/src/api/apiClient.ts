@@ -70,7 +70,7 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-const AUTH_PAGES = ["/", "/signup"];
+const AUTH_PAGES = ["/", "/login", "/signup"];
 
 export const shouldClearAppSession = (
   status: number | undefined,
@@ -119,7 +119,7 @@ apiClient.interceptors.response.use(
     ) {
       endAuthenticatedSession();
       if (!AUTH_PAGES.includes(window.location.pathname)) {
-        window.location.assign("/");
+        window.location.assign("/login");
       }
     }
     return Promise.reject(error);

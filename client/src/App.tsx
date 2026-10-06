@@ -20,7 +20,6 @@ import OnboardingModal from "./component/OnboardingModal";
 import ToastWrapper from "./component/ToastWrapper";
 import GroupChat from "./pages/GroupChat";
 import JoinByLink from "./pages/JoinByLink";
-import Terms from "./pages/Terms";
 import ResetPassword from "./pages/ResetPassword";
 import ProtectedRoute from "./utils/ProtectedRoute";
 import { useModalStore } from "./store/useModalStore";
@@ -86,12 +85,14 @@ function App({ isAuthenticated, isAuthPage }: AppProps) {
     <>
       <AnalyticsRouteTracker />
       <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={isAuthenticated ? <Navigate to="/home" replace /> : <Login />} />
+        {/* Public Routes. The marketing pages (/, /features, /terms, ...) are static
+            HTML generated from client/site; "/" only reaches the app through
+            client-side navigation. */}
+        <Route path="/" element={<Navigate to={isAuthenticated ? "/home" : "/login"} replace />} />
+        <Route path="/login" element={isAuthenticated ? <Navigate to="/home" replace /> : <Login />} />
         <Route path="/signup" element={isAuthenticated ? <Navigate to="/home" replace /> : <Signup />} />
         <Route path="/invite/:token" element={<JoinByLink />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
-        <Route path="/terms" element={<Terms />} />
 
         {/* Protected Routes */}
         <Route element={<ProtectedRoute />}>
@@ -113,7 +114,7 @@ function App({ isAuthenticated, isAuthPage }: AppProps) {
           <Route path="/history/tv/:seriesTmdbId" element={<TvSeriesHistory />} />
           <Route path="/coming-soon" element={<ComingSoon />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/about" element={<About />} />
+          <Route path="/app-about" element={<About />} />
         </Route>
       </Routes>
 

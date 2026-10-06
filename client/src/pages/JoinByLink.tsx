@@ -87,7 +87,7 @@ const JoinByLink: React.FC = () => {
 
   const handleSignIn = () => {
     sessionStorage.setItem("redirectAfterAuth", `/invite/${token}`);
-    navigate("/");
+    navigate("/login");
   };
 
   const handleSignUp = () => {
