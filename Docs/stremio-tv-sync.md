@@ -132,8 +132,9 @@ successfully. Movies, including The Whisper Man, were verified in the history UI
 Manual duplicate and delete-suppression acceptance scenarios remain covered by
 automated tests and have not all been exercised against this real snapshot.
 
-History pages cover up to twelve calendar months, including gaps after history began
-but never months before the earliest recorded watch. Each month
+History pages cover up to twelve months that contain recorded watches, newest first.
+Empty months and entire years without watches do not produce timeline sections or
+pagination pages. Each month
 previews four movie or grouped TV-session cards, with a plus/minus control to expand
 or collapse additional cards. Numbered pages, Previous and Next load older twelve-month
 ranges from the server, retaining the same owner/group authorization scope.

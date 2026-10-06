@@ -171,18 +171,7 @@ const WatchHistory: React.FC = () => {
       existing.items.push(item);
       grouped.set(key, existing);
     });
-    if (!bucket.monthPagination) return [...grouped.values()];
-    if (bucket.monthPagination.oldestWatchedAt === null) return [];
-    const end = new Date(bucket.monthPagination.end);
-    const oldest = bucket.monthPagination.oldestWatchedAt ? new Date(bucket.monthPagination.oldestWatchedAt) : null;
-    const monthCount = oldest ? Math.max(0, Math.min(12, (end.getUTCFullYear() - oldest.getUTCFullYear()) * 12 + end.getUTCMonth() - oldest.getUTCMonth())) : 12;
-    return Array.from({ length: monthCount }, (_, index) => {
-      const date = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - index - 1, 1));
-      return grouped.get(`${date.getUTCFullYear()}-${date.getUTCMonth()}`) || {
-        month: date.toLocaleDateString("en-US", { month: "long", timeZone: "UTC" }),
-        year: String(date.getUTCFullYear()), items: [],
-      };
-    });
+    return [...grouped.values()];
   }, [visibleItems, bucket.monthPagination]);
 
   const changeMonthPage = (page: number) => {
@@ -318,7 +307,7 @@ const WatchHistory: React.FC = () => {
           <div className="history-skeleton" role="status" aria-label="Loading watch history">{Array.from({ length: 6 }).map((_, index) => <div key={index} />)}</div>
         ) : activeError ? (
           <section className="history-state"><h2>History unavailable</h2><p>{activeError}</p><button type="button" onClick={() => isPersonal ? fetchPersonal(false, monthPage) : fetchGroup(activeTab, false, monthPage)}>Try again</button></section>
-        ) : visibleItems.length === 0 && (!bucket.monthPagination || bucket.monthPagination.oldestWatchedAt === null) ? (
+        ) : visibleItems.length === 0 ? (
           <section className="history-state"><h2>{bucket.items.length ? "No matching screenings" : "Your next movie night starts here"}</h2><p>{bucket.items.length ? "Try another title or clear the active filter." : isPersonal ? "Add something you've watched, or mark a movie watched from your Watchlist." : "Add something this group watched, or mark a movie watched from the group's Watchlist."}</p>{bucket.items.length ? <button type="button" onClick={() => { setSearch(""); setPeriodFilter("all"); }}>Clear filters</button> : null}</section>
         ) : (
           <div className="history-timeline">

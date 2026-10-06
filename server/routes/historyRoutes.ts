@@ -115,18 +115,23 @@ const readEntries = async (req: Request, res: Response, baseQuery: Record<string
 
   const monthPage = Number(req.query.monthPage);
   if (Number.isSafeInteger(monthPage) && monthPage > 0 && monthPage <= 1000) {
-    const now = new Date();
-    const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1 - (monthPage - 1) * 12, 1));
-    const start = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - 12, 1));
-    const oldest = await WatchHistoryEntry.findOne(baseQuery).sort({ watchedAt: 1 }).select("watchedAt").lean();
+    const months = await WatchHistoryEntry.aggregate<{ _id: string }>([
+      { $match: query },
+      { $group: { _id: { $dateToString: { format: "%Y-%m", date: "$watchedAt", timezone: "UTC" } } } },
+      { $sort: { _id: -1 } },
+    ]);
+    const totalPages = Math.max(1, Math.ceil(months.length / 12));
+    const page = Math.min(monthPage, totalPages);
+    const selectedMonths = months.slice((page - 1) * 12, page * 12);
+    const start = selectedMonths.length ? new Date(`${selectedMonths[selectedMonths.length - 1]._id}-01T00:00:00Z`) : null;
+    const lastMonth = selectedMonths.length ? new Date(`${selectedMonths[0]._id}-01T00:00:00Z`) : null;
+    const end = lastMonth ? new Date(Date.UTC(lastMonth.getUTCFullYear(), lastMonth.getUTCMonth() + 1, 1)) : null;
     const total = await WatchHistoryEntry.countDocuments(baseQuery);
-    const oldestDate = oldest?.watchedAt ? new Date(oldest.watchedAt) : now;
-    const months = (now.getUTCFullYear() - oldestDate.getUTCFullYear()) * 12 + now.getUTCMonth() - oldestDate.getUTCMonth() + 1;
     query.watchedAt = { $gte: start, $lt: end };
-    const documents = await WatchHistoryEntry.find(query).sort({ watchedAt: -1, _id: -1 }).populate(POPULATE).lean();
+    const documents = selectedMonths.length ? await WatchHistoryEntry.find(query).sort({ watchedAt: -1, _id: -1 }).populate(POPULATE).lean() : [];
     res.json({ items: documents.map((entry) => serializeHistoryEntry(entry, userId)), nextCursor: null,
       stats: { total, latestWatchedAt: documents[0]?.watchedAt || null },
-      monthPagination: { page: monthPage, totalPages: Math.max(1, Math.ceil(months / 12)), start: start.toISOString(), end: end.toISOString(), oldestWatchedAt: oldest?.watchedAt || null } });
+      monthPagination: { page, totalPages, start: start?.toISOString() || null, end: end?.toISOString() || null } });
     return;
   }
 

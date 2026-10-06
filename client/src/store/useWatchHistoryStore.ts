@@ -62,7 +62,7 @@ interface HistoryBucket {
   items: HistoryEntry[];
   total: number;
   nextCursor: string | null;
-  monthPagination?: { page: number; totalPages: number; start: string; end: string; oldestWatchedAt?: string | null };
+  monthPagination?: { page: number; totalPages: number; start: string | null; end: string | null };
 }
 
 interface WatchHistoryState {

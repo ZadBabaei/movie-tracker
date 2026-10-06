@@ -201,13 +201,13 @@ describe("Watch History timeline", () => {
     await screen.findByText("Heat");
     expect(screen.getByRole("heading", { name: /^May$/ })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "April" })).not.toBeInTheDocument();
-    expect(screen.getAllByText("No watches this month.")).toHaveLength(5);
+    expect(screen.queryByText("No watches this month.")).not.toBeInTheDocument();
   });
   test("shows only the two remaining months on page two of a fourteen-month history", async () => {
     historyApi.fetchPersonalHistory.mockResolvedValue({ items: [{ ...movieEntry, watchedAt: "2025-09-10T00:00:00Z" }], nextCursor: null, stats: { total: 1 }, monthPagination: { page: 2, totalPages: 2, start: "2024-11-01T00:00:00Z", end: "2025-11-01T00:00:00Z", oldestWatchedAt: "2025-09-10T00:00:00Z" } });
     renderPage();
     await screen.findByText("Heat");
-    expect(screen.getByRole("heading", { name: "October" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "October" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "September" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "August" })).not.toBeInTheDocument();
   });
@@ -217,7 +217,7 @@ describe("Watch History timeline", () => {
     vi.spyOn(window, "scrollTo").mockImplementation(() => {});
     renderPage();
     expect(await screen.findAllByTestId("history-row")).toHaveLength(4);
-    expect(screen.getAllByText("No watches this month.")).toHaveLength(11);
+    expect(screen.queryByText("No watches this month.")).not.toBeInTheDocument();
     const expand = screen.getByRole("button", { name: "Expand October 2026" });
     expect(expand).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(expand);
