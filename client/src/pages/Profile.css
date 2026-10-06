@@ -657,6 +657,120 @@
 }
 
 /* ---------- entrance ---------- */
+.Profile-sharing h2 {
+  margin: 0 0 24px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--Profile-text);
+}
+
+.Profile-sharing-fields {
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  border: 0;
+}
+
+.Profile-sharing label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.Profile-sharing-inputrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.Profile-username-control {
+  display: flex;
+  align-items: center;
+  flex: 1 1 220px;
+  max-width: 360px;
+  min-width: 0;
+  padding: 0 12px;
+  border: 1px solid var(--Profile-border-gold);
+  border-radius: var(--brand-radius);
+  background: rgba(2, 26, 8, 0.5);
+}
+
+.Profile-username-control span {
+  color: var(--Profile-accent);
+  font-size: 1rem;
+}
+
+.Profile-username-control input {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--Profile-text);
+  font: inherit;
+  outline: none;
+}
+
+.Profile-username-control:focus-within {
+  outline: 2px solid var(--Profile-accent);
+  outline-offset: 3px;
+}
+
+.Profile-sharing-help,
+.Profile-sharing-requirement {
+  max-width: 68ch;
+  margin: 6px 0 0;
+  color: var(--Profile-muted);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.Profile-sharing-requirement {
+  color: var(--Profile-accent);
+}
+
+.Profile-sharing-option {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--Profile-border);
+}
+
+.Profile-sharing-option input {
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  accent-color: var(--Profile-accent);
+  cursor: pointer;
+}
+
+.Profile-sharing-option input:disabled {
+  cursor: not-allowed;
+}
+
+.Profile-sharing-option input:focus-visible {
+  outline: 2px solid var(--Profile-accent);
+  outline-offset: 3px;
+}
+
+.Profile-sharing-error {
+  margin: 18px 0 0;
+  color: #ffb4b4;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.Profile-sharing-status {
+  align-self: center;
+  color: var(--Profile-accent);
+  font-size: 0.82rem;
+}
+
 .Profile-rise {
   opacity: 0;
   transform: translateY(10px);

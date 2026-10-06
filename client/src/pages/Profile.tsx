@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import VerticalNavbar from "../component/VerticalNavbar";
+import ProfileSharingSettings from "../component/ProfileSharingSettings";
 import { useUserStore } from "../store/useUserStore";
 import { endAuthenticatedSession } from "../auth/sessionScope";
 import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
@@ -243,6 +244,7 @@ const Profile: React.FC = () => {
         </div>
 
         <section className="Profile-console">
+          <ProfileSharingSettings key={profile._id} profile={profile} updateProfile={updateProfile} />
           <div className="Profile-pane Profile-pane--wide Profile-rise Profile-d2">
             <div className="Profile-pane-head">Signals</div>
 
