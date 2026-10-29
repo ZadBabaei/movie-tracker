@@ -63,6 +63,12 @@ const assertClean = (text: string, label: string) => {
   assert.ok(!/eyJ[A-Za-z0-9_-]{5,}/.test(text), `${label}: output contains JWT-shaped text`);
 };
 
+// Built at runtime so no token-shaped literal exists in source (secret scanners flag them).
+const syntheticJwt = () =>
+  [{ alg: "HS256", typ: "JWT" }, { server: true }, "synthetic-signature-bytes"]
+    .map((part) => Buffer.from(typeof part === "string" ? part : JSON.stringify(part)).toString("base64url"))
+    .join(".");
+
 const tokenParts = (header: string) => {
   const token = header.replace(/^Bearer\s+/i, "");
   const [, payload, signature] = token.split(".");
@@ -128,12 +134,13 @@ after(async () => {
 
 describe("describeError", () => {
   test("returns only bounded name, code, status and message", () => {
+    const fakeJwt = syntheticJwt();
     const error = Object.assign(new Error("upstream failed"), {
       name: "StreamApiError",
       code: 17,
       status: 403,
-      request: { _header: `GET / HTTP/1.1\r\nAuthorization: eyJhbGciOi.eyJzZXJ2ZXIi.c2lnbmF0dXJl\r\n` },
-      config: { headers: { Authorization: "eyJhbGciOi.eyJzZXJ2ZXIi.c2lnbmF0dXJl" } },
+      request: { _header: `GET / HTTP/1.1\r\nAuthorization: ${fakeJwt}\r\n` },
+      config: { headers: { Authorization: fakeJwt } },
     });
     const described = describeError(error);
     assert.deepEqual(described, { name: "StreamApiError", message: "upstream failed", code: 17, status: 403 });
@@ -148,7 +155,7 @@ describe("describeError", () => {
   });
 
   test("withholds messages that carry credential content", () => {
-    const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzZXJ2ZXIiOnRydWV9.dGVzdHNpZ25hdHVyZXZhbHVl";
+    const jwt = syntheticJwt();
     const secret = "synthetic-secret-value-1234";
     const previous = process.env.STREAM_API_SECRET;
     process.env.STREAM_API_SECRET = secret;
