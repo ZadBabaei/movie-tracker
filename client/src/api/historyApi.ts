@@ -4,8 +4,12 @@ const auth = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
 });
 
+export type HistoryTypeFilter = "all" | "movie" | "tv";
+
 export interface HistoryQuery {
   monthPage?: number;
+  /** Server-side content-type filter; omitted means "all". */
+  type?: Exclude<HistoryTypeFilter, "all">;
   search?: string;
   year?: number;
   rated?: boolean;

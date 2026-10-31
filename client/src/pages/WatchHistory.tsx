@@ -11,7 +11,8 @@ import VerticalNavbar from "../component/VerticalNavbar";
 import { AddHistoryOutcome, useAddToHistory } from "../hooks/useAddToHistory";
 import { useSocket } from "../hooks/useSocket";
 import { useGroupStore } from "../store/useGroupStore";
-import { HistoryEntry, useWatchHistoryStore } from "../store/useWatchHistoryStore";
+import type { HistoryTypeFilter } from "../api/historyApi";
+import { HistoryEntry, historyBucketKey, useWatchHistoryStore } from "../store/useWatchHistoryStore";
 import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
 import { formatEpisodeCode, getEntryBackdropPath, getEntryPosterPath, getEntryTitle } from "../utils/historyEntry";
 import {
@@ -27,6 +28,11 @@ import "./WatchHistory.css";
 type PeriodFilter = "all" | "year" | "rated";
 type SortMode = "recent" | "rating" | "title";
 const ACTIVE_TAB_KEY = "history:activeTab";
+const TYPE_FILTERS: Array<[HistoryTypeFilter, string]> = [["all", "All"], ["movie", "Movies"], ["tv", "TV Series"]];
+const TYPE_EMPTY_COPY: Record<Exclude<HistoryTypeFilter, "all">, [string, string]> = {
+  movie: ["No movies yet", "Movies you log will show up here."],
+  tv: ["No TV episodes yet", "Watched TV episodes, with their season and episode, will show up here."],
+};
 
 const posterUrl = (poster?: string) => {
   if (!poster) return "/default-avatar.png";
@@ -47,33 +53,54 @@ const WatchHistory: React.FC = () => {
   const {
     personal,
     byGroup,
+    typed,
     loading,
     errors,
     fetchPersonal,
     fetchGroup,
+    invalidate,
+    isBucketFresh,
   } = useWatchHistoryStore();
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTabState] = useState(() => localStorage.getItem(ACTIVE_TAB_KEY) || "personal");
   const [search, setSearch] = useState("");
   const [groupsLoaded, setGroupsLoaded] = useState(false);
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("all");
+  const [typeFilter, setTypeFilter] = useState<HistoryTypeFilter>("all");
   const [sortMode, setSortMode] = useState<SortMode>("recent");
   const [monthPage, setMonthPage] = useState(1);
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<HistoryEntry | null>(null);
   const deepLinkApplied = useRef(false);
+  // Views requested since the page mounted or the scope tab last changed. A
+  // view is reused without a request only if it is in here *and* the store
+  // still considers it fresh; entering the page always reloads, since history
+  // can change elsewhere (e.g. marking a movie watched from a watchlist).
+  const loadedViews = useRef<Set<string>>(new Set());
   const activeGroup = groupList.find((group) => group._id === activeTab);
   const isPersonal = activeTab === "personal";
   const socket = useSocket(isPersonal ? "" : activeTab);
 
   const setActiveTab = useCallback((tab: string) => {
+    // Socket updates are only received for the open group, so a scope we
+    // leave can change unobserved; every tab switch reloads, as before. The
+    // no-request reuse only applies to filter switches within one scope.
+    loadedViews.current.clear();
     localStorage.setItem(ACTIVE_TAB_KEY, tab);
     setActiveTabState(tab);
     setSearch("");
     setPeriodFilter("all");
+    setTypeFilter("all");
     setMonthPage(1);
     setExpandedMonths(new Set());
   }, []);
+
+  const changeTypeFilter = (type: HistoryTypeFilter) => {
+    if (type === typeFilter) return;
+    setTypeFilter(type);
+    setMonthPage(1);
+    setExpandedMonths(new Set());
+  };
 
   // One flow for movies and TV: search → (episodes) → watch details → save.
   // Saves land in the scope they were recorded to and, because personal history
@@ -87,12 +114,13 @@ const WatchHistory: React.FC = () => {
       } else {
         toast.warn(`${outcome.succeeded} saved, ${outcome.failed.length} failed for ${outcome.seriesTitle}.`);
       }
+      invalidate();
       setActiveTab(outcome.scopeId);
       const refreshes = [fetchPersonal(false, 1)];
       if (outcome.scopeId !== "personal") refreshes.push(fetchGroup(outcome.scopeId, false, 1));
       await Promise.all(refreshes);
     },
-    [fetchGroup, fetchPersonal, setActiveTab]
+    [fetchGroup, fetchPersonal, invalidate, setActiveTab]
   );
   const addFlow = useAddToHistory({ onSaved: handleSaved, onError: (message) => toast.error(message) });
 
@@ -121,14 +149,27 @@ const WatchHistory: React.FC = () => {
     if (!isPersonal && !groupList.some((group) => group._id === activeTab)) setActiveTab("personal");
   }, [activeTab, groupList, groupsLoaded, isPersonal, searchParams, setActiveTab]);
 
+  const viewKey = historyBucketKey(activeTab, typeFilter);
+
+  // Runs on view changes only. Freshness is read from the store rather than
+  // subscribed to, so an invalidation alone never triggers a request: stale
+  // views reload when they are next shown.
   useEffect(() => {
-    if (isPersonal) fetchPersonal(false, monthPage);
-    else fetchGroup(activeTab, false, monthPage);
-  }, [activeTab, fetchGroup, fetchPersonal, isPersonal, monthPage]);
+    if (loadedViews.current.has(viewKey) && isBucketFresh(viewKey, monthPage)) return;
+    loadedViews.current.add(viewKey);
+    if (isPersonal) fetchPersonal(false, monthPage, typeFilter);
+    else fetchGroup(activeTab, false, monthPage, typeFilter);
+  }, [activeTab, fetchGroup, fetchPersonal, isBucketFresh, isPersonal, monthPage, typeFilter, viewKey]);
 
   useEffect(() => {
     if (isPersonal) return;
-    const refresh = () => fetchGroup(activeTab, false, monthPage);
+    // Another member changed this group's history: every cached view may be
+    // affected (all three filters here, and personal history, which includes
+    // group watches), so invalidate them all and reload only the visible one.
+    const refresh = () => {
+      invalidate();
+      fetchGroup(activeTab, false, monthPage, typeFilter);
+    };
     socket.on("group:history_updated", refresh);
     socket.on("group:history_deleted", refresh);
     socket.on("group:history_rating_updated", refresh);
@@ -137,11 +178,15 @@ const WatchHistory: React.FC = () => {
       socket.off("group:history_deleted", refresh);
       socket.off("group:history_rating_updated", refresh);
     };
-  }, [activeTab, fetchGroup, isPersonal, socket, monthPage]);
+  }, [activeTab, fetchGroup, invalidate, isPersonal, socket, monthPage, typeFilter]);
 
-  const bucket = isPersonal ? personal : (byGroup[activeTab] || { items: [], total: 0, nextCursor: null });
-  const activeLoading = !!loading[activeTab];
-  const activeError = errors[activeTab];
+  const emptyBucket: typeof personal = { items: [], total: 0, nextCursor: null };
+  const bucket = typeFilter !== "all"
+    ? (typed[viewKey] || emptyBucket)
+    : isPersonal ? personal : (byGroup[activeTab] || emptyBucket);
+  const activeLoading = !!loading[viewKey];
+  const activeError = errors[viewKey];
+  const refetchActive = () => (isPersonal ? fetchPersonal(false, monthPage, typeFilter) : fetchGroup(activeTab, false, monthPage, typeFilter));
 
   // The store keeps raw entries; grouping into movie items and TV sessions is
   // derived here so every mutation regroups automatically.
@@ -257,6 +302,11 @@ const WatchHistory: React.FC = () => {
             <FaSearch aria-hidden="true" />
             <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search watch history…" aria-label="Search watch history" />
           </label>
+          <div className="history-type-tabs" role="group" aria-label="Content type">
+            {TYPE_FILTERS.map(([value, label]) => (
+              <button key={value} type="button" aria-pressed={typeFilter === value} onClick={() => changeTypeFilter(value)}>{label}</button>
+            ))}
+          </div>
           <div className="history-filter-tabs" role="group" aria-label="Filter history">
             {([['all', 'All time'], ['year', 'This year'], ['rated', 'Rated']] as Array<[PeriodFilter, string]>).map(([value, label]) => (
               <button key={value} type="button" className={periodFilter === value ? "active" : ""} aria-pressed={periodFilter === value} onClick={() => setPeriodFilter(value)}>{label}</button>
@@ -306,7 +356,9 @@ const WatchHistory: React.FC = () => {
         {activeLoading ? (
           <div className="history-skeleton" role="status" aria-label="Loading watch history">{Array.from({ length: 6 }).map((_, index) => <div key={index} />)}</div>
         ) : activeError ? (
-          <section className="history-state"><h2>History unavailable</h2><p>{activeError}</p><button type="button" onClick={() => isPersonal ? fetchPersonal(false, monthPage) : fetchGroup(activeTab, false, monthPage)}>Try again</button></section>
+          <section className="history-state"><h2>History unavailable</h2><p>{activeError}</p><button type="button" onClick={() => refetchActive()}>Try again</button></section>
+        ) : visibleItems.length === 0 && !bucket.items.length && typeFilter !== "all" ? (
+          <section className="history-state" data-testid="history-type-empty"><h2>{TYPE_EMPTY_COPY[typeFilter][0]}</h2><p>{TYPE_EMPTY_COPY[typeFilter][1]}</p><button type="button" onClick={() => changeTypeFilter("all")}>Show all</button></section>
         ) : visibleItems.length === 0 ? (
           <section className="history-state"><h2>{bucket.items.length ? "No matching screenings" : "Your next movie night starts here"}</h2><p>{bucket.items.length ? "Try another title or clear the active filter." : isPersonal ? "Add something you've watched, or mark a movie watched from your Watchlist." : "Add something this group watched, or mark a movie watched from the group's Watchlist."}</p>{bucket.items.length ? <button type="button" onClick={() => { setSearch(""); setPeriodFilter("all"); }}>Clear filters</button> : null}</section>
         ) : (
