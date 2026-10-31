@@ -7,9 +7,31 @@ import Group from "../models/Groups";
 
 const router = express.Router();
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+/** Replaceable in tests so no real OpenAI request is made. */
+export const assistantClients = {
+  createOpenAI: (apiKey: string) => new OpenAI({ apiKey }),
+};
+
+// The assistant is optional. The client is created on first use so a missing
+// OPENAI_API_KEY disables this route (503) instead of crashing the whole
+// server when this module is imported.
+let openaiClient: { apiKey: string; client: ReturnType<typeof assistantClients.createOpenAI> } | null = null;
+const getOpenAI = () => {
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey) return null;
+  if (!openaiClient || openaiClient.apiKey !== apiKey) {
+    openaiClient = { apiKey, client: assistantClients.createOpenAI(apiKey) };
+  }
+  return openaiClient.client;
+};
+
+export const resetAssistantClientCache = () => {
+  openaiClient = null;
+};
+
+if (!process.env.OPENAI_API_KEY?.trim()) {
+  console.warn("OPENAI_API_KEY is not set; /api/assistant/chat will respond 503.");
+}
 
 // Set OPENAI_MODEL in the server .env to change the assistant chat model.
 const assistantModel = process.env.OPENAI_MODEL || "gpt-4o-mini";
@@ -22,6 +44,12 @@ interface ChatMessage {
 // POST /api/assistant/chat — send message to AI assistant
 router.post("/chat", authenticate, assistantLimiter, async (req: Request, res: Response) => {
   try {
+    const openai = getOpenAI();
+    if (!openai) {
+      res.status(503).json({ msg: "The AI assistant is not available right now." });
+      return;
+    }
+
     const { message, history } = req.body as {
       message: string;
       history: ChatMessage[];
