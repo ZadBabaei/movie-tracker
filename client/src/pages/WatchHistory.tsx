@@ -72,16 +72,20 @@ const WatchHistory: React.FC = () => {
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<HistoryEntry | null>(null);
   const deepLinkApplied = useRef(false);
-  // Views requested while this page has been mounted. A view is reused without
-  // a request only if it is in here *and* the store still considers it fresh;
-  // entering the page always reloads, since history can change elsewhere
-  // (e.g. marking a movie watched from a watchlist).
+  // Views requested since the page mounted or the scope tab last changed. A
+  // view is reused without a request only if it is in here *and* the store
+  // still considers it fresh; entering the page always reloads, since history
+  // can change elsewhere (e.g. marking a movie watched from a watchlist).
   const loadedViews = useRef<Set<string>>(new Set());
   const activeGroup = groupList.find((group) => group._id === activeTab);
   const isPersonal = activeTab === "personal";
   const socket = useSocket(isPersonal ? "" : activeTab);
 
   const setActiveTab = useCallback((tab: string) => {
+    // Socket updates are only received for the open group, so a scope we
+    // leave can change unobserved; every tab switch reloads, as before. The
+    // no-request reuse only applies to filter switches within one scope.
+    loadedViews.current.clear();
     localStorage.setItem(ACTIVE_TAB_KEY, tab);
     setActiveTabState(tab);
     setSearch("");

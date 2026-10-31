@@ -745,6 +745,33 @@ describe("Watch History filter cache invalidation", () => {
     await waitFor(() => expect(screen.getAllByTestId("history-session")).toHaveLength(2));
   });
 
+  test("returning to a group after another tab reloads it, since its updates were not observed meanwhile", async () => {
+    renderPage();
+    await screen.findAllByTestId("history-row");
+    const groupCalls = (type?: string) => historyApi.fetchGroupHistory.mock.calls.filter(([, query]: any[]) => query?.type === type).length;
+    fireEvent.click(screen.getByRole("tab", { name: "Movie Club" }));
+    await waitFor(() => expect(groupCalls(undefined)).toBe(1));
+    fireEvent.click(screen.getByRole("button", { name: "TV Series" }));
+    await waitFor(() => expect(groupCalls("tv")).toBe(1));
+
+    fireEvent.click(screen.getByRole("tab", { name: "Personal" }));
+    await screen.findAllByTestId("history-row");
+    // Another member logs a movie while this user is on Personal; no socket
+    // event reaches the page for that group.
+    serverMovies = [{ ...movieEntry, _id: "m-unseen", movie: { ...movieEntry.movie!, _id: "mv-unseen", title: "Unseen Pick" } }, ...serverMovies];
+
+    fireEvent.click(screen.getByRole("tab", { name: "Movie Club" }));
+    await waitFor(() => expect(groupCalls(undefined)).toBe(2));
+    expect(await screen.findByText("Unseen Pick")).toBeInTheDocument();
+    // Filter switches inside the group are still served from cache once loaded.
+    fireEvent.click(screen.getByRole("button", { name: "Movies" }));
+    await waitFor(() => expect(groupCalls("movie")).toBe(1));
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    fireEvent.click(screen.getByRole("button", { name: "Movies" }));
+    await waitFor(() => expect(screen.getByText("Unseen Pick")).toBeInTheDocument());
+    expect([groupCalls(undefined), groupCalls("movie")]).toEqual([2, 1]);
+  });
+
   test("a group socket event reloads the visible view and invalidates the group's other filters", async () => {
     renderPage();
     await screen.findAllByTestId("history-row");
