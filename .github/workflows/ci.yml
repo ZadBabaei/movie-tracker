@@ -35,8 +35,6 @@ jobs:
         working-directory: client
 
   e2e:
-    # Pinned: ubuntu-latest now resolves to 26.04, which the locked Playwright
-    # (1.59.x) cannot install Chromium on. Revisit when Playwright is upgraded.
     runs-on: ubuntu-24.04
     services:
       mongodb:
