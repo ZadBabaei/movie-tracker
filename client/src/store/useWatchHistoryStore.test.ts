@@ -2,7 +2,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { useWatchHistoryStore } from "./useWatchHistoryStore";
 import * as api from "../api/historyApi";
 
-vi.mock("../api/historyApi", () => ({ fetchPersonalHistory: vi.fn(), deleteHistoryEntry: vi.fn() }));
+vi.mock("../api/historyApi", () => ({ fetchPersonalHistory: vi.fn(), deleteHistoryEntry: vi.fn(), updateHistoryEntry: vi.fn(), rateHistoryEntry: vi.fn() }));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -56,4 +56,45 @@ test("deleting and replacing entries applies to filtered buckets too", async () 
   expect(typed["personal:movie"]).toMatchObject({ items: [], total: 0 });
   expect(typed["personal:tv"].total).toBe(2);
   expect(personal.total).toBe(0);
+});
+
+test("fetched views are fresh until a write invalidates them", async () => {
+  vi.mocked(api.fetchPersonalHistory).mockResolvedValue({ items: [], nextCursor: null, stats: { total: 0 }, monthPagination: { page: 1, totalPages: 1, start: null, end: null } } as any);
+  const store = useWatchHistoryStore.getState();
+  await store.fetchPersonal(false, 1, "movie");
+  await store.fetchPersonal(false, 1);
+  expect(store.isBucketFresh("personal:movie", 1)).toBe(true);
+  expect(store.isBucketFresh("personal", 1)).toBe(true);
+  expect(store.isBucketFresh("personal:movie", 2)).toBe(false);
+  expect(store.isBucketFresh("personal:tv", 1)).toBe(false);
+  store.invalidate();
+  expect(store.isBucketFresh("personal:movie", 1)).toBe(false);
+  expect(store.isBucketFresh("personal", 1)).toBe(false);
+});
+
+test("edits and deletes invalidate; ratings do not", async () => {
+  const movie = { _id: "m-1", mediaType: "movie", watchedAt: "2026-10-04T12:00:00Z", group: null };
+  vi.mocked(api.updateHistoryEntry).mockResolvedValue(movie as any);
+  vi.mocked(api.rateHistoryEntry).mockResolvedValue(movie as any);
+  vi.mocked(api.deleteHistoryEntry).mockResolvedValue({});
+  const versionAfter = async (write: () => Promise<unknown>) => {
+    const before = useWatchHistoryStore.getState().version;
+    await write();
+    return useWatchHistoryStore.getState().version - before;
+  };
+  const store = useWatchHistoryStore.getState();
+  expect(await versionAfter(() => store.rateEntry("m-1", 8))).toBe(0);
+  expect(await versionAfter(() => store.updateEntry("m-1", { watchedAt: "2026-10-01", watchedLocation: "", watchedNotes: "" }))).toBe(1);
+  expect(await versionAfter(() => store.deleteEntry("m-1"))).toBe(1);
+});
+
+test("a write landing while a request is in flight leaves that view stale", async () => {
+  let resolve!: (value: unknown) => void;
+  vi.mocked(api.fetchPersonalHistory).mockReturnValue(new Promise((done) => { resolve = done; }) as any);
+  const loading = useWatchHistoryStore.getState().fetchPersonal(false, 1, "tv");
+  useWatchHistoryStore.getState().invalidate();
+  resolve({ items: [], nextCursor: null, stats: { total: 0 }, monthPagination: { page: 1, totalPages: 1, start: null, end: null } });
+  await loading;
+  expect(useWatchHistoryStore.getState().typed["personal:tv"]).toBeDefined();
+  expect(useWatchHistoryStore.getState().isBucketFresh("personal:tv", 1)).toBe(false);
 });

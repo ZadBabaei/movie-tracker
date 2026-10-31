@@ -24,7 +24,16 @@ vi.mock("../api/historyApi", async (importOriginal) => {
 vi.mock("../store/useGroupStore", () => ({
   useGroupStore: () => ({ groupList: [{ _id: "group-1", name: "Movie Club", slug: "movie-club" }], fetchGroups: vi.fn().mockResolvedValue(undefined) }),
 }));
-vi.mock("../hooks/useSocket", () => ({ useSocket: () => ({ on: vi.fn(), off: vi.fn() }) }));
+// One stable socket that records handlers, so a test can emit a group event.
+const socketMock = vi.hoisted(() => {
+  const handlers = new Map<string, () => void>();
+  return {
+    handlers,
+    on: (event: string, handler: () => void) => { handlers.set(event, handler); },
+    off: (event: string) => { handlers.delete(event); },
+  };
+});
+vi.mock("../hooks/useSocket", () => ({ useSocket: () => socketMock }));
 vi.mock("../component/VerticalNavbar", () => ({ default: () => null }));
 // The unified search and the episode picker have their own suites; here they
 // are stubs that emit the shapes the page has to handle.
@@ -150,7 +159,7 @@ const tvOtherDay: HistoryEntry = {
 
 beforeEach(() => {
   vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => undefined, removeItem: () => undefined });
-  useWatchHistoryStore.setState({ personal: { items: [], total: 0, nextCursor: null }, byGroup: {}, loading: {}, errors: {} });
+  useWatchHistoryStore.setState({ personal: { items: [], total: 0, nextCursor: null }, byGroup: {}, typed: {}, loading: {}, errors: {} });
   historyApi.fetchPersonalHistory.mockReset();
   historyApi.fetchPersonalHistory.mockResolvedValue({ items: [tvOtherDay, tvNext, tvRewatch, tvEntry, movieEntry], nextCursor: null, stats: { total: 5, latestWatchedAt: tvOtherDay.watchedAt } });
   historyApi.updateHistoryEntry.mockReset();
@@ -623,5 +632,146 @@ describe("Watch History content-type filter", () => {
     await waitFor(() => expect(screen.queryAllByTestId("history-row")).toHaveLength(0));
     expect(useWatchHistoryStore.getState().typed["personal:movie"].total).toBe(0);
     expect(await screen.findByTestId("history-type-empty")).toBeInTheDocument();
+  });
+});
+
+describe("Watch History filter cache invalidation", () => {
+  const pagination = { page: 1, totalPages: 1, start: "2024-01-01T00:00:00Z", end: "2024-06-01T00:00:00Z" };
+  // Mutable "server" so a test can change history between requests.
+  let serverMovies: HistoryEntry[];
+  let serverEpisodes: HistoryEntry[];
+  const personalCalls = (type?: string) =>
+    historyApi.fetchPersonalHistory.mock.calls.filter(([query]: any[]) => query?.type === type).length;
+
+  beforeEach(() => {
+    socketMock.handlers.clear();
+    serverMovies = [movieEntry];
+    serverEpisodes = [tvEntry];
+    const respond = (query: any = {}) => {
+      const items = query.type === "movie" ? serverMovies : query.type === "tv" ? serverEpisodes : [...serverEpisodes, ...serverMovies];
+      return { items, nextCursor: null, stats: { total: items.length }, monthPagination: pagination };
+    };
+    historyApi.fetchPersonalHistory.mockImplementation(async (query: any) => respond(query));
+    historyApi.fetchGroupHistory.mockImplementation(async (_groupId: string, query: any) => respond(query));
+  });
+
+  // Load All, Movies and TV once so every view is cached and fresh.
+  const warmAllViews = async () => {
+    renderPage();
+    await screen.findAllByTestId("history-row");
+    fireEvent.click(screen.getByRole("button", { name: "Movies" }));
+    await waitFor(() => expect(screen.queryAllByTestId("history-session")).toHaveLength(0));
+    fireEvent.click(screen.getByRole("button", { name: "TV Series" }));
+    await waitFor(() => expect(screen.queryAllByTestId("history-row")).toHaveLength(0));
+    expect(historyApi.fetchPersonalHistory).toHaveBeenCalledTimes(3);
+  };
+
+  test("after adding a movie, Movies and TV Series reload instead of showing cached pages", async () => {
+    await warmAllViews();
+    const arrivalEntry: HistoryEntry = { ...movieEntry, _id: "m-arrival", movie: { ...movieEntry.movie!, _id: "mv-arrival", title: "Arrival" }, watchedAt: "2024-05-20T00:00:00.000Z" };
+    historyApi.createHistoryEntry.mockImplementation(async () => {
+      serverMovies = [arrivalEntry, ...serverMovies];
+      return { _id: arrivalEntry._id };
+    });
+    chooseArrival();
+    fireEvent.click(screen.getByRole("button", { name: /save personal/i }));
+    await screen.findByText("Arrival");
+
+    const movieCallsBefore = personalCalls("movie");
+    fireEvent.click(screen.getByRole("button", { name: "Movies" }));
+    await waitFor(() => expect(personalCalls("movie")).toBe(movieCallsBefore + 1));
+    await waitFor(() => expect(screen.getAllByTestId("history-row")).toHaveLength(2));
+    expect(screen.getByText("Arrival")).toBeInTheDocument();
+
+    const tvCallsBefore = personalCalls("tv");
+    fireEvent.click(screen.getByRole("button", { name: "TV Series" }));
+    await waitFor(() => expect(personalCalls("tv")).toBe(tvCallsBefore + 1));
+  });
+
+  test("an edit invalidates the other filters; switching shows the latest data", async () => {
+    await warmAllViews();
+    // Re-date the episode on the server, then save the edit through the store.
+    const moved = { ...tvEntry, watchedAt: "2024-03-02T00:00:00.000Z" };
+    historyApi.updateHistoryEntry.mockImplementation(async () => {
+      serverEpisodes = [moved];
+      return moved;
+    });
+    await useWatchHistoryStore.getState().updateEntry(tvEntry._id, { watchedAt: moved.watchedAt, watchedLocation: "", watchedNotes: "" });
+    // Editing alone never sends a request.
+    expect(historyApi.fetchPersonalHistory).toHaveBeenCalledTimes(3);
+
+    fireEvent.click(screen.getByRole("button", { name: "Movies" }));
+    await waitFor(() => expect(personalCalls("movie")).toBe(2));
+    fireEvent.click(screen.getByRole("button", { name: "TV Series" }));
+    await waitFor(() => expect(personalCalls("tv")).toBe(2));
+    expect(await screen.findByText("March 2, 2024")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "March" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "May" })).not.toBeInTheDocument();
+  });
+
+  test("a delete invalidates the other views so their totals reload", async () => {
+    await warmAllViews();
+    fireEvent.click(screen.getByRole("button", { name: "Movies" }));
+    await waitFor(() => expect(screen.getAllByTestId("history-row")).toHaveLength(1));
+    serverMovies = [];
+    await useWatchHistoryStore.getState().deleteEntry(movieEntry._id);
+    expect(await screen.findByTestId("history-type-empty")).toBeInTheDocument();
+
+    const allCallsBefore = personalCalls(undefined);
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    await waitFor(() => expect(personalCalls(undefined)).toBe(allCallsBefore + 1));
+    await waitFor(() => expect(screen.getByText(/watch event/)).toHaveTextContent("1 watch event"));
+  });
+
+  test("rating changes an entry in place without invalidating any view", async () => {
+    await warmAllViews();
+    historyApi.rateHistoryEntry.mockResolvedValue({ ...tvEntry, currentUserRating: 7, averageRating: 7, ratingCount: 1 });
+    await useWatchHistoryStore.getState().rateEntry(tvEntry._id, 7);
+    fireEvent.click(screen.getByRole("button", { name: "Movies" }));
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    fireEvent.click(screen.getByRole("button", { name: "TV Series" }));
+    await waitFor(() => expect(screen.getAllByTestId("history-session")).toHaveLength(1));
+    expect(historyApi.fetchPersonalHistory).toHaveBeenCalledTimes(3);
+  });
+
+  test("an external sync (e.g. Stremio) invalidates every cached view", async () => {
+    await warmAllViews();
+    serverEpisodes = [tvEntry, tvOtherDay];
+    useWatchHistoryStore.getState().invalidate();
+    fireEvent.click(screen.getByRole("button", { name: "Movies" }));
+    await waitFor(() => expect(personalCalls("movie")).toBe(2));
+    fireEvent.click(screen.getByRole("button", { name: "TV Series" }));
+    await waitFor(() => expect(personalCalls("tv")).toBe(2));
+    await waitFor(() => expect(screen.getAllByTestId("history-session")).toHaveLength(2));
+  });
+
+  test("a group socket event reloads the visible view and invalidates the group's other filters", async () => {
+    renderPage();
+    await screen.findAllByTestId("history-row");
+    fireEvent.click(screen.getByRole("tab", { name: "Movie Club" }));
+    await waitFor(() => expect(historyApi.fetchGroupHistory).toHaveBeenCalledWith("group-1", { limit: 100, monthPage: 1 }));
+    fireEvent.click(screen.getByRole("button", { name: "Movies" }));
+    await waitFor(() => expect(historyApi.fetchGroupHistory).toHaveBeenCalledWith("group-1", { limit: 100, monthPage: 1, type: "movie" }));
+    fireEvent.click(screen.getByRole("button", { name: "TV Series" }));
+    await waitFor(() => expect(historyApi.fetchGroupHistory).toHaveBeenCalledWith("group-1", { limit: 100, monthPage: 1, type: "tv" }));
+    await waitFor(() => expect(screen.getAllByTestId("history-session")).toHaveLength(1));
+    const groupCalls = (type?: string) => historyApi.fetchGroupHistory.mock.calls.filter(([, query]: any[]) => query?.type === type).length;
+    expect([groupCalls(undefined), groupCalls("movie"), groupCalls("tv")]).toEqual([1, 1, 1]);
+
+    // Another member logs a movie in the group.
+    serverMovies = [{ ...movieEntry, _id: "m-group", movie: { ...movieEntry.movie!, _id: "mv-group", title: "Group Pick" } }, ...serverMovies];
+    socketMock.handlers.get("group:history_updated")!();
+    await waitFor(() => expect(groupCalls("tv")).toBe(2));
+    expect([groupCalls(undefined), groupCalls("movie")]).toEqual([1, 1]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Movies" }));
+    await waitFor(() => expect(groupCalls("movie")).toBe(2));
+    expect(await screen.findByText("Group Pick")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    await waitFor(() => expect(groupCalls(undefined)).toBe(2));
+    // Personal history includes group watches, so it is invalidated too.
+    const personalBefore = historyApi.fetchPersonalHistory.mock.calls.length;
+    fireEvent.click(screen.getByRole("tab", { name: "Personal" }));
+    await waitFor(() => expect(historyApi.fetchPersonalHistory.mock.calls.length).toBe(personalBefore + 1));
   });
 });

@@ -64,6 +64,8 @@ interface HistoryBucket {
   total: number;
   nextCursor: string | null;
   monthPagination?: { page: number; totalPages: number; start: string | null; end: string | null };
+  /** Store `version` the request for this bucket started at; older means stale. */
+  version?: number;
 }
 
 /**
@@ -80,8 +82,16 @@ interface WatchHistoryState {
   personal: HistoryBucket;
   byGroup: Record<string, HistoryBucket>;
   typed: Record<string, HistoryBucket>;
+  /**
+   * Bumped by every write that can change which entries a view contains, their
+   * order, months or totals (add, edit, delete, Stremio sync, group events).
+   * Rating does not bump it: it only changes an entry in place.
+   */
+  version: number;
   loading: Record<string, boolean>;
   errors: Record<string, string | null>;
+  invalidate: () => void;
+  isBucketFresh: (key: string, monthPage?: number) => boolean;
   fetchPersonal: (append?: boolean, monthPage?: number, type?: HistoryTypeFilter) => Promise<void>;
   fetchGroup: (groupId: string, append?: boolean, monthPage?: number, type?: HistoryTypeFilter) => Promise<void>;
   replaceEntry: (entry: HistoryEntry) => void;
@@ -99,14 +109,27 @@ export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
   personal: emptyBucket(),
   byGroup: {},
   typed: {},
+  version: 0,
   loading: {},
   errors: {},
+
+  invalidate: () => set((state) => ({ version: state.version + 1 })),
+
+  isBucketFresh: (key, monthPage) => {
+    const state = get();
+    const scopeKey = key.split(":")[0];
+    const bucket = key.includes(":") ? state.typed[key] : scopeKey === "personal" ? state.personal : state.byGroup[scopeKey];
+    if (!bucket || bucket.version !== state.version || state.errors[key]) return false;
+    return monthPage === undefined || bucket.monthPagination?.page === monthPage;
+  },
 
   fetchPersonal: async (append = false, monthPage, type = "all") => {
     const key = historyBucketKey("personal", type);
     const previous = (type === "all" ? get().personal : get().typed[key]) || emptyBucket();
     if (append && (!previous.nextCursor || get().loading[key])) return;
     const sessionGeneration = getSessionGeneration();
+    // A write landing while this request is in flight leaves the bucket stale.
+    const version = get().version;
     const typeParam = type === "all" ? {} : { type };
     set((state) => ({ loading: { ...state.loading, [key]: true }, errors: { ...state.errors, [key]: null } }));
     try {
@@ -123,7 +146,7 @@ export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
       if (!isSessionGenerationCurrent(sessionGeneration)) return;
       set((state) => {
         const current = (type === "all" ? state.personal : state.typed[key]) || emptyBucket();
-        const next: HistoryBucket = { items: append ? [...current.items, ...page.items.filter((item) => !current.items.some((existing) => existing._id === item._id))] : page.items, total: append ? previous.total : data.stats?.total || 0, nextCursor: page.nextCursor, ...(data.monthPagination ? { monthPagination: data.monthPagination } : {}) };
+        const next: HistoryBucket = { items: append ? [...current.items, ...page.items.filter((item) => !current.items.some((existing) => existing._id === item._id))] : page.items, total: append ? previous.total : data.stats?.total || 0, nextCursor: page.nextCursor, ...(data.monthPagination ? { monthPagination: data.monthPagination } : {}), version: append ? current.version : version };
         return {
           ...(type === "all" ? { personal: next } : { typed: { ...state.typed, [key]: next } }),
           loading: { ...state.loading, [key]: false },
@@ -143,6 +166,7 @@ export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
     const previous = (type === "all" ? get().byGroup[groupId] : get().typed[key]) || emptyBucket();
     if (append && (!previous.nextCursor || get().loading[key])) return;
     const sessionGeneration = getSessionGeneration();
+    const version = get().version;
     const typeParam = type === "all" ? {} : { type };
     set((state) => ({ loading: { ...state.loading, [key]: true }, errors: { ...state.errors, [key]: null } }));
     try {
@@ -156,8 +180,8 @@ export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
       );
       if (!isSessionGenerationCurrent(sessionGeneration)) return;
       set((state) => {
-        const currentItems = ((type === "all" ? state.byGroup[groupId] : state.typed[key]) || emptyBucket()).items;
-        const next: HistoryBucket = { items: append ? [...currentItems, ...page.items.filter((item) => !currentItems.some((existing) => existing._id === item._id))] : page.items, total: append ? previous.total : data.stats?.total || 0, nextCursor: page.nextCursor, ...(data.monthPagination ? { monthPagination: data.monthPagination } : {}) };
+        const current = (type === "all" ? state.byGroup[groupId] : state.typed[key]) || emptyBucket();
+        const next: HistoryBucket = { items: append ? [...current.items, ...page.items.filter((item) => !current.items.some((existing) => existing._id === item._id))] : page.items, total: append ? previous.total : data.stats?.total || 0, nextCursor: page.nextCursor, ...(data.monthPagination ? { monthPagination: data.monthPagination } : {}), version: append ? current.version : version };
         return {
           ...(type === "all" ? { byGroup: { ...state.byGroup, [groupId]: next } } : { typed: { ...state.typed, [key]: next } }),
           loading: { ...state.loading, [key]: false },
@@ -184,9 +208,14 @@ export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
     });
   },
 
+  // Edits and deletes patch every cached view in place so the screen updates
+  // at once, then invalidate: a new date can move the entry to another month
+  // or position, and a delete changes totals and month pages of views that
+  // never held the entry on their loaded page.
   updateEntry: async (entryId, payload) => {
     const entry = await api.updateHistoryEntry(entryId, payload);
     get().replaceEntry(entry);
+    get().invalidate();
     return entry;
   },
 
@@ -201,6 +230,7 @@ export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
         personal: remove(state.personal),
         byGroup: mapBuckets(state.byGroup, remove),
         typed: mapBuckets(state.typed, remove),
+        version: state.version + 1,
       };
     });
   },

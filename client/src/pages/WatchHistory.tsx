@@ -58,6 +58,8 @@ const WatchHistory: React.FC = () => {
     errors,
     fetchPersonal,
     fetchGroup,
+    invalidate,
+    isBucketFresh,
   } = useWatchHistoryStore();
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTabState] = useState(() => localStorage.getItem(ACTIVE_TAB_KEY) || "personal");
@@ -70,8 +72,10 @@ const WatchHistory: React.FC = () => {
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<HistoryEntry | null>(null);
   const deepLinkApplied = useRef(false);
-  // Scope+type views fetched since the last invalidation. Switching back to one
-  // of them reuses the cached bucket instead of hitting the API again.
+  // Views requested while this page has been mounted. A view is reused without
+  // a request only if it is in here *and* the store still considers it fresh;
+  // entering the page always reloads, since history can change elsewhere
+  // (e.g. marking a movie watched from a watchlist).
   const loadedViews = useRef<Set<string>>(new Set());
   const activeGroup = groupList.find((group) => group._id === activeTab);
   const isPersonal = activeTab === "personal";
@@ -106,13 +110,13 @@ const WatchHistory: React.FC = () => {
       } else {
         toast.warn(`${outcome.succeeded} saved, ${outcome.failed.length} failed for ${outcome.seriesTitle}.`);
       }
-      loadedViews.current.clear();
+      invalidate();
       setActiveTab(outcome.scopeId);
       const refreshes = [fetchPersonal(false, 1)];
       if (outcome.scopeId !== "personal") refreshes.push(fetchGroup(outcome.scopeId, false, 1));
       await Promise.all(refreshes);
     },
-    [fetchGroup, fetchPersonal, setActiveTab]
+    [fetchGroup, fetchPersonal, invalidate, setActiveTab]
   );
   const addFlow = useAddToHistory({ onSaved: handleSaved, onError: (message) => toast.error(message) });
 
@@ -143,20 +147,23 @@ const WatchHistory: React.FC = () => {
 
   const viewKey = historyBucketKey(activeTab, typeFilter);
 
+  // Runs on view changes only. Freshness is read from the store rather than
+  // subscribed to, so an invalidation alone never triggers a request: stale
+  // views reload when they are next shown.
   useEffect(() => {
-    const cached = typeFilter === "all" ? (isPersonal ? personal : byGroup[activeTab]) : typed[viewKey];
-    if (loadedViews.current.has(viewKey) && cached?.monthPagination?.page === monthPage) return;
+    if (loadedViews.current.has(viewKey) && isBucketFresh(viewKey, monthPage)) return;
     loadedViews.current.add(viewKey);
     if (isPersonal) fetchPersonal(false, monthPage, typeFilter);
     else fetchGroup(activeTab, false, monthPage, typeFilter);
-    // Cached buckets are read, not subscribed to: a store update must not refetch.
-  }, [activeTab, fetchGroup, fetchPersonal, isPersonal, monthPage, typeFilter, viewKey]);
+  }, [activeTab, fetchGroup, fetchPersonal, isBucketFresh, isPersonal, monthPage, typeFilter, viewKey]);
 
   useEffect(() => {
     if (isPersonal) return;
+    // Another member changed this group's history: every cached view may be
+    // affected (all three filters here, and personal history, which includes
+    // group watches), so invalidate them all and reload only the visible one.
     const refresh = () => {
-      loadedViews.current.clear();
-      loadedViews.current.add(viewKey);
+      invalidate();
       fetchGroup(activeTab, false, monthPage, typeFilter);
     };
     socket.on("group:history_updated", refresh);
@@ -167,7 +174,7 @@ const WatchHistory: React.FC = () => {
       socket.off("group:history_deleted", refresh);
       socket.off("group:history_rating_updated", refresh);
     };
-  }, [activeTab, fetchGroup, isPersonal, socket, monthPage, typeFilter, viewKey]);
+  }, [activeTab, fetchGroup, invalidate, isPersonal, socket, monthPage, typeFilter]);
 
   const emptyBucket: typeof personal = { items: [], total: 0, nextCursor: null };
   const bucket = typeFilter !== "all"

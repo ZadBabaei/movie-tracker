@@ -201,6 +201,7 @@ function Home() {
     fetchWatchlist,
   } = useWatchlistStore();
   const fetchPersonalHistory = useWatchHistoryStore((state) => state.fetchPersonal);
+  const invalidateHistory = useWatchHistoryStore((state) => state.invalidate);
   const { groupList, fetchGroups } = useGroupStore();
 
   useEffect(() => {
@@ -297,6 +298,8 @@ function Home() {
           headers: { Authorization: `Bearer ${token}` },
         })
       : Promise.resolve(null);
+    // Imported movies and episodes change every cached history view.
+    invalidateHistory();
     const [dashboardResult] = await Promise.allSettled([
       dashboardRequest,
       fetchPersonalHistory(),
@@ -305,7 +308,7 @@ function Home() {
     if (dashboardResult.status === "fulfilled" && dashboardResult.value) {
       setDashboard(dashboardResult.value.data);
     }
-  }, [fetchPersonalHistory, fetchWatchlist]);
+  }, [fetchPersonalHistory, fetchWatchlist, invalidateHistory]);
 
   const handlePollRank = (pollId, movieId, value, isRunoff = false) => {
     setPollRankings((current) => ({
