@@ -1,0 +1,2 @@
+# Synthetic JWT fixture in an earlier commit of this PR; the current test builds it at runtime.
+f585a435ab796d842358d3adce336187f946f8f9:server/tests/streamErrorLogging.test.ts:jwt:151
