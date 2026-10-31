@@ -100,9 +100,27 @@ const parseTvEpisode = (raw: unknown): IWatchHistoryTvEpisode | string => {
   };
 };
 
-const readEntries = async (req: Request, res: Response, baseQuery: Record<string, unknown>) => {
+// Content-type filter for the timeline. Reuses the stored `mediaType`; movies
+// are "anything that is not a TV episode" so pre-TV documents (no mediaType)
+// stay movies, matching `resolveMediaType`. Returns null for an unknown value.
+const parseTypeFilter = (value: unknown): Record<string, unknown> | null => {
+  if (value === undefined || value === null || value === "" || value === "all") return {};
+  if (value === "movie") return { mediaType: { $ne: "tv_episode" } };
+  if (value === "tv") return { mediaType: "tv_episode" };
+  return null;
+};
+
+const readEntries = async (req: Request, res: Response, scopeQuery: Record<string, unknown>) => {
   const userId = req.user!.id;
   const limit = parseLimit(req.query.limit);
+  const typeFilter = parseTypeFilter(req.query.type);
+  if (!typeFilter) {
+    res.status(400).json({ msg: "Invalid type. Use all, movie or tv." });
+    return;
+  }
+  // Applied to every query below (page, month list, cursor, counts) so that
+  // pagination and totals are computed over the filtered set.
+  const baseQuery = { ...scopeQuery, ...typeFilter };
   const query: Record<string, any> = { ...baseQuery };
   const searchFilter = await buildSearchFilter(req.query.search);
   if (searchFilter) query.$and = [searchFilter];

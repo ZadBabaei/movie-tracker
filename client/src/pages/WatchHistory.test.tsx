@@ -498,3 +498,130 @@ describe("Add to History (unified movie + TV)", () => {
     await waitFor(() => expect(screen.queryByTestId("tv-outcome")).not.toBeInTheDocument());
   });
 });
+
+describe("Watch History content-type filter", () => {
+  const pagination = { page: 1, totalPages: 1, start: "2024-01-01T00:00:00Z", end: "2024-06-01T00:00:00Z" };
+  // The server filters; the mock mirrors that by honouring the `type` param.
+  const serveByType = (movies: HistoryEntry[] = [movieEntry], episodes: HistoryEntry[] = [tvNext, tvEntry]) => {
+    historyApi.fetchPersonalHistory.mockImplementation(async (query: any = {}) => {
+      const items = query.type === "movie" ? movies : query.type === "tv" ? episodes : [...episodes, ...movies];
+      return { items, nextCursor: null, stats: { total: items.length }, monthPagination: pagination };
+    });
+  };
+
+  test("defaults to All and sends no type param", async () => {
+    serveByType();
+    renderPage();
+    await screen.findAllByTestId("history-row");
+    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Movies" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "TV Series" })).toHaveAttribute("aria-pressed", "false");
+    expect(historyApi.fetchPersonalHistory).toHaveBeenCalledWith({ limit: 100, monthPage: 1 });
+  });
+
+  test("Movies shows only movie cards and requests type=movie from page one", async () => {
+    serveByType();
+    renderPage();
+    await screen.findAllByTestId("history-row");
+    fireEvent.click(screen.getByRole("button", { name: "Movies" }));
+    await waitFor(() => expect(historyApi.fetchPersonalHistory).toHaveBeenCalledWith({ limit: 100, monthPage: 1, type: "movie" }));
+    await waitFor(() => expect(screen.queryAllByTestId("history-session")).toHaveLength(0));
+    expect(screen.getAllByTestId("history-row")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Movies" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  test("TV Series shows episode sessions with season and episode info", async () => {
+    serveByType();
+    renderPage();
+    await screen.findAllByTestId("history-row");
+    fireEvent.click(screen.getByRole("button", { name: "TV Series" }));
+    await waitFor(() => expect(historyApi.fetchPersonalHistory).toHaveBeenCalledWith({ limit: 100, monthPage: 1, type: "tv" }));
+    await waitFor(() => expect(screen.queryAllByTestId("history-row")).toHaveLength(0));
+    const sessions = screen.getAllByTestId("history-session");
+    expect(sessions).toHaveLength(1);
+    expect(within(sessions[0]).getByText("S01 · E03–E04")).toBeInTheDocument();
+  });
+
+  test("does not refetch when switching back to a view that is already loaded", async () => {
+    serveByType();
+    renderPage();
+    await screen.findAllByTestId("history-row");
+    fireEvent.click(screen.getByRole("button", { name: "Movies" }));
+    await waitFor(() => expect(screen.queryAllByTestId("history-session")).toHaveLength(0));
+    fireEvent.click(screen.getByRole("button", { name: "TV Series" }));
+    await waitFor(() => expect(screen.queryAllByTestId("history-row")).toHaveLength(0));
+    expect(historyApi.fetchPersonalHistory).toHaveBeenCalledTimes(3);
+
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    fireEvent.click(screen.getByRole("button", { name: "Movies" }));
+    fireEvent.click(screen.getByRole("button", { name: "TV Series" }));
+    await waitFor(() => expect(screen.getAllByTestId("history-session")).toHaveLength(1));
+    expect(historyApi.fetchPersonalHistory).toHaveBeenCalledTimes(3);
+  });
+
+  test("shows a filter-specific empty state and returns to All", async () => {
+    serveByType([], [tvEntry]);
+    renderPage();
+    await screen.findAllByTestId("history-session");
+    fireEvent.click(screen.getByRole("button", { name: "Movies" }));
+    const empty = await screen.findByTestId("history-type-empty");
+    expect(empty).toHaveTextContent("No movies yet");
+    expect(screen.queryByText("Your next movie night starts here")).not.toBeInTheDocument();
+    fireEvent.click(within(empty).getByRole("button", { name: "Show all" }));
+    await screen.findAllByTestId("history-session");
+    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  test("keeps search working inside the filtered list", async () => {
+    serveByType([movieEntry, { ...movieEntry, _id: "m2", movie: { ...movieEntry.movie!, _id: "mv2", title: "Alien" } }]);
+    renderPage();
+    await screen.findAllByTestId("history-row");
+    fireEvent.click(screen.getByRole("button", { name: "Movies" }));
+    await waitFor(() => expect(screen.getAllByTestId("history-row")).toHaveLength(2));
+    fireEvent.change(screen.getByLabelText("Search watch history"), { target: { value: "alien" } });
+    expect(screen.getAllByTestId("history-row")).toHaveLength(1);
+    expect(screen.getByText("Alien")).toBeInTheDocument();
+  });
+
+  test("changing the filter returns to page one of the filtered set", async () => {
+    historyApi.fetchPersonalHistory.mockImplementation(async (query: any = {}) => ({
+      items: [movieEntry],
+      nextCursor: null,
+      stats: { total: 1 },
+      monthPagination: { ...pagination, page: query.monthPage || 1, totalPages: 3 },
+    }));
+    vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    renderPage();
+    await screen.findAllByTestId("history-row");
+    fireEvent.click(screen.getByRole("button", { name: /^Next$/ }));
+    await waitFor(() => expect(historyApi.fetchPersonalHistory).toHaveBeenCalledWith({ limit: 100, monthPage: 2 }));
+    fireEvent.click(screen.getByRole("button", { name: "TV Series" }));
+    await waitFor(() => expect(historyApi.fetchPersonalHistory).toHaveBeenCalledWith({ limit: 100, monthPage: 1, type: "tv" }));
+  });
+
+  test("group tabs send the filter to the group endpoint and reset to All", async () => {
+    serveByType();
+    historyApi.fetchGroupHistory.mockResolvedValue({ items: [], nextCursor: null, stats: { total: 0 }, monthPagination: pagination });
+    renderPage();
+    await screen.findAllByTestId("history-row");
+    fireEvent.click(screen.getByRole("button", { name: "TV Series" }));
+    await waitFor(() => expect(historyApi.fetchPersonalHistory).toHaveBeenCalledWith({ limit: 100, monthPage: 1, type: "tv" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Movie Club" }));
+    await waitFor(() => expect(historyApi.fetchGroupHistory).toHaveBeenCalledWith("group-1", { limit: 100, monthPage: 1 }));
+    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Movies" }));
+    await waitFor(() => expect(historyApi.fetchGroupHistory).toHaveBeenCalledWith("group-1", { limit: 100, monthPage: 1, type: "movie" }));
+  });
+
+  test("deleting inside a filtered view updates that view and its total", async () => {
+    serveByType([movieEntry]);
+    renderPage();
+    await screen.findAllByTestId("history-row");
+    fireEvent.click(screen.getByRole("button", { name: "Movies" }));
+    await waitFor(() => expect(screen.queryAllByTestId("history-session")).toHaveLength(0));
+    await useWatchHistoryStore.getState().deleteEntry("m1");
+    await waitFor(() => expect(screen.queryAllByTestId("history-row")).toHaveLength(0));
+    expect(useWatchHistoryStore.getState().typed["personal:movie"].total).toBe(0);
+    expect(await screen.findByTestId("history-type-empty")).toBeInTheDocument();
+  });
+});

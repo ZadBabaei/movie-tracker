@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import * as api from "../api/historyApi";
+import type { HistoryTypeFilter } from "../api/historyApi";
 import { completeTrailingDay } from "../utils/historyPagination";
 import {
   getSessionGeneration,
@@ -65,13 +66,24 @@ interface HistoryBucket {
   monthPagination?: { page: number; totalPages: number; start: string | null; end: string | null };
 }
 
+/**
+ * Key shared by `loading`, `errors` and `typed`. The unfiltered ("all") view
+ * keeps the plain scope key (`"personal"` / a group id) and lives in
+ * `personal` / `byGroup`; filtered views are cached in `typed` as
+ * `<scope>:<type>`, so one filter can never show or overwrite another's page.
+ * Everything is cleared with the rest of the store on sign-out.
+ */
+export const historyBucketKey = (scopeKey: string, type: HistoryTypeFilter = "all") =>
+  type === "all" ? scopeKey : `${scopeKey}:${type}`;
+
 interface WatchHistoryState {
   personal: HistoryBucket;
   byGroup: Record<string, HistoryBucket>;
+  typed: Record<string, HistoryBucket>;
   loading: Record<string, boolean>;
   errors: Record<string, string | null>;
-  fetchPersonal: (append?: boolean, monthPage?: number) => Promise<void>;
-  fetchGroup: (groupId: string, append?: boolean, monthPage?: number) => Promise<void>;
+  fetchPersonal: (append?: boolean, monthPage?: number, type?: HistoryTypeFilter) => Promise<void>;
+  fetchGroup: (groupId: string, append?: boolean, monthPage?: number, type?: HistoryTypeFilter) => Promise<void>;
   replaceEntry: (entry: HistoryEntry) => void;
   updateEntry: (entryId: string, payload: { watchedAt: string; watchedLocation: string; watchedNotes: string }) => Promise<HistoryEntry>;
   deleteEntry: (entryId: string) => Promise<void>;
@@ -80,69 +92,82 @@ interface WatchHistoryState {
 
 const emptyBucket = (): HistoryBucket => ({ items: [], total: 0, nextCursor: null });
 
+const mapBuckets = (buckets: Record<string, HistoryBucket>, fn: (bucket: HistoryBucket) => HistoryBucket) =>
+  Object.fromEntries(Object.entries(buckets).map(([key, bucket]) => [key, fn(bucket)]));
+
 export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
   personal: emptyBucket(),
   byGroup: {},
+  typed: {},
   loading: {},
   errors: {},
 
-  fetchPersonal: async (append = false, monthPage) => {
-    const previous = get().personal;
-    if (append && (!previous.nextCursor || get().loading.personal)) return;
+  fetchPersonal: async (append = false, monthPage, type = "all") => {
+    const key = historyBucketKey("personal", type);
+    const previous = (type === "all" ? get().personal : get().typed[key]) || emptyBucket();
+    if (append && (!previous.nextCursor || get().loading[key])) return;
     const sessionGeneration = getSessionGeneration();
-    set((state) => ({ loading: { ...state.loading, personal: true }, errors: { ...state.errors, personal: null } }));
+    const typeParam = type === "all" ? {} : { type };
+    set((state) => ({ loading: { ...state.loading, [key]: true }, errors: { ...state.errors, [key]: null } }));
     try {
-      const data = await api.fetchPersonalHistory({ limit: 100, ...(monthPage ? { monthPage } : {}), ...(append ? { cursor: previous.nextCursor! } : {}) });
+      const data = await api.fetchPersonalHistory({ limit: 100, ...typeParam, ...(monthPage ? { monthPage } : {}), ...(append ? { cursor: previous.nextCursor! } : {}) });
       // Pull in the rest of the trailing day so a TV session is never split
       // at the page boundary (see utils/historyPagination.ts).
       const page = await completeTrailingDay(
         { items: data.items || [], nextCursor: data.nextCursor || null },
         async (cursor, limit) => {
-          const more = await api.fetchPersonalHistory({ cursor, limit });
+          const more = await api.fetchPersonalHistory({ cursor, limit, ...typeParam });
           return { items: more.items || [], nextCursor: more.nextCursor || null };
         }
       );
       if (!isSessionGenerationCurrent(sessionGeneration)) return;
-      set((state) => ({
-        personal: { items: append ? [...state.personal.items, ...page.items.filter((item) => !state.personal.items.some((existing) => existing._id === item._id))] : page.items, total: append ? previous.total : data.stats?.total || 0, nextCursor: page.nextCursor, ...(data.monthPagination ? { monthPagination: data.monthPagination } : {}) },
-        loading: { ...state.loading, personal: false },
-      }));
+      set((state) => {
+        const current = (type === "all" ? state.personal : state.typed[key]) || emptyBucket();
+        const next: HistoryBucket = { items: append ? [...current.items, ...page.items.filter((item) => !current.items.some((existing) => existing._id === item._id))] : page.items, total: append ? previous.total : data.stats?.total || 0, nextCursor: page.nextCursor, ...(data.monthPagination ? { monthPagination: data.monthPagination } : {}) };
+        return {
+          ...(type === "all" ? { personal: next } : { typed: { ...state.typed, [key]: next } }),
+          loading: { ...state.loading, [key]: false },
+        };
+      });
     } catch (error: any) {
       if (!isSessionGenerationCurrent(sessionGeneration)) return;
       set((state) => ({
-        loading: { ...state.loading, personal: false },
-        errors: { ...state.errors, personal: error?.response?.data?.msg || "Unable to load your watch history." },
+        loading: { ...state.loading, [key]: false },
+        errors: { ...state.errors, [key]: error?.response?.data?.msg || "Unable to load your watch history." },
       }));
     }
   },
 
-  fetchGroup: async (groupId, append = false, monthPage) => {
-    const previous = get().byGroup[groupId] || emptyBucket();
-    if (append && (!previous.nextCursor || get().loading[groupId])) return;
+  fetchGroup: async (groupId, append = false, monthPage, type = "all") => {
+    const key = historyBucketKey(groupId, type);
+    const previous = (type === "all" ? get().byGroup[groupId] : get().typed[key]) || emptyBucket();
+    if (append && (!previous.nextCursor || get().loading[key])) return;
     const sessionGeneration = getSessionGeneration();
-    set((state) => ({ loading: { ...state.loading, [groupId]: true }, errors: { ...state.errors, [groupId]: null } }));
+    const typeParam = type === "all" ? {} : { type };
+    set((state) => ({ loading: { ...state.loading, [key]: true }, errors: { ...state.errors, [key]: null } }));
     try {
-      const data = await api.fetchGroupHistory(groupId, { limit: 100, ...(monthPage ? { monthPage } : {}), ...(append ? { cursor: previous.nextCursor! } : {}) });
+      const data = await api.fetchGroupHistory(groupId, { limit: 100, ...typeParam, ...(monthPage ? { monthPage } : {}), ...(append ? { cursor: previous.nextCursor! } : {}) });
       const page = await completeTrailingDay(
         { items: data.items || [], nextCursor: data.nextCursor || null },
         async (cursor, limit) => {
-          const more = await api.fetchGroupHistory(groupId, { cursor, limit });
+          const more = await api.fetchGroupHistory(groupId, { cursor, limit, ...typeParam });
           return { items: more.items || [], nextCursor: more.nextCursor || null };
         }
       );
       if (!isSessionGenerationCurrent(sessionGeneration)) return;
-      set((state) => ({
-        byGroup: {
-          ...state.byGroup,
-          [groupId]: { items: append ? [...(state.byGroup[groupId]?.items || []), ...page.items.filter((item) => !(state.byGroup[groupId]?.items || []).some((existing) => existing._id === item._id))] : page.items, total: append ? previous.total : data.stats?.total || 0, nextCursor: page.nextCursor, ...(data.monthPagination ? { monthPagination: data.monthPagination } : {}) },
-        },
-        loading: { ...state.loading, [groupId]: false },
-      }));
+      set((state) => {
+        const currentItems = ((type === "all" ? state.byGroup[groupId] : state.typed[key]) || emptyBucket()).items;
+        const next: HistoryBucket = { items: append ? [...currentItems, ...page.items.filter((item) => !currentItems.some((existing) => existing._id === item._id))] : page.items, total: append ? previous.total : data.stats?.total || 0, nextCursor: page.nextCursor, ...(data.monthPagination ? { monthPagination: data.monthPagination } : {}) };
+        return {
+          ...(type === "all" ? { byGroup: { ...state.byGroup, [groupId]: next } } : { typed: { ...state.typed, [key]: next } }),
+          loading: { ...state.loading, [key]: false },
+        };
+      });
     } catch (error: any) {
       if (!isSessionGenerationCurrent(sessionGeneration)) return;
       set((state) => ({
-        loading: { ...state.loading, [groupId]: false },
-        errors: { ...state.errors, [groupId]: error?.response?.data?.msg || "Unable to load this group's history." },
+        loading: { ...state.loading, [key]: false },
+        errors: { ...state.errors, [key]: error?.response?.data?.msg || "Unable to load this group's history." },
       }));
     }
   },
@@ -155,7 +180,7 @@ export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
       });
       const byGroup = { ...state.byGroup };
       if (entry.group?._id && byGroup[entry.group._id]) byGroup[entry.group._id] = replace(byGroup[entry.group._id]);
-      return { personal: replace(state.personal), byGroup };
+      return { personal: replace(state.personal), byGroup, typed: mapBuckets(state.typed, replace) };
     });
   },
 
@@ -174,7 +199,8 @@ export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
       };
       return {
         personal: remove(state.personal),
-        byGroup: Object.fromEntries(Object.entries(state.byGroup).map(([key, bucket]) => [key, remove(bucket)])),
+        byGroup: mapBuckets(state.byGroup, remove),
+        typed: mapBuckets(state.typed, remove),
       };
     });
   },
@@ -189,6 +215,7 @@ export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
 registerUserScopedReset(() => useWatchHistoryStore.setState({
   personal: emptyBucket(),
   byGroup: {},
+  typed: {},
   loading: {},
   errors: {},
 }));

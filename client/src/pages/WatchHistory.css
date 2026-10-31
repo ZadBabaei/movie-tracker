@@ -172,6 +172,35 @@
 .history-filter-tabs button:hover { color: var(--brand-ivory); }
 .history-filter-tabs button.active { border-bottom-color: var(--brand-gold); color: var(--brand-gold-bright); }
 
+/* Content-type segmented control (All | Movies | TV Series). */
+.history-type-tabs {
+  display: inline-flex;
+  gap: 0;
+  border: 1px solid var(--brand-hairline-soft);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.history-type-tabs button {
+  min-height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-right: 1px solid var(--brand-hairline-soft);
+  background: transparent;
+  color: #b8b0a2;
+  font-size: .71rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.history-type-tabs button:last-child { border-right: 0; }
+.history-type-tabs button:hover { color: var(--brand-ivory); }
+.history-type-tabs button[aria-pressed="true"] { background: rgba(212, 175, 55, .14); color: var(--brand-gold-bright); }
+.history-type-tabs button:focus-visible { outline: 2px solid var(--brand-gold); outline-offset: -2px; }
+
 .history-sort {
   display: flex;
   align-items: center;
@@ -387,6 +416,8 @@
   .history-scope-tabs { gap: 25px; }
   .history-toolbar { align-items: stretch; padding-top: 22px; }
   .history-search { flex-basis: 100%; max-width: none; }
+  .history-type-tabs { display: flex; width: 100%; }
+  .history-type-tabs button { flex: 1 1 0; padding-inline: 8px; }
   .history-filter-tabs { flex: 1; overflow-x: auto; }
   .history-filter-tabs button { flex: 0 0 auto; padding-inline: 9px; }
   .history-sort { width: 100%; margin-left: 0; justify-content: space-between; }
