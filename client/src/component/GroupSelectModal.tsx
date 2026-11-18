@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { FaArrowLeft, FaArrowRight } from "react-icons/fa";
-import apiClient from "../api/apiClient";
-import { getAvatarUrl, handleAvatarError } from "../utils/avatar";
+import { fetchGroupMembers } from "../api/groupApi";
 import Modal from "./Modal/Modal";
+import ParticipantPicker from "./ParticipantPicker";
 import "./GroupSelectModal.css";
 
 interface GroupOption {
@@ -85,11 +85,7 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
     setWatchedWithError("");
     setHasEditedWatchedWith(false);
     try {
-      const token = localStorage.getItem("token");
-      const res = await apiClient.get(`/api/groups/${groupId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const fetchedMembers: Member[] = res.data.members || [];
+      const fetchedMembers: Member[] = await fetchGroupMembers(groupId);
       setMembers(fetchedMembers);
       setWatchedWith(fetchedMembers.map((m) => m._id));
     } catch {
@@ -271,39 +267,13 @@ const GroupSelectModal: React.FC<GroupSelectModalProps> = ({
 
             <div className="group-select-form">
               <div className="group-select-field">
-                {loadingMembers ? (
-                  <p className="group-select-loading">Loading members...</p>
-                ) : (
-                  <div className="group-select-member-list">
-                    {members.map((member) => (
-                      <button
-                        key={member._id}
-                        className={`group-select-member-chip ${
-                          watchedWith.includes(member._id)
-                            ? "group-select-member-chip--active"
-                            : ""
-                        }`}
-                        data-testid="group-select-member"
-                        onClick={() => toggleMember(member._id)}
-                      >
-                        <div className="member-chip-avatar">
-                          <img
-                            src={getAvatarUrl(member)}
-                            alt={member.name}
-                            onError={(event) => handleAvatarError(event, member)}
-                          />
-                        </div>
-                        <span className="member-chip-name">{member.name}</span>
-                        {watchedWith.includes(member._id) && (
-                          <span className="member-chip-check">✓</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {watchedWithError && (
-                  <p className="group-select-error">{watchedWithError}</p>
-                )}
+                <ParticipantPicker
+                  members={members}
+                  selected={watchedWith}
+                  onToggle={toggleMember}
+                  loading={loadingMembers}
+                  error={watchedWithError}
+                />
               </div>
 
               <div className="group-select-actions">

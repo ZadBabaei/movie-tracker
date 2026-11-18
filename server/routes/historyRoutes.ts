@@ -396,7 +396,7 @@ router.post("/", authenticate, async (req, res) => {
         res.status(400).json({ msg: "Participants can only include group members." });
         return;
       }
-      const participantIds = requested.length ? requested : [userId];
+      const participantIds: string[] = requested.length ? Array.from(new Set(requested)) : [userId];
       participants = participantIds.map((id: string) => new mongoose.Types.ObjectId(id));
 
       // Group.movies[] is the legacy movie-only history; episodes live solely
@@ -499,24 +499,42 @@ router.patch("/:historyEntryId", authenticate, async (req, res) => {
   try {
     const entry = await loadAuthorizedEntry(req, res, "edit");
     if (!entry) return;
-    const watchedAt = parseDate(req.body?.watchedAt || req.body?.watchedDate);
-    if (!watchedAt) {
-      res.status(400).json({ msg: "Invalid watched date." });
-      return;
+    // Partial update: a field the request leaves out keeps its saved value,
+    // so a client editing one detail can never blank the others.
+    const body = req.body || {};
+    const has = (key: string) => Object.prototype.hasOwnProperty.call(body, key);
+    let watchedAt = entry.watchedAt;
+    if (has("watchedAt") || has("watchedDate")) {
+      const parsed = parseDate(body.watchedAt || body.watchedDate);
+      if (!parsed) {
+        res.status(400).json({ msg: "Invalid watched date." });
+        return;
+      }
+      watchedAt = parsed;
     }
-    if (entry.scope === "group" && Array.isArray(req.body?.participants || req.body?.watchedWith)) {
-      const group = await Group.findById(entry.groupId).select("members").lean();
-      const memberIds = new Set(group?.members.map((member) => member.toString()) || []);
-      const ids = (req.body.participants || req.body.watchedWith).map(String);
-      if (!ids.length || ids.some((id: string) => !mongoose.Types.ObjectId.isValid(id) || !memberIds.has(id))) {
+    const participantInput = has("participants") ? body.participants : has("watchedWith") ? body.watchedWith : undefined;
+    if (entry.scope === "group" && participantInput !== undefined) {
+      if (!Array.isArray(participantInput)) {
         res.status(400).json({ msg: "Select valid group participants." });
         return;
       }
-      entry.participants = ids.map((id: string) => new mongoose.Types.ObjectId(id));
+      const group = await Group.findById(entry.groupId).select("members").lean();
+      const memberIds = new Set(group?.members.map((member) => member.toString()) || []);
+      // Someone who has since left the group may stay on a past watch, but
+      // only current members can be added.
+      const existingIds = new Set(entry.participants.map((id) => id.toString()));
+      const ids: string[] = Array.from(new Set(participantInput.map(String)));
+      if (!ids.length || ids.some((id) => !mongoose.Types.ObjectId.isValid(id) || (!memberIds.has(id) && !existingIds.has(id)))) {
+        res.status(400).json({ msg: "Select valid group participants." });
+        return;
+      }
+      entry.participants = ids.map((id) => new mongoose.Types.ObjectId(id));
     }
     entry.watchedAt = watchedAt;
-    entry.watchedLocation = String(req.body?.watchedLocation || req.body?.watchedWhere || "").trim();
-    entry.watchedNotes = String(req.body?.watchedNotes || "").trim();
+    if (has("watchedLocation") || has("watchedWhere")) {
+      entry.watchedLocation = String(body.watchedLocation ?? body.watchedWhere ?? "").trim();
+    }
+    if (has("watchedNotes")) entry.watchedNotes = String(body.watchedNotes ?? "").trim();
     await entry.save();
 
     if (entry.legacyGroupId && entry.legacyHistoryItemId) {

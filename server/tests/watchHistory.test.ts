@@ -471,3 +471,123 @@ describe("history API — authorization", () => {
     assert.equal(await WatchHistoryEntry.countDocuments({ scope: "group" }), 0);
   });
 });
+
+describe("history API — editing who watched", () => {
+  const setup = async () => {
+    const { user, token } = await createUser("Owner");
+    const { user: friend } = await createUser("Friend");
+    const { user: third } = await createUser("Third");
+    const { user: outsider } = await createUser("Outsider");
+    const group = await createGroup(user._id, [user._id, friend._id, third._id]);
+    return { user, friend, third, outsider, group, client: api(server, token) };
+  };
+
+  const ids = (entry: any) => entry.participants.map((member: any) => member._id).sort();
+
+  for (const kind of ["movie", "tv_episode"] as const) {
+    it(`adds and removes participants on a group ${kind} without touching other fields`, async () => {
+      const { user, friend, third, group, client } = await setup();
+      const movie = kind === "movie" ? await createMovie("Heat") : null;
+      const created = await client.post("/api/history", {
+        ...(movie ? { movieId: String(movie._id) } : { mediaType: "tv_episode", tv: tvEpisode({ seriesTitle: "East of Eden", episodeNumber: 6 }) }),
+        scope: "group",
+        groupId: String(group._id),
+        participants: [String(user._id), String(friend._id)],
+        watchedAt: "2024-04-01",
+        watchedLocation: "Cinema",
+        watchedNotes: "Great",
+      });
+      assert.equal(created.status, 201);
+      const id = created.body.entry._id;
+
+      // Add one person and remove another; duplicates collapse to one.
+      const edited = await client.patch(`/api/history/${id}`, {
+        participants: [String(user._id), String(third._id), String(third._id)],
+      });
+      assert.equal(edited.status, 200);
+      assert.deepEqual(ids(edited.body.entry), [String(user._id), String(third._id)].sort());
+      assert.equal(edited.body.entry.watchedLocation, "Cinema");
+      assert.equal(edited.body.entry.watchedNotes, "Great");
+      assert.equal(edited.body.entry.watchedAt.slice(0, 10), "2024-04-01");
+
+      // A date-only change keeps participants, location and notes.
+      const redated = await client.patch(`/api/history/${id}`, { watchedAt: "2024-05-02" });
+      assert.equal(redated.status, 200);
+      assert.deepEqual(ids(redated.body.entry), [String(user._id), String(third._id)].sort());
+      assert.equal(redated.body.entry.watchedLocation, "Cinema");
+      assert.equal(redated.body.entry.watchedNotes, "Great");
+
+      // Location + notes change keeps participants; values survive a re-read.
+      await client.patch(`/api/history/${id}`, { watchedLocation: "Home", watchedNotes: "" });
+      const stored = await WatchHistoryEntry.findById(id).lean();
+      assert.equal(stored!.watchedLocation, "Home");
+      assert.equal(stored!.watchedNotes, "");
+      assert.equal(stored!.watchedAt.toISOString().slice(0, 10), "2024-05-02");
+      assert.deepEqual(stored!.participants.map(String).sort(), [String(user._id), String(third._id)].sort());
+
+      if (kind === "movie") {
+        const legacy = (await Group.findById(group._id).lean())!.movies[0] as any;
+        assert.deepEqual(legacy.watchedWith.map(String).sort(), [String(user._id), String(third._id)].sort());
+        assert.equal(legacy.watchedLocation, "Home");
+      } else {
+        assert.equal((await Group.findById(group._id).lean())!.movies.length, 0);
+      }
+    });
+  }
+
+  it("rejects empty or non-member participants and changes nothing", async () => {
+    const { user, outsider, group, client } = await setup();
+    const movie = await createMovie("Heat");
+    const created = await client.post("/api/history", {
+      movieId: String(movie._id), scope: "group", groupId: String(group._id), participants: [String(user._id)], watchedAt: "2024-04-01",
+    });
+    const id = created.body.entry._id;
+
+    assert.equal((await client.patch(`/api/history/${id}`, { participants: [] })).status, 400);
+    assert.equal((await client.patch(`/api/history/${id}`, { participants: [String(outsider._id)] })).status, 400);
+    assert.equal((await client.patch(`/api/history/${id}`, { participants: "nope" })).status, 400);
+    assert.equal((await client.patch(`/api/history/${id}`, { watchedAt: "not-a-date" })).status, 400);
+    const stored = await WatchHistoryEntry.findById(id).lean();
+    assert.deepEqual(stored!.participants.map(String), [String(user._id)]);
+  });
+
+  it("keeps a participant who has left the group, but cannot add them back after removal", async () => {
+    const { user, friend, group, client } = await setup();
+    const movie = await createMovie("Heat");
+    const created = await client.post("/api/history", {
+      movieId: String(movie._id), scope: "group", groupId: String(group._id),
+      participants: [String(user._id), String(friend._id)], watchedAt: "2024-04-01",
+    });
+    const id = created.body.entry._id;
+    await Group.updateOne({ _id: group._id }, { $pull: { members: friend._id } });
+
+    const kept = await client.patch(`/api/history/${id}`, { participants: [String(user._id), String(friend._id)], watchedNotes: "still here" });
+    assert.equal(kept.status, 200);
+    assert.equal(kept.body.entry.participants.length, 2);
+
+    assert.equal((await client.patch(`/api/history/${id}`, { participants: [String(user._id)] })).status, 200);
+    assert.equal((await client.patch(`/api/history/${id}`, { participants: [String(user._id), String(friend._id)] })).status, 400);
+  });
+
+  it("ignores participants on personal entries", async () => {
+    const { user, friend, client } = await setup();
+    const movie = await createMovie("Heat");
+    const created = await client.post("/api/history", { movieId: String(movie._id), watchedAt: "2024-04-01", watchedLocation: "Couch" });
+    const edited = await client.patch(`/api/history/${created.body.entry._id}`, { participants: [String(friend._id)], watchedNotes: "solo" });
+    assert.equal(edited.status, 200);
+    assert.deepEqual(ids(edited.body.entry), [String(user._id)]);
+    assert.equal(edited.body.entry.watchedLocation, "Couch");
+    assert.equal(edited.body.entry.watchedNotes, "solo");
+  });
+
+  it("dedupes participants when adding a group entry", async () => {
+    const { user, group, client } = await setup();
+    const movie = await createMovie("Heat");
+    const created = await client.post("/api/history", {
+      movieId: String(movie._id), scope: "group", groupId: String(group._id),
+      participants: [String(user._id), String(user._id)], watchedAt: "2024-04-01",
+    });
+    assert.equal(created.status, 201);
+    assert.equal(created.body.entry.participants.length, 1);
+  });
+});

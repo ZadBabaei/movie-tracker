@@ -58,3 +58,12 @@ export const searchUsers = async (query) => {
   });
   return res.data;
 };
+
+/** Current members of a group (`_id`, `name`, `avatar`), for the "who watched" picker. */
+export const fetchGroupMembers = async (groupId) => {
+  const token = localStorage.getItem("token");
+  const res = await apiClient.get(`/api/groups/${groupId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data?.members || [];
+};

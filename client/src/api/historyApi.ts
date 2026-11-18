@@ -83,9 +83,20 @@ export const createHistoryEntry = async (payload: CreateHistoryPayload) => {
   return response.data.entry;
 };
 
+/**
+ * Fields left out keep their saved values on the server. `participants` is
+ * honoured for group entries only (a personal entry is always just you).
+ */
+export interface UpdateHistoryPayload {
+  watchedAt?: string;
+  watchedLocation?: string;
+  watchedNotes?: string;
+  participants?: string[];
+}
+
 export const updateHistoryEntry = async (
   historyEntryId: string,
-  payload: { watchedAt: string; watchedLocation: string; watchedNotes: string }
+  payload: UpdateHistoryPayload
 ) => {
   const response = await apiClient.patch(`/api/history/${historyEntryId}`, payload, auth());
   return response.data.entry;
