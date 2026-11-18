@@ -18,6 +18,18 @@ export interface StremioIntegration {
   lastSuccessfulSyncAt: string | null;
   lastSyncStatus: StremioSyncStatus | null;
   lastErrorCode: string | null;
+  lastSyncTrigger?: "manual" | "scheduled" | null;
+}
+
+export interface StremioAutoSync {
+  enabled: boolean;
+  timezone: string;
+  nextRunAt: string | null;
+}
+
+export interface IntegrationOverview {
+  integrations: StremioIntegration[];
+  autoSync: StremioAutoSync | null;
 }
 
 export interface StremioSyncResult {
@@ -66,6 +78,7 @@ export type StremioApiErrorCode =
   | "stremio_provider_unavailable"
   | "integration_changed"
   | "stremio_sync_failed"
+  | "stremio_sync_in_progress"
   | "invalid_input"
   | "request_failed";
 
@@ -88,6 +101,7 @@ const knownCodes = new Set<StremioApiErrorCode>([
   "stremio_provider_unavailable",
   "integration_changed",
   "stremio_sync_failed",
+  "stremio_sync_in_progress",
 ]);
 
 const normalizeError = (error: unknown): never => {
@@ -100,14 +114,31 @@ const normalizeError = (error: unknown): never => {
   throw new StremioApiError("request_failed");
 };
 
-export const fetchIntegrations = async (): Promise<StremioIntegration[]> => {
+const parseAutoSync = (value: unknown): StremioAutoSync | null => {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Partial<StremioAutoSync>;
+  if (typeof candidate.enabled !== "boolean") return null;
+  return {
+    enabled: candidate.enabled,
+    timezone: typeof candidate.timezone === "string" ? candidate.timezone : "",
+    nextRunAt: typeof candidate.nextRunAt === "string" ? candidate.nextRunAt : null,
+  };
+};
+
+export const fetchIntegrationOverview = async (): Promise<IntegrationOverview> => {
   try {
     const response = await apiClient.get("/api/integrations", authConfig());
-    return Array.isArray(response.data?.integrations) ? response.data.integrations : [];
+    return {
+      integrations: Array.isArray(response.data?.integrations) ? response.data.integrations : [],
+      autoSync: parseAutoSync(response.data?.autoSync),
+    };
   } catch (error) {
     return normalizeError(error);
   }
 };
+
+export const fetchIntegrations = async (): Promise<StremioIntegration[]> =>
+  (await fetchIntegrationOverview()).integrations;
 
 export const connectStremio = async (
   email: string,

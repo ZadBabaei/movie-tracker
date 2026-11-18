@@ -24,6 +24,7 @@ import comingSoonRoutes from "./routes/comingSoonRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
 import historyRoutes from "./routes/historyRoutes";
 import integrationRoutes from "./routes/integrationRoutes";
+import { startStremioAutoSync } from "./services/integrations/stremioAutoSync";
 import { corsOptions } from "./utils/corsConfig";
 import { analyticsLimiter, apiLimiter, publicDataLimiter } from "./middleware/rateLimits";
 import { securityEventLogger } from "./middleware/securityLog";
@@ -153,4 +154,11 @@ mongoose
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   reportEmailConfiguration();
+  // Each run checks the database connection itself, so scheduling does not
+  // depend on the initial connect succeeding.
+  try {
+    startStremioAutoSync();
+  } catch (error) {
+    console.error("[stremio-auto-sync] not scheduled:", error);
+  }
 });

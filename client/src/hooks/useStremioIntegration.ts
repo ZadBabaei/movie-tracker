@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   connectStremio,
   disconnectStremio,
-  fetchIntegrations,
+  fetchIntegrationOverview,
   StremioApiError,
+  type StremioAutoSync,
   type StremioIntegration,
   type StremioSyncResult,
   syncStremio,
@@ -20,6 +21,9 @@ const messageFor = (error: unknown, operation: Exclude<StremioOperation, null>) 
   }
   if (code === "stremio_provider_unavailable") {
     return "Stremio is unavailable right now. Try again in a moment.";
+  }
+  if (code === "stremio_sync_in_progress") {
+    return "A Stremio sync is already running. Your history will update when it finishes.";
   }
   if (code === "integration_changed") {
     return "The Stremio connection changed during sync. Please try again.";
@@ -39,6 +43,7 @@ export const useStremioIntegration = ({
   const [operation, setOperation] = useState<StremioOperation>(null);
   const [error, setError] = useState("");
   const [syncResult, setSyncResult] = useState<StremioSyncResult | null>(null);
+  const [autoSync, setAutoSync] = useState<StremioAutoSync | null>(null);
   const operationRef = useRef<StremioOperation>(null);
   const mountedRef = useRef(true);
 
@@ -51,9 +56,10 @@ export const useStremioIntegration = ({
 
   const refresh = useCallback(async () => {
     try {
-      const integrations = await fetchIntegrations();
+      const { integrations, autoSync: schedule } = await fetchIntegrationOverview();
       if (mountedRef.current) {
         setIntegration(integrations.find((item) => item.provider === "stremio") || null);
+        setAutoSync(schedule);
         setError("");
       }
     } catch {
@@ -126,6 +132,7 @@ export const useStremioIntegration = ({
     operation,
     error,
     syncResult,
+    autoSync,
     connect,
     sync,
     disconnect,

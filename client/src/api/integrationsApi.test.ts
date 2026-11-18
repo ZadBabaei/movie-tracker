@@ -3,7 +3,9 @@ import apiClient from "./apiClient";
 import {
   connectStremio,
   disconnectStremio,
+  fetchIntegrationOverview,
   fetchIntegrations,
+  StremioApiError,
   syncStremio,
 } from "./integrationsApi";
 
@@ -62,5 +64,32 @@ describe("Stremio integration API", () => {
       expect.objectContaining({ skipAuthRedirect: true })
     );
     expect(JSON.stringify(mockedClient.get.mock.calls)).not.toContain("secret-value");
+  });
+
+  test("reads the automatic sync schedule and tolerates a server without one", async () => {
+    mockedClient.get
+      .mockResolvedValueOnce({
+        data: {
+          integrations: [],
+          autoSync: { enabled: true, timezone: "America/Toronto", nextRunAt: "2026-11-19T10:00:00.000Z" },
+        },
+      })
+      .mockResolvedValueOnce({ data: { integrations: [] } });
+
+    await expect(fetchIntegrationOverview()).resolves.toEqual({
+      integrations: [],
+      autoSync: { enabled: true, timezone: "America/Toronto", nextRunAt: "2026-11-19T10:00:00.000Z" },
+    });
+    await expect(fetchIntegrationOverview()).resolves.toEqual({ integrations: [], autoSync: null });
+  });
+
+  test("maps an in-progress sync to its own error code", async () => {
+    mockedClient.post.mockRejectedValueOnce(
+      Object.assign(new Error("conflict"), {
+        isAxiosError: true,
+        response: { status: 409, data: { code: "stremio_sync_in_progress" } },
+      })
+    );
+    await expect(syncStremio()).rejects.toEqual(new StremioApiError("stremio_sync_in_progress"));
   });
 });

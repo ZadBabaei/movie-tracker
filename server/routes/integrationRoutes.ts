@@ -9,6 +9,10 @@ import stremioPipelineService, {
   StremioPipelineError,
   StremioPipelineService,
 } from "../services/integrations/stremioPipelineService";
+import {
+  getStremioAutoSyncStatus,
+  StremioAutoSyncStatus,
+} from "../services/integrations/stremioAutoSync";
 
 const EMAIL_MAX_LENGTH = 320;
 const PASSWORD_MAX_LENGTH = 1024;
@@ -48,6 +52,7 @@ const pipelineFailure = (error: unknown, res: Response) => {
     stremio_provider_unavailable: 503,
     integration_changed: 409,
     stremio_sync_failed: 500,
+    stremio_sync_in_progress: 409,
   };
   res.status(statusByCode[error.code]).json({
     msg: "Stremio sync could not be completed.",
@@ -58,15 +63,20 @@ const pipelineFailure = (error: unknown, res: Response) => {
 export const createIntegrationRouter = ({
   lifecycleService = stremioIntegrationService,
   pipelineService = stremioPipelineService,
+  autoSyncStatus = getStremioAutoSyncStatus,
 }: {
   lifecycleService?: StremioIntegrationService;
   pipelineService?: StremioPipelineService;
+  autoSyncStatus?: () => StremioAutoSyncStatus;
 } = {}) => {
   const router = express.Router();
 
   router.get("/", authenticate, async (req: Request, res: Response) => {
     try {
-      res.json({ integrations: await lifecycleService.listForUser(req.user!.id) });
+      res.json({
+        integrations: await lifecycleService.listForUser(req.user!.id),
+        autoSync: autoSyncStatus(),
+      });
     } catch {
       res.status(500).json({ msg: "Unable to load integrations." });
     }
@@ -96,7 +106,9 @@ export const createIntegrationRouter = ({
 
   router.post("/stremio/sync", authenticate, async (req: Request, res: Response) => {
     try {
-      res.json(await pipelineService.syncCurrentStremioIntegration(req.user!.id));
+      res.json(await pipelineService.syncCurrentStremioIntegration(req.user!.id, {
+        trigger: "manual",
+      }));
     } catch (error) {
       pipelineFailure(error, res);
     }

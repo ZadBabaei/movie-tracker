@@ -13,6 +13,17 @@ const formatSyncTime = (value: string | null | undefined) => {
   }).format(date);
 };
 
+const formatAutoSyncTime = (value: string | null | undefined) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+};
+
 const ConnectModal = ({
   open,
   reconnecting,
@@ -158,6 +169,7 @@ const StremioHomeControl = ({
     operation,
     error,
     syncResult,
+    autoSync,
     connect,
     sync,
     disconnect,
@@ -169,6 +181,9 @@ const StremioHomeControl = ({
   const reconnecting = reauth || integrationError;
   const connected = integration?.status === "connected" && integration.connected;
   const lastSync = integration?.lastSuccessfulSyncAt;
+  const lastSyncWasAutomatic = integration?.lastSyncTrigger === "scheduled"
+    && integration.lastSyncStatus === "success";
+  const nextAutoSync = autoSync?.enabled ? formatAutoSyncTime(autoSync.nextRunAt) : "";
   const syncStatusMessage = integration?.lastSyncStatus === "partial"
     ? "The latest sync completed with some items needing attention."
     : integration?.lastSyncStatus === "failed"
@@ -221,7 +236,13 @@ const StremioHomeControl = ({
             <p className="stremio-last-sync">
               Last successful sync<br />
               {lastSync ? <time dateTime={lastSync}>{formatSyncTime(lastSync)}</time> : <span>No completed sync yet</span>}
+              {lastSync && lastSyncWasAutomatic ? <span className="stremio-sync-origin"> · automatic</span> : null}
             </p>
+            {nextAutoSync && autoSync?.nextRunAt ? (
+              <p className="stremio-auto-sync">
+                Auto-syncs daily · next <time dateTime={autoSync.nextRunAt}>{nextAutoSync}</time>
+              </p>
+            ) : null}
             {syncResult ? (
               <p className="stremio-result" role="status">
                 {syncResult.import.imported} imported · {syncResult.matching.matched} matched

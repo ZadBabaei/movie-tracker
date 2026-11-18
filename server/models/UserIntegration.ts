@@ -3,10 +3,12 @@ import mongoose, { Document, Model, Schema, Types } from "mongoose";
 export const INTEGRATION_PROVIDERS = ["stremio"] as const;
 export const INTEGRATION_STATUSES = ["connected", "disconnected", "reauth_required", "error"] as const;
 export const INTEGRATION_SYNC_STATUSES = ["success", "partial", "failed"] as const;
+export const INTEGRATION_SYNC_TRIGGERS = ["manual", "scheduled"] as const;
 
 export type IntegrationProvider = (typeof INTEGRATION_PROVIDERS)[number];
 export type IntegrationStatus = (typeof INTEGRATION_STATUSES)[number];
 export type IntegrationSyncStatus = (typeof INTEGRATION_SYNC_STATUSES)[number];
+export type IntegrationSyncTrigger = (typeof INTEGRATION_SYNC_TRIGGERS)[number];
 
 export interface ICredentialEnvelope {
   ciphertext: string;
@@ -26,6 +28,11 @@ export interface IUserIntegration extends Document {
   lastSuccessfulSyncAt?: Date;
   lastSyncStatus?: IntegrationSyncStatus;
   lastErrorCode?: string;
+  lastSyncTrigger?: IntegrationSyncTrigger;
+  // Lease that serializes manual and scheduled syncs of one integration
+  // across every server instance. An expired lease can be reclaimed.
+  syncLockUntil?: Date;
+  syncLockToken?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -79,11 +86,15 @@ const userIntegrationSchema = new Schema<IUserIntegration>(
     lastSuccessfulSyncAt: { type: Date },
     lastSyncStatus: { type: String, enum: INTEGRATION_SYNC_STATUSES },
     lastErrorCode: { type: String, trim: true, maxlength: 128 },
+    lastSyncTrigger: { type: String, enum: INTEGRATION_SYNC_TRIGGERS },
+    syncLockUntil: { type: Date },
+    syncLockToken: { type: String, maxlength: 64 },
   },
   { timestamps: true }
 );
 
 userIntegrationSchema.index({ userId: 1, provider: 1 }, { unique: true });
+userIntegrationSchema.index({ provider: 1, status: 1 });
 
 userIntegrationSchema.pre("validate", function (next) {
   // A normal query intentionally excludes the envelope. Skip cross-field
