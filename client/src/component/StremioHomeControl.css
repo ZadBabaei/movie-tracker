@@ -114,6 +114,16 @@
 .stremio-last-sync time,
 .stremio-last-sync span { color: var(--brand-muted); }
 
+.stremio-auto-sync {
+  margin: 4px 0 0;
+  color: var(--brand-dim);
+  font: 0.4rem/1.35 var(--font-mono);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.stremio-auto-sync time { color: var(--brand-muted); }
+
 .stremio-result,
 .stremio-core-error {
   max-width: 220px;
@@ -245,6 +255,7 @@
   .stremio-core-copy { max-width: 164px; margin-top: 6px; font-size: 0.5rem; }
   .stremio-sync-button { width: 78px; height: 49px; margin-top: 8px; font-size: 0.57rem; }
   .stremio-last-sync { margin-top: 7px; font-size: 0.39rem; }
+  .stremio-auto-sync { margin-top: 3px; font-size: 0.36rem; }
   .stremio-result,
   .stremio-core-error { max-width: 170px; margin-top: 5px; font-size: 0.42rem; }
   .stremio-disconnect-link { margin-top: 4px; font-size: 0.4rem; }
@@ -255,7 +266,8 @@
   .stremio-core h1 { max-width: 148px; font-size: 0.8rem; }
   .stremio-core-copy { max-width: 148px; font-size: 0.44rem; }
   .stremio-sync-button { width: 70px; height: 44px; }
-  .stremio-result { display: none; }
+  .stremio-result,
+  .stremio-auto-sync { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

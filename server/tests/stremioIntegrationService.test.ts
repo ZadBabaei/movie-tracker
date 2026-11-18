@@ -101,6 +101,7 @@ test("integration listing exposes lifecycle timestamps and never credential data
     lastSuccessfulSyncAt,
     lastSyncStatus: "success",
     lastErrorCode: "bounded_code",
+    lastSyncTrigger: null,
   });
   assert.equal(/credential|authKey|secret-auth-key/i.test(JSON.stringify(status)), false);
 });

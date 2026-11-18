@@ -21,6 +21,7 @@ export interface SanitizedIntegrationStatus {
   lastSuccessfulSyncAt: Date | null;
   lastSyncStatus: IUserIntegration["lastSyncStatus"] | null;
   lastErrorCode: string | null;
+  lastSyncTrigger: IUserIntegration["lastSyncTrigger"] | null;
 }
 
 export interface StremioIntegrationService {
@@ -56,6 +57,7 @@ const statusView = (integration: Pick<
   | "lastSuccessfulSyncAt"
   | "lastSyncStatus"
   | "lastErrorCode"
+  | "lastSyncTrigger"
 >): SanitizedIntegrationStatus => ({
   provider: integration.provider,
   status: integration.status,
@@ -65,6 +67,7 @@ const statusView = (integration: Pick<
   lastSuccessfulSyncAt: integration.lastSuccessfulSyncAt || null,
   lastSyncStatus: integration.lastSyncStatus || null,
   lastErrorCode: integration.lastErrorCode || null,
+  lastSyncTrigger: integration.lastSyncTrigger || null,
 });
 
 const warnRevocationFailure = (userId: string, code: string) => {
@@ -137,7 +140,7 @@ export const createStremioIntegrationService = ({
       userId: new Types.ObjectId(userId),
     })
       .select(
-        "provider status lastSyncStartedAt lastSyncCompletedAt lastSuccessfulSyncAt lastSyncStatus lastErrorCode"
+        "provider status lastSyncStartedAt lastSyncCompletedAt lastSuccessfulSyncAt lastSyncStatus lastErrorCode lastSyncTrigger"
       )
       .sort({ provider: 1 })
       .lean<IUserIntegration[]>();

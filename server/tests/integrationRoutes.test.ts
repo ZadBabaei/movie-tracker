@@ -38,6 +38,7 @@ const serviceWith = (
     lastSuccessfulSyncAt: null,
     lastSyncStatus: null,
     lastErrorCode: null,
+    lastSyncTrigger: null,
   }),
   disconnect: async () => ({
     provider: "stremio",
@@ -132,6 +133,7 @@ test("GET lists only the authenticated user's sanitized integrations", async () 
             lastSuccessfulSyncAt: successfulAt,
             lastSyncStatus: "failed",
             lastErrorCode: "stremio_sync_failed",
+            lastSyncTrigger: "scheduled",
           },
         ];
       },
@@ -150,6 +152,7 @@ test("GET lists only the authenticated user's sanitized integrations", async () 
     lastSuccessfulSyncAt: successfulAt,
     lastSyncStatus: "failed",
     lastErrorCode: "stremio_sync_failed",
+    lastSyncTrigger: "scheduled",
   });
   assert.equal(JSON.stringify(res.state.body).includes("credentialEnvelope"), false);
   assert.equal(JSON.stringify(res.state.body).includes("credentialVersion"), false);
@@ -265,6 +268,7 @@ test("manual sync maps stable pipeline failures without exposing lower-level det
     ["stremio_provider_unavailable", 503],
     ["integration_changed", 409],
     ["stremio_sync_failed", 500],
+    ["stremio_sync_in_progress", 409],
   ] as const;
 
   for (const [code, status] of cases) {

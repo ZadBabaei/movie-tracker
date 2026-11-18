@@ -7,12 +7,22 @@ import {
 } from "../api/integrationsApi";
 import StremioHomeControl from "./StremioHomeControl";
 
-const integrationApi = vi.hoisted(() => ({
-  fetchIntegrations: vi.fn(),
-  connectStremio: vi.fn(),
-  syncStremio: vi.fn(),
-  disconnectStremio: vi.fn(),
-}));
+const integrationApi = vi.hoisted(() => {
+  const api = {
+    fetchIntegrations: vi.fn(),
+    fetchAutoSync: vi.fn(),
+    fetchIntegrationOverview: vi.fn(),
+    connectStremio: vi.fn(),
+    syncStremio: vi.fn(),
+    disconnectStremio: vi.fn(),
+  };
+  // The control loads one overview; tests keep stubbing the two halves.
+  api.fetchIntegrationOverview.mockImplementation(async () => ({
+    integrations: await api.fetchIntegrations(),
+    autoSync: await api.fetchAutoSync(),
+  }));
+  return api;
+});
 
 vi.mock("../api/integrationsApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../api/integrationsApi")>();
@@ -74,6 +84,7 @@ describe("Stremio Home control", () => {
       clear: () => storedValues.clear(),
     });
     integrationApi.fetchIntegrations.mockResolvedValue([]);
+    integrationApi.fetchAutoSync.mockResolvedValue(null);
     integrationApi.connectStremio.mockResolvedValue(connected());
     integrationApi.syncStremio.mockResolvedValue(syncResult);
     integrationApi.disconnectStremio.mockResolvedValue(undefined);
@@ -124,6 +135,55 @@ describe("Stremio Home control", () => {
     expect(onSyncComplete).toHaveBeenCalledTimes(1);
     const timestamp = screen.getByText((content, element) => element?.tagName === "TIME" && content.length > 0);
     expect(timestamp).toHaveAttribute("datetime", "2026-09-17T14:30:00.000Z");
+  });
+
+  test("shows the next automatic sync and labels an automatic last sync", async () => {
+    integrationApi.fetchIntegrations.mockResolvedValue([
+      connected({
+        lastSuccessfulSyncAt: "2026-11-18T10:00:30.000Z",
+        lastSyncStatus: "success",
+        lastSyncTrigger: "scheduled",
+      }),
+    ]);
+    integrationApi.fetchAutoSync.mockResolvedValue({
+      enabled: true,
+      timezone: "America/Toronto",
+      nextRunAt: "2026-11-19T10:00:00.000Z",
+    });
+    render(<StremioHomeControl />);
+
+    expect(await screen.findByText(/Auto-syncs daily/)).toBeInTheDocument();
+    expect(screen.getByText("· automatic", { exact: false })).toBeInTheDocument();
+    const next = screen.getByText((_, element) =>
+      element?.tagName === "TIME" && element.getAttribute("datetime") === "2026-11-19T10:00:00.000Z"
+    );
+    expect(next).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "SYNC" })).toBeEnabled();
+  });
+
+  test("hides the automatic sync line when the schedule is off and keeps manual labels", async () => {
+    integrationApi.fetchIntegrations.mockResolvedValue([
+      connected({
+        lastSuccessfulSyncAt: "2026-11-18T10:00:30.000Z",
+        lastSyncStatus: "success",
+        lastSyncTrigger: "manual",
+      }),
+    ]);
+    integrationApi.fetchAutoSync.mockResolvedValue({ enabled: false, timezone: "America/Toronto", nextRunAt: null });
+    render(<StremioHomeControl />);
+
+    expect(await screen.findByRole("button", { name: "SYNC" })).toBeInTheDocument();
+    expect(screen.queryByText(/Auto-syncs daily/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/automatic/)).not.toBeInTheDocument();
+  });
+
+  test("explains when a sync is already running", async () => {
+    integrationApi.fetchIntegrations.mockResolvedValue([connected()]);
+    integrationApi.syncStremio.mockRejectedValue(new StremioApiError("stremio_sync_in_progress"));
+    render(<StremioHomeControl />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "SYNC" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("A Stremio sync is already running.");
   });
 
   test("shows useful provider errors without echoing submitted secrets or clearing app auth", async () => {

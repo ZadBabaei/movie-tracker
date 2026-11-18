@@ -1,5 +1,5 @@
 import { Types } from "mongoose";
-import UserIntegration from "../../models/UserIntegration";
+import UserIntegration, { IntegrationSyncTrigger } from "../../models/UserIntegration";
 import stremioHistoryImportService, {
   StremioHistoryImportSummary,
 } from "./stremioHistoryImportService";
@@ -8,6 +8,7 @@ import stremioMovieMatchService, {
 } from "./stremioMovieMatchService";
 import { StremioClientError } from "./stremioClient";
 import stremioSyncService, { StremioSyncError } from "./stremioSyncService";
+import stremioSyncLockService, { StremioSyncLockService } from "./stremioSyncLock";
 
 export interface StremioSnapshotSummary {
   snapshotItems: number;
@@ -34,6 +35,7 @@ export type StremioPipelineErrorCode =
   | "stremio_reauth_required"
   | "stremio_provider_unavailable"
   | "stremio_sync_failed"
+  | "stremio_sync_in_progress"
   | "integration_changed";
 
 export class StremioPipelineError extends Error {
@@ -77,8 +79,15 @@ interface PipelineLifecycleService {
   ): Promise<boolean>;
 }
 
+export interface StremioPipelineSyncOptions {
+  trigger?: IntegrationSyncTrigger;
+}
+
 export interface StremioPipelineService {
-  syncCurrentStremioIntegration(userId: string): Promise<StremioPipelineResult>;
+  syncCurrentStremioIntegration(
+    userId: string,
+    options?: StremioPipelineSyncOptions
+  ): Promise<StremioPipelineResult>;
 }
 
 const normalizeSnapshotError = (error: unknown): StremioPipelineError => {
@@ -167,16 +176,24 @@ export const createStremioPipelineService = ({
   importService = stremioHistoryImportService,
   generationService = defaultGenerationService,
   lifecycleService = defaultLifecycleService,
+  lockService,
   now = () => new Date(),
+  onLockReleaseError = (error: unknown) => {
+    console.error("[stremio-sync] failed to release sync lock:", error);
+  },
 }: {
   snapshotService?: SnapshotService;
   matchingService?: MatchingService;
   importService?: ImportService;
   generationService?: GenerationService;
   lifecycleService?: PipelineLifecycleService;
+  // When provided, every run holds the integration's sync lease, so manual
+  // and scheduled syncs of one user never overlap.
+  lockService?: StremioSyncLockService;
   now?: () => Date;
-} = {}): StremioPipelineService => ({
-  async syncCurrentStremioIntegration(userId) {
+  onLockReleaseError?: (error: unknown) => void;
+} = {}): StremioPipelineService => {
+  const runPipeline = async (userId: string): Promise<StremioPipelineResult> => {
     let snapshotResult: Awaited<ReturnType<SnapshotService["sync"]>>;
     try {
       snapshotResult = await snapshotService.sync(userId);
@@ -258,9 +275,36 @@ export const createStremioPipelineService = ({
       matching,
       import: importSummary,
     };
-  },
-});
+  };
 
-const stremioPipelineService = createStremioPipelineService();
+  return {
+    async syncCurrentStremioIntegration(userId, { trigger = "manual" } = {}) {
+      if (!lockService) return runPipeline(userId);
+
+      let lock: Awaited<ReturnType<StremioSyncLockService["acquire"]>>;
+      try {
+        lock = await lockService.acquire(userId, trigger);
+      } catch {
+        throw new StremioPipelineError("stremio_sync_failed");
+      }
+      if (lock.status === "busy") throw new StremioPipelineError("stremio_sync_in_progress");
+      if (lock.status === "missing") throw new StremioPipelineError("stremio_not_connected");
+
+      try {
+        return await runPipeline(userId);
+      } finally {
+        try {
+          await lockService.release(userId, lock.token);
+        } catch (error) {
+          onLockReleaseError(error);
+        }
+      }
+    },
+  };
+};
+
+const stremioPipelineService = createStremioPipelineService({
+  lockService: stremioSyncLockService,
+});
 
 export default stremioPipelineService;
