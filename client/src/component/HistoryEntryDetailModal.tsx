@@ -1,8 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { FaClock, FaMapMarkerAlt, FaTrashAlt, FaUsers } from "react-icons/fa";
 import { toast } from "react-toastify";
 import Modal from "./Modal/Modal";
-import { HistoryEntry, useWatchHistoryStore } from "../store/useWatchHistoryStore";
+import ParticipantPicker from "./ParticipantPicker";
+import { fetchGroupMembers } from "../api/groupApi";
+import type { UpdateHistoryPayload } from "../api/historyApi";
+import { HistoryEntry, HistoryMember, useWatchHistoryStore } from "../store/useWatchHistoryStore";
 import { getEntryPosterPath, getEntrySubtitle, getEntryTitle, historyImageUrl, isTvEntry } from "../utils/historyEntry";
 import "./HistoryEntryDetailModal.css";
 
@@ -36,6 +39,8 @@ const toDateInput = (value: string) => {
 
 const posterUrl = (path: string) => historyImageUrl(path) || "/default-avatar.png";
 
+const sameIds = (a: string[], b: string[]) => a.length === b.length && a.every((id) => b.includes(id));
+
 const HistoryEntryDetailModal: React.FC<HistoryEntryDetailModalProps> = ({ entry, onClose, onUpdated, onDeleted }) => {
   const { updateEntry, deleteEntry, rateEntry } = useWatchHistoryStore();
   const [editing, setEditing] = useState(false);
@@ -45,22 +50,87 @@ const HistoryEntryDetailModal: React.FC<HistoryEntryDetailModalProps> = ({ entry
   const [editDate, setEditDate] = useState("");
   const [editLocation, setEditLocation] = useState("");
   const [editNotes, setEditNotes] = useState("");
+  const [editParticipants, setEditParticipants] = useState<string[]>([]);
+  const [groupMembers, setGroupMembers] = useState<HistoryMember[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [membersError, setMembersError] = useState("");
+  const [participantsError, setParticipantsError] = useState("");
+
+  const groupId = entry?.scope === "group" ? entry.group?._id || "" : "";
+  const isGroupEntry = Boolean(groupId);
+
+  const resetForm = (source: HistoryEntry) => {
+    setEditDate(toDateInput(source.watchedAt));
+    setEditLocation(source.watchedLocation || "");
+    setEditNotes(source.watchedNotes || "");
+    setEditParticipants(source.participants.map((member) => member._id));
+    setParticipantsError("");
+  };
 
   // Reset the form whenever a record is opened or replaced by its saved copy.
   useEffect(() => {
     if (!entry) return;
     setEditing(false);
     setConfirmDelete(false);
-    setEditDate(toDateInput(entry.watchedAt));
-    setEditLocation(entry.watchedLocation || "");
-    setEditNotes(entry.watchedNotes || "");
+    resetForm(entry);
   }, [entry]);
+
+  // Offer the same people the add flow does — the group's current members —
+  // plus anyone already recorded on this watch who has since left the group.
+  useEffect(() => {
+    if (!editing || !groupId) return;
+    let cancelled = false;
+    setLoadingMembers(true);
+    setMembersError("");
+    fetchGroupMembers(groupId)
+      .then((members: HistoryMember[]) => {
+        if (!cancelled) setGroupMembers(members);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setGroupMembers([]);
+        setMembersError("Couldn't load group members. You can still keep or remove the people already listed.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingMembers(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [editing, groupId]);
+
+  const participantOptions = useMemo(() => {
+    if (!entry) return [];
+    const known = new Set(groupMembers.map((member) => member._id));
+    return [...groupMembers, ...entry.participants.filter((member) => !known.has(member._id))];
+  }, [entry, groupMembers]);
+
+  const toggleParticipant = (memberId: string) => {
+    setParticipantsError("");
+    setEditParticipants((prev) => (prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId]));
+  };
+
+  const cancelEdit = () => {
+    if (entry) resetForm(entry);
+    setEditing(false);
+  };
 
   const saveEdit = async () => {
     if (!entry || !editDate) return;
+    const payload: UpdateHistoryPayload = { watchedAt: editDate, watchedLocation: editLocation, watchedNotes: editNotes };
+    if (isGroupEntry) {
+      if (editParticipants.length === 0) {
+        setParticipantsError("Select at least one person who watched.");
+        return;
+      }
+      // Only send participants when they changed, so editing a date or a note
+      // never rewrites who watched.
+      const savedIds = entry.participants.map((member) => member._id);
+      if (!sameIds(editParticipants, savedIds)) payload.participants = editParticipants;
+    }
     setSaving(true);
     try {
-      const updated = await updateEntry(entry._id, { watchedAt: editDate, watchedLocation: editLocation, watchedNotes: editNotes });
+      const updated = await updateEntry(entry._id, payload);
       onUpdated?.(updated);
       setEditing(false);
       toast.success("Watch details updated.");
@@ -130,7 +200,25 @@ const HistoryEntryDetailModal: React.FC<HistoryEntryDetailModalProps> = ({ entry
                 <label>Watched date<input type="date" value={editDate} onChange={(event) => setEditDate(event.target.value)} /></label>
                 <label>Location<input type="text" value={editLocation} maxLength={300} onChange={(event) => setEditLocation(event.target.value)} /></label>
                 <label>Notes<textarea value={editNotes} maxLength={2000} rows={5} onChange={(event) => setEditNotes(event.target.value)} /></label>
-                <div><button type="button" onClick={() => setEditing(false)} disabled={saving}>Cancel</button><button type="button" className="primary" onClick={saveEdit} disabled={saving || !editDate}>{saving ? "Saving…" : "Save changes"}</button></div>
+                <fieldset className="history-edit-participants" data-testid="edit-participants">
+                  <legend>Who did you watch with?</legend>
+                  {isGroupEntry ? (
+                    <>
+                      {membersError && <p className="history-edit-hint">{membersError}</p>}
+                      <ParticipantPicker
+                        members={participantOptions}
+                        selected={editParticipants}
+                        onToggle={toggleParticipant}
+                        loading={loadingMembers}
+                        error={participantsError}
+                        disabled={saving}
+                      />
+                    </>
+                  ) : (
+                    <p className="history-edit-hint">Just you. Personal history only records you; add the watch to a group to log who you watched with.</p>
+                  )}
+                </fieldset>
+                <div><button type="button" onClick={cancelEdit} disabled={saving}>Cancel</button><button type="button" className="primary" onClick={saveEdit} disabled={saving || !editDate}>{saving ? "Saving…" : "Save changes"}</button></div>
               </div>
             )}
           </div>

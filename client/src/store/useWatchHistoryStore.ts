@@ -95,7 +95,7 @@ interface WatchHistoryState {
   fetchPersonal: (append?: boolean, monthPage?: number, type?: HistoryTypeFilter) => Promise<void>;
   fetchGroup: (groupId: string, append?: boolean, monthPage?: number, type?: HistoryTypeFilter) => Promise<void>;
   replaceEntry: (entry: HistoryEntry) => void;
-  updateEntry: (entryId: string, payload: { watchedAt: string; watchedLocation: string; watchedNotes: string }) => Promise<HistoryEntry>;
+  updateEntry: (entryId: string, payload: api.UpdateHistoryPayload) => Promise<HistoryEntry>;
   deleteEntry: (entryId: string) => Promise<void>;
   rateEntry: (entryId: string, rating: number) => Promise<HistoryEntry>;
 }
