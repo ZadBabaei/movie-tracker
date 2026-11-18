@@ -8,6 +8,7 @@ import { loadGroupForMember } from "../middleware/groupAccess";
 import { setCapped } from "../utils/http";
 import { readBearerToken, verifyAuthToken } from "../utils/authToken";
 import { getDefaultAvatarUrl } from "../utils/avatar";
+import { describeError } from "../utils/safeLog";
 
 const router = express.Router();
 const linkPreviewCache = new Map<string, { expiresAt: number; value: LinkPreview }>();
@@ -313,7 +314,7 @@ router.post("/token", async (req: Request, res: Response) => {
       res.status(401).json({ msg: "Unauthorized" });
       return;
     }
-    console.error("Error in /api/chat/token:", error);
+    console.error("Error in /api/chat/token:", describeError(error));
     res.status(500).json({ msg: "Server error" });
   }
 });
@@ -358,7 +359,7 @@ router.get("/unread-info", async (req: Request, res: Response) => {
       res.status(401).json({ msg: "Unauthorized" });
       return;
     }
-    console.error("Error in /api/chat/unread-info:", error);
+    console.error("Error in /api/chat/unread-info:", describeError(error));
     res.status(500).json({ msg: "Server error" });
   }
 });

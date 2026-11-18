@@ -13,6 +13,7 @@ import { verifyAuthToken } from "../utils/authToken";
 import { getIO } from "../socket";
 import { sendGroupInviteEmail } from "../utils/emailService";
 import { getDefaultAvatarUrl } from "../utils/avatar";
+import { describeError } from "../utils/safeLog";
 import WatchHistoryEntry from "../models/WatchHistoryEntry";
 import { syncLegacyGroupHistory } from "../utils/watchHistory";
 
@@ -79,7 +80,7 @@ const upsertUserToStream = async (user: { _id: any; name?: string; email?: strin
       image: user.avatar || getDefaultAvatarUrl(user.name, user.email),
     });
   } catch (err) {
-    console.error("Failed to upsert user to Stream Chat:", err);
+    console.error("Failed to upsert user to Stream Chat:", describeError(err));
   }
 };
 
