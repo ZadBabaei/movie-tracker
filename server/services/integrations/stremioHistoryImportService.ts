@@ -86,8 +86,8 @@ const safeExistingHistory = (
   entry.scope === "personal" &&
   entry.createdBy.toString() === ownerId.toString() &&
   !entry.groupId &&
-  entry.participants.length === 1 &&
-  entry.participants[0].toString() === ownerId.toString() &&
+  // The owner may have tagged people they watched with since the import.
+  entry.participants.some((id) => id.toString() === ownerId.toString()) &&
   validProviderWatchTime(entry.watchedAt);
 
 export const suppressStremioImportAfterHistoryDelete = async (

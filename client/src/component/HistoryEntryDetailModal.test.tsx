@@ -11,6 +11,7 @@ const historyApi = vi.hoisted(() => ({
   updateHistoryEntry: vi.fn(),
   deleteHistoryEntry: vi.fn(),
   rateHistoryEntry: vi.fn(),
+  fetchHistoryParticipantOptions: vi.fn(),
 }));
 const groupApi = vi.hoisted(() => ({ fetchGroupMembers: vi.fn() }));
 const toastMock = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), warn: vi.fn() }));
@@ -87,6 +88,7 @@ beforeEach(() => {
   toastMock.success.mockReset();
   toastMock.error.mockReset();
   groupApi.fetchGroupMembers.mockResolvedValue([zad, sam, kim]);
+  historyApi.fetchHistoryParticipantOptions.mockResolvedValue([sam, kim]);
 });
 
 describe.each([
@@ -216,14 +218,14 @@ test("if members can't load, existing participants are still editable", async ()
   expect(chip(dialog, "Sam")).toHaveAttribute("aria-pressed", "true");
 });
 
-test("personal entries edit normally and never send participants", async () => {
+test("personal entries edit normally and send no participants when nobody is added", async () => {
   const entry = base({ scope: "personal", group: null, participants: [zad], watchedLocation: "", watchedNotes: "" });
   historyApi.updateHistoryEntry.mockResolvedValueOnce({ ...entry, watchedLocation: "Couch" });
   render(<Harness initial={entry} />);
   const dialog = await openEditor();
 
-  expect(within(dialog).getByTestId("edit-participants")).toHaveTextContent(/just you/i);
-  expect(within(dialog).queryByTestId("group-select-member")).not.toBeInTheDocument();
+  expect(within(dialog).getByTestId("edit-participants")).toHaveTextContent(/always included/i);
+  await within(dialog).findByText("Kim");
   expect(groupApi.fetchGroupMembers).not.toHaveBeenCalled();
 
   fireEvent.change(within(dialog).getByLabelText(/location/i), { target: { value: "Couch" } });
@@ -231,4 +233,79 @@ test("personal entries edit normally and never send participants", async () => {
   await waitFor(() =>
     expect(historyApi.updateHistoryEntry).toHaveBeenCalledWith("h1", { watchedAt: "2026-09-19", watchedLocation: "Couch", watchedNotes: "" })
   );
+});
+
+describe("editing a personal watch", () => {
+  const personal = (overrides: Partial<HistoryEntry> = {}) =>
+    episode({ scope: "personal", group: null, participants: [zad], ...overrides });
+
+  test("shows a picker of people from your groups, without the owner", async () => {
+    render(<Harness initial={personal()} />);
+    const dialog = await openEditor();
+
+    await waitFor(() => expect(historyApi.fetchHistoryParticipantOptions).toHaveBeenCalledTimes(1));
+    expect(groupApi.fetchGroupMembers).not.toHaveBeenCalled();
+    expect(await within(dialog).findByText("Kim")).toBeInTheDocument();
+    expect(chip(dialog, "Sam")).toHaveAttribute("aria-pressed", "false");
+    expect(within(within(dialog).getByTestId("edit-participants")).queryByRole("button", { name: /Zad/ })).toBeNull();
+    expect(within(dialog).queryByText(/Personal history only records you/)).toBeNull();
+  });
+
+  test("saves the owner plus the people picked, and only when they changed", async () => {
+    const entry = personal();
+    historyApi.updateHistoryEntry.mockResolvedValueOnce({ ...entry, participants: [zad, sam] });
+    render(<Harness initial={entry} />);
+    const dialog = await openEditor();
+    await within(dialog).findByText("Sam");
+
+    fireEvent.click(chip(dialog, "Sam"));
+    fireEvent.click(within(dialog).getByRole("button", { name: /save changes/i }));
+    await waitFor(() =>
+      expect(historyApi.updateHistoryEntry).toHaveBeenCalledWith(entry._id, {
+        watchedAt: "2026-09-19",
+        watchedLocation: "Cinema",
+        watchedNotes: "Loved it",
+        participants: ["u1", "u2"],
+      })
+    );
+    expect(await within(dialog).findByText(/Zad, Sam/)).toBeInTheDocument();
+
+    // Reopen: Sam is selected; a notes-only edit leaves who watched alone.
+    fireEvent.click(within(dialog).getByRole("button", { name: /edit details/i }));
+    await within(dialog).findByText("Kim");
+    expect(chip(dialog, "Sam")).toHaveAttribute("aria-pressed", "true");
+    historyApi.updateHistoryEntry.mockResolvedValueOnce({ ...entry, participants: [zad, sam], watchedNotes: "x" });
+    fireEvent.change(within(dialog).getByLabelText(/notes/i), { target: { value: "x" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: /save changes/i }));
+    await waitFor(() => expect(historyApi.updateHistoryEntry).toHaveBeenCalledTimes(2));
+    expect("participants" in historyApi.updateHistoryEntry.mock.calls[1][1]).toBe(false);
+  });
+
+  test("removing everyone else saves just the owner", async () => {
+    const entry = personal({ participants: [zad, sam] });
+    historyApi.updateHistoryEntry.mockResolvedValueOnce({ ...entry, participants: [zad] });
+    render(<Harness initial={entry} />);
+    const dialog = await openEditor();
+    await within(dialog).findByText("Kim");
+
+    fireEvent.click(chip(dialog, "Sam"));
+    fireEvent.click(within(dialog).getByRole("button", { name: /save changes/i }));
+    await waitFor(() => expect(historyApi.updateHistoryEntry.mock.calls[0][1].participants).toEqual(["u1"]));
+  });
+
+  test("suggests joining a group when there is nobody to add", async () => {
+    historyApi.fetchHistoryParticipantOptions.mockResolvedValue([]);
+    render(<Harness initial={personal()} />);
+    const dialog = await openEditor();
+    expect(await within(dialog).findByText(/join or create a group/i)).toBeInTheDocument();
+  });
+
+  test("someone tagged on another person's watch sees it read-only", async () => {
+    render(<Harness initial={personal({ participants: [zad, sam], canEdit: false })} />);
+    const dialog = await screen.findByRole("dialog", { name: /watch history details/i });
+    expect(within(dialog).queryByRole("button", { name: /edit details/i })).toBeNull();
+    expect(within(dialog).queryByRole("button", { name: /delete/i })).toBeNull();
+    expect(within(dialog).getByText(/Added by Zad/)).toBeInTheDocument();
+    expect(within(dialog).getByLabelText(/your rating/i)).toBeEnabled();
+  });
 });

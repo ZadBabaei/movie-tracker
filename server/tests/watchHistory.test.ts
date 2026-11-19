@@ -475,11 +475,11 @@ describe("history API — authorization", () => {
 describe("history API — editing who watched", () => {
   const setup = async () => {
     const { user, token } = await createUser("Owner");
-    const { user: friend } = await createUser("Friend");
+    const { user: friend, token: friendToken } = await createUser("Friend");
     const { user: third } = await createUser("Third");
     const { user: outsider } = await createUser("Outsider");
     const group = await createGroup(user._id, [user._id, friend._id, third._id]);
-    return { user, friend, third, outsider, group, client: api(server, token) };
+    return { user, friend, third, outsider, group, client: api(server, token), friendClient: api(server, friendToken) };
   };
 
   const ids = (entry: any) => entry.participants.map((member: any) => member._id).sort();
@@ -569,15 +569,79 @@ describe("history API — editing who watched", () => {
     assert.equal((await client.patch(`/api/history/${id}`, { participants: [String(user._id), String(friend._id)] })).status, 400);
   });
 
-  it("ignores participants on personal entries", async () => {
-    const { user, friend, client } = await setup();
+  it("tags people who share a group on a personal entry, always keeping the owner", async () => {
+    const { user, friend, third, client } = await setup();
     const movie = await createMovie("Heat");
     const created = await client.post("/api/history", { movieId: String(movie._id), watchedAt: "2024-04-01", watchedLocation: "Couch" });
-    const edited = await client.patch(`/api/history/${created.body.entry._id}`, { participants: [String(friend._id)], watchedNotes: "solo" });
+    const id = created.body.entry._id;
+    assert.equal(created.body.entry.canEdit, true);
+
+    // The owner is kept even when omitted; duplicates collapse.
+    const edited = await client.patch(`/api/history/${id}`, {
+      participants: [String(friend._id), String(friend._id)],
+      watchedNotes: "with friend",
+    });
     assert.equal(edited.status, 200);
-    assert.deepEqual(ids(edited.body.entry), [String(user._id)]);
+    assert.deepEqual(ids(edited.body.entry), [String(user._id), String(friend._id)].sort());
     assert.equal(edited.body.entry.watchedLocation, "Couch");
-    assert.equal(edited.body.entry.watchedNotes, "solo");
+    assert.equal(edited.body.entry.watchedNotes, "with friend");
+
+    // A date-only edit keeps who watched.
+    const redated = await client.patch(`/api/history/${id}`, { watchedAt: "2024-05-02" });
+    assert.deepEqual(ids(redated.body.entry), [String(user._id), String(friend._id)].sort());
+
+    // Swap people; removing everyone else leaves just the owner.
+    const swapped = await client.patch(`/api/history/${id}`, { participants: [String(user._id), String(third._id)] });
+    assert.deepEqual(ids(swapped.body.entry), [String(user._id), String(third._id)].sort());
+    const solo = await client.patch(`/api/history/${id}`, { participants: [] });
+    assert.equal(solo.status, 200);
+    assert.deepEqual(ids(solo.body.entry), [String(user._id)]);
+  });
+
+  it("rejects tagging someone who shares no group with the owner", async () => {
+    const { user, outsider, client } = await setup();
+    const movie = await createMovie("Heat");
+    const created = await client.post("/api/history", { movieId: String(movie._id), watchedAt: "2024-04-01" });
+    const id = created.body.entry._id;
+
+    assert.equal((await client.patch(`/api/history/${id}`, { participants: [String(outsider._id)] })).status, 400);
+    assert.equal((await client.patch(`/api/history/${id}`, { participants: ["not-an-id"] })).status, 400);
+    assert.equal((await client.patch(`/api/history/${id}`, { participants: "nope" })).status, 400);
+    const stored = await WatchHistoryEntry.findById(id).lean();
+    assert.deepEqual(stored!.participants.map(String), [String(user._id)]);
+  });
+
+  it("shows a tagged watch read-only in the other person's history; they may rate but not edit or delete", async () => {
+    const { friend, client, friendClient } = await setup();
+    const movie = await createMovie("Heat");
+    const created = await client.post("/api/history", { movieId: String(movie._id), watchedAt: "2024-04-01", watchedNotes: "fun" });
+    const id = created.body.entry._id;
+    await client.patch(`/api/history/${id}`, { participants: [String(friend._id)] });
+
+    const friendHistory = await friendClient.get("/api/history/personal");
+    assert.equal(friendHistory.status, 200);
+    const seen = friendHistory.body.items.find((item: any) => item._id === id);
+    assert.ok(seen);
+    assert.equal(seen.canEdit, false);
+
+    assert.equal((await friendClient.patch(`/api/history/${id}`, { watchedNotes: "mine now" })).status, 403);
+    assert.equal((await friendClient.delete(`/api/history/${id}`)).status, 403);
+    const rated = await friendClient.put(`/api/history/${id}/rating`, { rating: 8 });
+    assert.equal(rated.status, 200);
+    assert.equal((await WatchHistoryEntry.findById(id).lean())!.watchedNotes, "fun");
+  });
+
+  it("lists people who share any group with the user as participant options", async () => {
+    const { user, friend, third, outsider, client } = await setup();
+    const { user: otherGroupMate } = await createUser("Zed");
+    await createGroup(otherGroupMate._id, [otherGroupMate._id, user._id]);
+    await createGroup(outsider._id, [outsider._id]);
+
+    const response = await client.get("/api/history/participant-options");
+    assert.equal(response.status, 200);
+    const optionIds = response.body.members.map((member: any) => member._id).sort();
+    assert.deepEqual(optionIds, [String(friend._id), String(third._id), String(otherGroupMate._id)].sort());
+    assert.ok(response.body.members.every((member: any) => typeof member.name === "string"));
   });
 
   it("dedupes participants when adding a group entry", async () => {
