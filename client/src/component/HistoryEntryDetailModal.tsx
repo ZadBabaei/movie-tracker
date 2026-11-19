@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import Modal from "./Modal/Modal";
 import ParticipantPicker from "./ParticipantPicker";
 import { fetchGroupMembers } from "../api/groupApi";
-import type { UpdateHistoryPayload } from "../api/historyApi";
+import { fetchHistoryParticipantOptions, type UpdateHistoryPayload } from "../api/historyApi";
 import { HistoryEntry, HistoryMember, useWatchHistoryStore } from "../store/useWatchHistoryStore";
 import { getEntryPosterPath, getEntrySubtitle, getEntryTitle, historyImageUrl, isTvEntry } from "../utils/historyEntry";
 import "./HistoryEntryDetailModal.css";
@@ -58,12 +58,17 @@ const HistoryEntryDetailModal: React.FC<HistoryEntryDetailModalProps> = ({ entry
 
   const groupId = entry?.scope === "group" ? entry.group?._id || "" : "";
   const isGroupEntry = Boolean(groupId);
+  const isPersonalEntry = entry?.scope === "personal";
+  // A personal watch always includes its owner; the picker only chooses who else.
+  const ownerId = isPersonalEntry ? entry?.createdBy?._id || "" : "";
+  const canEdit = entry?.canEdit !== false;
 
   const resetForm = (source: HistoryEntry) => {
     setEditDate(toDateInput(source.watchedAt));
     setEditLocation(source.watchedLocation || "");
     setEditNotes(source.watchedNotes || "");
-    setEditParticipants(source.participants.map((member) => member._id));
+    const owner = source.scope === "personal" ? source.createdBy?._id : "";
+    setEditParticipants(source.participants.map((member) => member._id).filter((id) => id !== owner));
     setParticipantsError("");
   };
 
@@ -75,21 +80,24 @@ const HistoryEntryDetailModal: React.FC<HistoryEntryDetailModalProps> = ({ entry
     resetForm(entry);
   }, [entry]);
 
-  // Offer the same people the add flow does — the group's current members —
-  // plus anyone already recorded on this watch who has since left the group.
+  // Group watch: the group's current members (as in the add flow). Personal
+  // watch: everyone who shares a group with you. Either way, anyone already
+  // recorded on this watch stays listed so they can be kept or removed.
   useEffect(() => {
-    if (!editing || !groupId) return;
+    if (!editing || (!groupId && !isPersonalEntry)) return;
     let cancelled = false;
     setLoadingMembers(true);
     setMembersError("");
-    fetchGroupMembers(groupId)
+    (groupId ? fetchGroupMembers(groupId) : fetchHistoryParticipantOptions())
       .then((members: HistoryMember[]) => {
         if (!cancelled) setGroupMembers(members);
       })
       .catch(() => {
         if (cancelled) return;
         setGroupMembers([]);
-        setMembersError("Couldn't load group members. You can still keep or remove the people already listed.");
+        setMembersError(groupId
+          ? "Couldn't load group members. You can still keep or remove the people already listed."
+          : "Couldn't load people from your groups. You can still keep or remove the people already listed.");
       })
       .finally(() => {
         if (!cancelled) setLoadingMembers(false);
@@ -97,13 +105,14 @@ const HistoryEntryDetailModal: React.FC<HistoryEntryDetailModalProps> = ({ entry
     return () => {
       cancelled = true;
     };
-  }, [editing, groupId]);
+  }, [editing, groupId, isPersonalEntry]);
 
   const participantOptions = useMemo(() => {
     if (!entry) return [];
     const known = new Set(groupMembers.map((member) => member._id));
-    return [...groupMembers, ...entry.participants.filter((member) => !known.has(member._id))];
-  }, [entry, groupMembers]);
+    return [...groupMembers, ...entry.participants.filter((member) => !known.has(member._id))]
+      .filter((member) => member._id !== ownerId);
+  }, [entry, groupMembers, ownerId]);
 
   const toggleParticipant = (memberId: string) => {
     setParticipantsError("");
@@ -127,6 +136,9 @@ const HistoryEntryDetailModal: React.FC<HistoryEntryDetailModalProps> = ({ entry
       // never rewrites who watched.
       const savedIds = entry.participants.map((member) => member._id);
       if (!sameIds(editParticipants, savedIds)) payload.participants = editParticipants;
+    } else if (isPersonalEntry && ownerId) {
+      const savedOthers = entry.participants.map((member) => member._id).filter((id) => id !== ownerId);
+      if (!sameIds(editParticipants, savedOthers)) payload.participants = [ownerId, ...editParticipants];
     }
     setSaving(true);
     try {
@@ -189,10 +201,14 @@ const HistoryEntryDetailModal: React.FC<HistoryEntryDetailModalProps> = ({ entry
                     {Array.from({ length: 10 }, (_, index) => 10 - index).map((rating) => <option value={rating} key={rating}>{rating}/10</option>)}
                   </select>
                 </label>
-                <div className="history-detail-actions">
-                  <button type="button" onClick={() => setEditing(true)}>Edit details</button>
-                  <button type="button" className="danger" onClick={() => setConfirmDelete(true)}><FaTrashAlt /> Delete</button>
-                </div>
+                {canEdit ? (
+                  <div className="history-detail-actions">
+                    <button type="button" onClick={() => setEditing(true)}>Edit details</button>
+                    <button type="button" className="danger" onClick={() => setConfirmDelete(true)}><FaTrashAlt /> Delete</button>
+                  </div>
+                ) : (
+                  <p className="history-edit-hint">Added by {entry.createdBy?.name || "another member"}. Only they can edit or delete this watch.</p>
+                )}
                 {confirmDelete && <div className="history-delete-confirm"><p>Delete this watch entry? This cannot be undone.</p><div><button type="button" onClick={() => setConfirmDelete(false)}>Cancel</button><button type="button" className="danger" disabled={deleting} onClick={removeEntry}>{deleting ? "Deleting…" : "Delete entry"}</button></div></div>}
               </>
             ) : (
@@ -202,9 +218,13 @@ const HistoryEntryDetailModal: React.FC<HistoryEntryDetailModalProps> = ({ entry
                 <label>Notes<textarea value={editNotes} maxLength={2000} rows={5} onChange={(event) => setEditNotes(event.target.value)} /></label>
                 <fieldset className="history-edit-participants" data-testid="edit-participants">
                   <legend>Who did you watch with?</legend>
-                  {isGroupEntry ? (
+                  {isGroupEntry || isPersonalEntry ? (
                     <>
+                      {isPersonalEntry && <p className="history-edit-hint">You're always included. Add anyone who shares a group with you; it will show in their history too.</p>}
                       {membersError && <p className="history-edit-hint">{membersError}</p>}
+                      {isPersonalEntry && !loadingMembers && !membersError && participantOptions.length === 0 && (
+                        <p className="history-edit-hint">Join or create a group to add the people you watch with.</p>
+                      )}
                       <ParticipantPicker
                         members={participantOptions}
                         selected={editParticipants}

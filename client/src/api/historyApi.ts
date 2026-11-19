@@ -40,6 +40,18 @@ export const fetchPersonalHistory = async (query: HistoryQuery = {}) => {
   return response.data;
 };
 
+export interface HistoryParticipantOption {
+  _id: string;
+  name: string;
+  avatar: string;
+}
+
+/** People who share a group with the user, i.e. who can be tagged on a personal watch. */
+export const fetchHistoryParticipantOptions = async (): Promise<HistoryParticipantOption[]> => {
+  const response = await apiClient.get("/api/history/participant-options", auth());
+  return Array.isArray(response.data?.members) ? response.data.members : [];
+};
+
 export const fetchGroupHistory = async (groupId: string, query: HistoryQuery = {}) => {
   const response = await apiClient.get(`/api/history/group/${groupId}`, { ...auth(), params: query });
   return response.data;

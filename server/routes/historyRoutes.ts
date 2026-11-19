@@ -23,6 +23,22 @@ const POPULATE = [
   { path: "ratings.userId", select: "name avatar" },
 ];
 
+// Everyone who shares at least one group with the user: the people who can
+// be tagged on that user's personal watches.
+const groupConnectionIds = async (userId: string): Promise<Set<string>> => {
+  const objectId = new mongoose.Types.ObjectId(userId);
+  const groups = await Group.find({ $or: [{ members: objectId }, { creator: objectId }] })
+    .select("members creator")
+    .lean();
+  const ids = new Set<string>();
+  for (const group of groups) {
+    for (const member of group.members || []) ids.add(member.toString());
+    if (group.creator) ids.add(group.creator.toString());
+  }
+  ids.delete(userId);
+  return ids;
+};
+
 const parseDate = (value: unknown): Date | null => {
   const date = value ? new Date(String(value)) : new Date();
   return Number.isNaN(date.getTime()) ? null : date;
@@ -196,6 +212,26 @@ router.get("/personal", authenticate, async (req, res) => {
   } catch (error) {
     console.error("Error fetching personal watch history:", error);
     res.status(500).json({ msg: "Failed to fetch watch history" });
+  }
+});
+
+router.get("/participant-options", authenticate, async (req, res) => {
+  try {
+    const ids = [...(await groupConnectionIds(req.user!.id))];
+    const users = await User.find({ _id: { $in: ids } })
+      .select("name avatar")
+      .sort({ name: 1 })
+      .lean();
+    res.json({
+      members: users.map((user) => ({
+        _id: user._id.toString(),
+        name: user.name || "Member",
+        avatar: user.avatar || "",
+      })),
+    });
+  } catch (error) {
+    console.error("Error loading history participant options:", error);
+    res.status(500).json({ msg: "Failed to load people you can add." });
   }
 });
 
@@ -481,7 +517,10 @@ const loadAuthorizedEntry = async (req: Request, res: Response, action: string) 
   }
   const userId = req.user!.id;
   if (entry.scope === "personal") {
-    if (entry.createdBy.toString() !== userId) {
+    // People tagged on someone else's personal watch see it in their own
+    // history and may rate it, but only the owner can change or delete it.
+    const isParticipant = entry.participants.some((id) => id.toString() === userId);
+    if (entry.createdBy.toString() !== userId && !(action === "rate" && isParticipant)) {
       res.status(403).json({ msg: `Only the owner can ${action} this history entry.` });
       return null;
     }
@@ -529,6 +568,23 @@ router.patch("/:historyEntryId", authenticate, async (req, res) => {
         return;
       }
       entry.participants = ids.map((id) => new mongoose.Types.ObjectId(id));
+    }
+    if (entry.scope === "personal" && participantInput !== undefined) {
+      if (!Array.isArray(participantInput)) {
+        res.status(400).json({ msg: "Select valid people to add." });
+        return;
+      }
+      // The owner always stays on their own personal watch. Anyone else must
+      // currently share a group with the owner, or already be on this watch.
+      const ownerId = entry.createdBy.toString();
+      const connections = await groupConnectionIds(ownerId);
+      const existingIds = new Set(entry.participants.map((id) => id.toString()));
+      const others: string[] = Array.from(new Set(participantInput.map(String))).filter((id) => id !== ownerId);
+      if (others.some((id) => !mongoose.Types.ObjectId.isValid(id) || (!connections.has(id) && !existingIds.has(id)))) {
+        res.status(400).json({ msg: "You can only add people who share a group with you." });
+        return;
+      }
+      entry.participants = [ownerId, ...others].map((id) => new mongoose.Types.ObjectId(id));
     }
     entry.watchedAt = watchedAt;
     if (has("watchedLocation") || has("watchedWhere")) {

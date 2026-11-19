@@ -48,6 +48,8 @@ export interface HistoryEntry {
   movie: HistoryMovie | null;
   tv: HistoryTvEpisode | null;
   participants: HistoryMember[];
+  /** False when the viewer was tagged on someone else's personal watch. */
+  canEdit?: boolean;
   watchedAt: string;
   watchedLocation: string;
   watchedNotes: string;

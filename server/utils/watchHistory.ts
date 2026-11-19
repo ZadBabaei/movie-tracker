@@ -155,6 +155,11 @@ export const serializeHistoryEntry = (entry: any, currentUserId: string) => {
       name: participant.name || "Member",
       avatar: participant.avatar || "",
     })),
+    // Group watches are editable by any member (the only people who can read
+    // them); a personal watch only by its owner, not by people tagged on it.
+    canEdit:
+      entry.scope !== "personal" ||
+      (entry.createdBy?._id?.toString?.() || entry.createdBy?.toString?.() || "") === currentUserId,
     watchedAt: entry.watchedAt,
     watchedLocation: entry.watchedLocation || "",
     watchedNotes: entry.watchedNotes || "",
