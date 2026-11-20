@@ -9,6 +9,35 @@ permissions:
   contents: read
 
 jobs:
+  server-regression:
+    if: github.event_name == 'pull_request' && github.event.pull_request.number == 13
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1}).ok'"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    defaults:
+      run:
+        working-directory: server
+    env:
+      TEST_MONGODB_URI: mongodb://127.0.0.1:27017/movie-tracker-regression-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run build
+      - name: Password reset and email provider selection
+        run: node --require ts-node/register --test tests/passwordReset.test.ts
+      - name: Full server test suite
+        run: npm test
+
   quality:
     runs-on: ubuntu-latest
     steps:
