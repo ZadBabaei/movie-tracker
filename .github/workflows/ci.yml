@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   server-regression:
-    if: github.event_name == 'pull_request' && github.event.pull_request.number == 13
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     services:
